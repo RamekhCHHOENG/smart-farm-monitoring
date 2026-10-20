@@ -136,6 +136,7 @@ public final class Dtos {
     public record ActiveRequest(boolean active) {
     }
 
-    public record RepairRequest(boolean testPassed) {
+    /** Boolean, not boolean: actions other than COMPLETE_REPAIR send an empty body {}. */
+    public record RepairRequest(Boolean testPassed) {
     }
 }

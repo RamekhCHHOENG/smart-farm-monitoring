@@ -47,7 +47,7 @@ public class OperationsController {
     public ActuatorDto lifecycle(@RequestAttribute(AuthInterceptor.USER_ID) Long userId, @PathVariable Long id,
                                  @PathVariable LifecycleAction action,
                                  @RequestBody(required = false) RepairRequest req) {
-        return ActuatorDto.of(actuatorService.lifecycle(userId, id, action, req != null && req.testPassed()));
+        return ActuatorDto.of(actuatorService.lifecycle(userId, id, action, req != null && Boolean.TRUE.equals(req.testPassed())));
     }
 
     @GetMapping("/actuators/{id}/logs")

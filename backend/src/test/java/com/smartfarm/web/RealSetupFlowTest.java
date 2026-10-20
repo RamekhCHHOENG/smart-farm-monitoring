@@ -74,6 +74,18 @@ class RealSetupFlowTest {
                 .content("{\"type\":\"WATER_PUMP\",\"name\":\"Mini pump\",\"maxRunMinutes\":2}"), tech)
                 .andExpect(status().isCreated()));
 
+        // UC-10: technician fault -> repair cycle, with the empty JSON body the UI sends
+        for (String action : new String[]{"FAULT", "START_REPAIR"}) {
+            call(post("/api/actuators/" + pumpId + "/lifecycle/" + action).contentType(MediaType.APPLICATION_JSON)
+                    .content("{}"), tech).andExpect(status().isOk());
+        }
+        call(post("/api/actuators/" + pumpId + "/lifecycle/COMPLETE_REPAIR").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"testPassed\":true}"), tech)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("IDLE"));
+        call(post("/api/actuators/" + pumpId + "/lifecycle/EXPLODE").contentType(MediaType.APPLICATION_JSON)
+                .content("{}"), tech)
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").value("Invalid value 'EXPLODE' for action"));
+
         // UC-4: owner adds a rule; UC-5: and a schedule
         call(post("/api/rules").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Dry\",\"sensorId\":" + sensorId + ",\"condition\":\"BELOW\",\"threshold\":30,"

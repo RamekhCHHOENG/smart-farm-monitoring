@@ -275,13 +275,15 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: object) {
             <Label for="dname">Name</Label>
             <Input id="dname" v-model="deviceForm.name" required placeholder="e.g. Soil moisture B2" />
           </div>
-          <label v-if="deviceForm.kind === 'sensor'" class="flex items-center gap-2 text-sm">
-            <input v-model="deviceForm.simulated" type="checkbox" class="size-4 accent-[var(--primary)]">
-            Simulated (untick for a real ESP32 sensor)
-          </label>
-          <p class="text-xs text-muted-foreground">
-            After saving, the device shows a #id in the table. Put that id in the ESP32's secrets.h.
-          </p>
+          <div v-if="deviceForm.kind === 'sensor'" class="flex flex-col gap-1.5">
+            <label class="flex items-center gap-2 text-sm">
+              <input v-model="deviceForm.simulated" type="checkbox" class="size-4 accent-[var(--primary)]">
+              Simulated (untick for a real ESP32 sensor)
+            </label>
+            <p class="text-xs text-muted-foreground">
+              After saving, the device shows a #id in the table. Put that id in the ESP32's secrets.h.
+            </p>
+          </div>
           <div v-else class="flex flex-col gap-1.5">
             <Label for="maxrun">Safety limit (max minutes per run)</Label>
             <Input id="maxrun" v-model.number="deviceForm.maxRunMinutes" type="number" min="1" max="240" />
