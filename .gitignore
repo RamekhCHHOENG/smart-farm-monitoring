@@ -30,3 +30,7 @@ Thumbs.db
 
 # --- Office lock files ---
 ~$*.docx
+
+# Root-level tools (e2e walkthrough)
+/node_modules/
+/package-lock.json
