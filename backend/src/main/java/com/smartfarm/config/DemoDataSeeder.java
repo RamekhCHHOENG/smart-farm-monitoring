@@ -21,7 +21,8 @@ import java.util.EnumSet;
 import java.util.HexFormat;
 
 /**
- * Creates a demo farm on first start: one crop zone and one poultry zone with
+ * On first start, creates the farm and its three users. With FARM_DEMO_DATA=false the farm
+ * starts empty, ready for a real setup. Otherwise it creates a demo farm: one crop zone and one poultry zone with
  * devices, default rules (from each zone subclass), and two scheduled tasks.
  * Demo users get the password from FARM_DEMO_PASSWORD; if it is not set, a random
  * password is generated and printed once to the server log. No password is committed.
@@ -37,10 +38,13 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final ScheduledTaskRepository tasks;
     private final PasswordEncoder encoder;
     private final String demoPassword;
+    private final boolean demoData;
 
     public DemoDataSeeder(FarmRepository farms, AppUserRepository users, AutomationRuleRepository rules,
                           ScheduledTaskRepository tasks, PasswordEncoder encoder,
-                          @Value("${farm.demo-password:}") String demoPassword) {
+                          @Value("${farm.demo-password:}") String demoPassword,
+                          @Value("${farm.demo-data:true}") boolean demoData) {
+        this.demoData = demoData;
         this.farms = farms;
         this.users = users;
         this.rules = rules;
@@ -55,8 +59,17 @@ public class DemoDataSeeder implements ApplicationRunner {
         if (farms.count() > 0) {
             return;
         }
-        Farm farm = new Farm("Group 1 Demo Farm", "Kandal, Cambodia");
+        Farm farm = demoData ? new Farm("Group 1 Demo Farm", "Kandal, Cambodia") : new Farm("My Farm", "");
+        if (demoData) {
+            createDemoZones(farm);
+        } else {
+            farms.save(farm);
+        }
+        createUsers(farm);
+        log.info("Farm created with {} zones (demo data: {})", farm.getZones().size(), demoData);
+    }
 
+    private void createDemoZones(Farm farm) {
         CropZone crop = farm.addCropZone("Vegetable Bed A", "Morning glory");
         crop.addSensor(SensorType.SOIL_MOISTURE, "Soil moisture A1", true);
         crop.addSensor(SensorType.TEMPERATURE, "Air temperature A", true);
@@ -75,7 +88,9 @@ public class DemoDataSeeder implements ApplicationRunner {
         EnumSet<DayOfWeek> everyDay = EnumSet.allOf(DayOfWeek.class);
         tasks.save(new ScheduledTask("Morning feeding", feeder, LocalTime.of(7, 0), everyDay, 3));
         tasks.save(new ScheduledTask("Evening watering", pump, LocalTime.of(17, 0), everyDay, 5));
+    }
 
+    private void createUsers(Farm farm) {
         String password = demoPassword;
         if (password == null || password.isBlank()) {
             byte[] bytes = new byte[9];
@@ -87,6 +102,5 @@ public class DemoDataSeeder implements ApplicationRunner {
         users.save(new AppUser(farm, "owner", "Sokha (Farm Owner)", hash, Role.OWNER));
         users.save(new AppUser(farm, "worker", "Dara (Farm Worker)", hash, Role.WORKER));
         users.save(new AppUser(farm, "technician", "Vibol (Technician)", hash, Role.TECHNICIAN));
-        log.info("Demo farm created with {} zones", farm.getZones().size());
     }
 }

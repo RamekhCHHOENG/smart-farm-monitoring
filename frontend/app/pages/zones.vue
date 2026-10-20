@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Plus, Trash2, Wand2 } from "lucide-vue-next";
+import { Plus, Settings, Trash2, Wand2 } from "lucide-vue-next";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +39,21 @@ async function act(fn: () => Promise<unknown>, done?: string) {
   } catch (e) {
     error.value = errorMessage(e);
     return false;
+  }
+}
+
+// ----- farm settings -----
+const farmDialog = ref(false);
+const farmForm = reactive({ name: "", location: "" });
+
+function openFarm() {
+  Object.assign(farmForm, { name: farm.value?.name ?? "", location: farm.value?.location ?? "" });
+  farmDialog.value = true;
+}
+
+async function saveFarm() {
+  if (await act(() => api("/api/farm", { method: "PUT", body: { ...farmForm } }), "Farm settings saved")) {
+    farmDialog.value = false;
   }
 }
 
@@ -108,8 +123,19 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: object) {
 <template>
   <div>
     <PageHeader title="Zones & devices" description="Manage farm zones (Farm Owner) and register or maintain devices (Technician).">
+      <Button v-if="can()" variant="outline" @click="openFarm()"><Settings /> Farm settings</Button>
       <Button v-if="can()" @click="openZone()"><Plus /> New zone</Button>
     </PageHeader>
+
+    <Card v-if="farm && farm.zones.length === 0" class="mb-4">
+      <CardHeader>
+        <CardTitle>No zones yet</CardTitle>
+        <CardDescription>
+          Step 1: the Farm Owner creates a zone (for example "Test bed").
+          Step 2: the Technician adds devices to it. Untick "Simulated" for a real ESP32 sensor and note its #id.
+        </CardDescription>
+      </CardHeader>
+    </Card>
 
     <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
     <Alert v-if="notice" class="mb-4"><AlertDescription>{{ notice }}</AlertDescription></Alert>
@@ -170,6 +196,26 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: object) {
         </CardContent>
       </Card>
     </div>
+
+    <Dialog v-model:open="farmDialog">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Farm settings</DialogTitle>
+          <DialogDescription>The name and location shown on the dashboard.</DialogDescription>
+        </DialogHeader>
+        <form class="flex flex-col gap-4" @submit.prevent="saveFarm">
+          <div class="flex flex-col gap-1.5">
+            <Label for="farm-name">Farm name</Label>
+            <Input id="farm-name" v-model="farmForm.name" required maxlength="80" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="farm-location">Location</Label>
+            <Input id="farm-location" v-model="farmForm.location" maxlength="120" placeholder="e.g. Takeo, Cambodia" />
+          </div>
+          <DialogFooter><Button type="submit">Save</Button></DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
 
     <Dialog v-model:open="zoneDialog">
       <DialogContent>
@@ -233,6 +279,9 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: object) {
             <input v-model="deviceForm.simulated" type="checkbox" class="size-4 accent-[var(--primary)]">
             Simulated (untick for a real ESP32 sensor)
           </label>
+          <p class="text-xs text-muted-foreground">
+            After saving, the device shows a #id in the table. Put that id in the ESP32's secrets.h.
+          </p>
           <div v-else class="flex flex-col gap-1.5">
             <Label for="maxrun">Safety limit (max minutes per run)</Label>
             <Input id="maxrun" v-model.number="deviceForm.maxRunMinutes" type="number" min="1" max="240" />

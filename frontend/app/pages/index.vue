@@ -61,6 +61,18 @@ const stats = computed(() => {
       </Card>
     </div>
 
+    <Card v-if="farm && farm.zones.length === 0" class="mb-6">
+      <CardHeader>
+        <CardTitle>Set up your farm</CardTitle>
+        <CardDescription>
+          No zones yet. The Farm Owner adds zones, then the Technician registers sensors and actuators in each zone.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button as-child><NuxtLink to="/zones">Go to Zones &amp; devices</NuxtLink></Button>
+      </CardContent>
+    </Card>
+
     <div class="grid gap-4 xl:grid-cols-[1fr_340px]">
       <div class="grid gap-4 lg:grid-cols-2">
         <Card v-for="zone in farm?.zones ?? []" :key="zone.id">

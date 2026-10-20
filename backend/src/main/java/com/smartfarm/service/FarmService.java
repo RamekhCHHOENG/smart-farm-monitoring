@@ -34,6 +34,13 @@ public class FarmService {
         return farms.findFirstByOrderByIdAsc().orElseThrow(() -> new IllegalStateException("No farm configured"));
     }
 
+    public Farm updateFarm(Long userId, String name, String location) {
+        access.require(userId);
+        Farm farm = farm();
+        farm.update(name, location);
+        return farm;
+    }
+
     public Zone createZone(Long userId, String type, String name, String cropName, Integer birdCount) {
         access.require(userId);
         Farm farm = farm();

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Bell, CalendarClock, ChartLine, LayoutDashboard, LogOut, Moon, Sprout, Sun, Workflow } from "lucide-vue-next";
+import { Bell, CalendarClock, ChartLine, KeyRound, LayoutDashboard, LogOut, Moon, Sprout, Sun, Workflow } from "lucide-vue-next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { roleLabels } from "~/utils/types";
 
 const { user, logout } = useAuth();
 const openAlerts = useState<number>("openAlerts", () => 0);
+const passwordOpen = ref(false);
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -73,9 +74,13 @@ function toggleTheme() {
           <Sun v-if="dark" />
           <Moon v-else />
         </Button>
+        <Button variant="ghost" size="icon-sm" aria-label="Change password" title="Change password" @click="passwordOpen = true">
+          <KeyRound />
+        </Button>
         <Button variant="outline" size="sm" @click="logout">
           <LogOut /> Log out
         </Button>
+        <ChangePasswordDialog v-model:open="passwordOpen" />
       </header>
       <main class="mx-auto max-w-7xl px-4 py-6 md:px-8">
         <slot />

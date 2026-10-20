@@ -107,6 +107,9 @@ public final class Dtos {
     public record ReadingRequest(@NotNull Long sensorId, @NotNull Double value) {
     }
 
+    public record FarmRequest(@NotBlank @Size(max = 80) String name, @Size(max = 120) String location) {
+    }
+
     public record ZoneRequest(@NotBlank String type, @NotBlank @Size(max = 80) String name,
                               String cropName, @PositiveOrZero Integer birdCount) {
     }

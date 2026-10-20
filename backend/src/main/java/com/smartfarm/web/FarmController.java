@@ -35,6 +35,13 @@ public class FarmController {
                 alerts.countByStatus(AlertStatus.OPEN), farm.getZones().stream().map(this::toDto).toList());
     }
 
+    @PutMapping("/farm")
+    @Transactional
+    public FarmDto updateFarm(@RequestAttribute(AuthInterceptor.USER_ID) Long userId, @Valid @RequestBody FarmRequest req) {
+        farmService.updateFarm(userId, req.name(), req.location());
+        return farm();
+    }
+
     @PostMapping("/zones")
     @ResponseStatus(HttpStatus.CREATED)
     @Transactional

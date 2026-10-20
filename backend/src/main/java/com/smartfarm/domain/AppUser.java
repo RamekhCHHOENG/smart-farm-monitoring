@@ -35,6 +35,10 @@ public class AppUser {
         this.role = role;
     }
 
+    public void changePasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
     public Long getId() { return id; }
     public String getUsername() { return username; }
     public String getName() { return name; }

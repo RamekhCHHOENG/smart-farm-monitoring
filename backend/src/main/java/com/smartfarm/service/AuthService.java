@@ -5,6 +5,7 @@ import com.smartfarm.repository.AppUserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.Clock;
@@ -27,6 +28,8 @@ public class AuthService {
 
     public record LoginResult(String token, Instant expiresAt, AppUser user) {
     }
+
+    public static final int MIN_PASSWORD_LENGTH = 8;
 
     private final AppUserRepository users;
     private final PasswordEncoder encoder;
@@ -54,6 +57,19 @@ public class AuthService {
         Instant expiresAt = clock.instant().plus(ttl);
         sessions.put(token, new Session(user.getId(), expiresAt));
         return new LoginResult(token, expiresAt, user);
+    }
+
+    /** Every user changes their own password; the current password is required. */
+    @Transactional
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        AppUser user = users.findById(userId).orElseThrow(() -> new UnauthorizedException("Please log in"));
+        if (!encoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Current password is wrong");
+        }
+        if (newPassword == null || newPassword.length() < MIN_PASSWORD_LENGTH) {
+            throw new IllegalArgumentException("New password must have at least " + MIN_PASSWORD_LENGTH + " characters");
+        }
+        user.changePasswordHash(encoder.encode(newPassword));
     }
 
     public Optional<Long> resolve(String token) {

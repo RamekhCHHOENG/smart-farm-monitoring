@@ -32,6 +32,7 @@ public class ScheduledTask {
 
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Set<DayOfWeek> repeatDays = EnumSet.noneOf(DayOfWeek.class);
 
     private int durationMin;

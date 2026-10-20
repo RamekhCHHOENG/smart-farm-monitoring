@@ -23,6 +23,8 @@ spring:
 farm:
   device-key: ${FARM_DEVICE_KEY:}
   demo-password: ${FARM_DEMO_PASSWORD:}
+  # false = start with an empty farm (no demo zones) for a real installation
+  demo-data: ${FARM_DEMO_DATA:true}
   session-ttl: PT12H
   sensor-offline-after: PT2M
   cors:
