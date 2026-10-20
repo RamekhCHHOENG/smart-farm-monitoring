@@ -1,0 +1,47 @@
+# Secrets are read ONLY from environment variables (see ../.env.example). Never put real values here.
+server:
+  port: ${PORT:8080}
+  error:
+    include-stacktrace: never
+
+spring:
+  application:
+    name: smart-farm
+  datasource:
+    # Local file database for development; use the "postgres" profile for a real server.
+    url: ${DB_URL:jdbc:h2:file:./data/smartfarm;AUTO_SERVER=TRUE}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  h2:
+    console:
+      enabled: false
+
+farm:
+  device-key: ${FARM_DEVICE_KEY:}
+  demo-password: ${FARM_DEMO_PASSWORD:}
+  session-ttl: PT12H
+  sensor-offline-after: PT2M
+  cors:
+    allowed-origins: ${FARM_CORS_ORIGINS:http://localhost:3000}
+  simulator:
+    enabled: ${FARM_SIMULATOR_ENABLED:true}
+    interval-ms: 5000
+  scheduler:
+    interval-ms: 10000
+  telegram:
+    bot-token: ${TELEGRAM_BOT_TOKEN:}
+    chat-id: ${TELEGRAM_CHAT_ID:}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
