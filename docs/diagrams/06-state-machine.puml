@@ -1,0 +1,29 @@
+@startuml state-machine
+!include style.iuml
+hide empty description
+
+[*] --> IDLE : install()
+IDLE : entry / logIdle()
+RUNNING : entry / startMotor()
+RUNNING : do / trackRuntime()
+RUNNING : exit / logRuntime()
+FAULT : entry / raiseAlert()
+OFFLINE : entry / notifyTechnician()
+MAINTENANCE : do / runDiagnostics()
+DECOMMISSIONED : entry / keepLogsOnly()
+
+IDLE --> RUNNING : activate(d) [d > 0 && d <= maxRunMinutes]
+RUNNING --> IDLE : deactivate()
+RUNNING --> IDLE : after(d) / safety shut-off
+IDLE --> FAULT : errorDetected()
+RUNNING --> FAULT : errorDetected()
+IDLE --> OFFLINE : heartbeatLost()
+RUNNING --> OFFLINE : heartbeatLost()
+OFFLINE --> IDLE : heartbeatRestored()
+OFFLINE --> MAINTENANCE : startRepair()
+FAULT --> MAINTENANCE : startRepair()
+MAINTENANCE --> IDLE : repairDone() [testPassed]
+MAINTENANCE --> MAINTENANCE : repairDone() [!testPassed]
+MAINTENANCE --> DECOMMISSIONED : decommission()
+DECOMMISSIONED --> [*]
+@enduml

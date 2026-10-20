@@ -1,0 +1,79 @@
+@startuml domain-model
+!include style.iuml
+hide circle
+hide methods
+skinparam nodesep 50
+skinparam ranksep 70
+
+class User {
+  userId
+  username
+  name
+  role
+}
+class Farm {
+  farmId
+  name
+  location
+}
+class Zone {
+  zoneId
+  name
+  zoneType
+}
+class Sensor {
+  sensorId
+  sensorType
+  unit
+  online
+}
+class Actuator {
+  actuatorId
+  actuatorType
+  status
+  maxRunMinutes
+}
+class SensorReading {
+  readingId
+  value
+  recordedAt
+}
+class AutomationRule {
+  ruleId
+  condition
+  threshold
+  durationMin
+  isActive
+}
+class ScheduledTask {
+  taskId
+  runTime
+  repeatDays
+  durationMin
+}
+class Alert {
+  alertId
+  message
+  severity
+  status
+  raisedAt
+}
+class DeviceLog {
+  logId
+  action
+  source
+  at
+}
+
+User "1..*" -- "1" Farm : works on >
+Farm "1" -- "1..*" Zone : contains >
+Zone "1" -- "0..*" Sensor : has >
+Zone "1" -- "0..*" Actuator : has >
+Sensor "1" -- "0..*" SensorReading : produces >
+AutomationRule "0..*" -- "1" Sensor : monitors >
+AutomationRule "0..*" -- "0..1" Actuator : controls >
+ScheduledTask "0..*" -- "1" Actuator : triggers >
+AutomationRule "0..1" -- "0..*" Alert : raises >
+Actuator "1" -- "0..*" DeviceLog : recorded in >
+User "0..1" -- "0..*" Alert : acknowledges >
+@enduml

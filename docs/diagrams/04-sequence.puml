@@ -1,0 +1,63 @@
+@startuml sequence
+!include style.iuml
+autonumber
+skinparam responseMessageBelowArrow true
+
+participant ":SensorDevice" as Dev
+participant ":ReadingController" as Ctrl
+participant ":MonitoringService" as Mon
+participant "sensor:Sensor" as Sen
+participant ":ReadingRepository" as RRepo
+participant ":RuleRepository" as Rules
+participant "rule:AutomationRule" as Rule
+participant "actuator:Actuator" as Act
+participant ":AlertService" as AS
+participant ":NotificationService" as Notif
+
+Dev -> Ctrl ++ : submitReading(key, sensorId, value)
+Ctrl -> Ctrl : checkKey(key)
+Ctrl -> Mon ++ : processReading(sensorId, value)
+Mon -> Sen ++ : isValid(value)
+return valid: boolean
+
+alt valid == false
+  Mon -> Sen : markSuspect(now)
+  Mon --> Ctrl : INVALID
+  Ctrl --> Dev : 422 Unprocessable
+else valid == true
+  Mon -> Sen ++ : record(value, now)
+  create participant "reading:SensorReading" as Rd
+  Sen -> Rd : <<create>>
+  return reading
+  Mon -> RRepo ++ : save(reading)
+  return saved
+  Mon -> Rules ++ : findBySensorIdAndActiveTrue(sensorId)
+  return rules: List<AutomationRule>
+
+  loop for each rule in rules
+    Mon -> Rule ++ : isTriggered(reading, now)
+    return triggered: boolean
+    opt triggered == true
+      Mon -> Rule : markTriggered(now)
+      Mon -> Rule ++ : getActuator()
+      return actuator
+      alt actuator != null
+        Mon -> Act ++ : activate(durationMin, now)
+        Act -> Act : checkSafetyLimit(durationMin)
+        return activated: boolean
+        alt activated == false
+          Mon -> Mon : severity = CRITICAL
+        end
+      end
+      Mon -> AS ++ : raise(message, severity, zoneId, ruleId)
+      create participant ":Alert" as Al
+      AS -> Al : <<create>>
+      AS -> Notif ++ : send(alert)
+      return delivered: boolean
+      return alert
+    end
+  end
+  Mon --> Ctrl -- : ReadingResult (OK | ACTION_TAKEN)
+  Ctrl --> Dev -- : 201 Created
+end
+@enduml

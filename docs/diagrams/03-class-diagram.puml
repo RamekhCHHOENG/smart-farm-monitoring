@@ -1,0 +1,194 @@
+@startuml class-diagram
+!include style.iuml
+skinparam classAttributeIconSize 0
+skinparam nodesep 40
+skinparam ranksep 60
+
+package "domain" {
+  class Farm {
+    -id: Long
+    -name: String
+    -location: String
+    -zones: List<Zone>
+    +addCropZone(name, cropName): CropZone
+    +addPoultryZone(name, birdCount): PoultryZone
+    +removeZone(zone): void
+  }
+
+  abstract class Zone {
+    -id: Long
+    -name: String
+    -sensors: List<Sensor>
+    -actuators: List<Actuator>
+    +addSensor(type, name, simulated): Sensor
+    +addActuator(type, name, maxRunMinutes): Actuator
+    +isCorrecting(sensor): boolean
+    +{abstract} createDefaultRules(): List<AutomationRule>
+  }
+  class CropZone {
+    -cropName: String
+    +createDefaultRules(): List<AutomationRule>
+  }
+  class PoultryZone {
+    -birdCount: int
+    +createDefaultRules(): List<AutomationRule>
+  }
+
+  abstract class Sensor {
+    -id: Long
+    -name: String
+    -online: boolean
+    -suspect: boolean
+    -lastSeenAt: Instant
+    +isValid(value: double): boolean
+    +record(value: double, at: Instant): SensorReading
+    +markSuspect(at: Instant): void
+    +{abstract} getUnit(): String
+    +{abstract} getCorrectiveActuatorType(): ActuatorType
+    +{abstract} simulateNext(prev, correcting, random): double
+  }
+  class SoilMoistureSensor
+  class TemperatureSensor
+  class FeedLevelSensor
+
+  class SensorReading {
+    -id: Long
+    -sensor: Sensor
+    -value: double
+    -recordedAt: Instant
+    +getSensorId(): Long
+  }
+
+  abstract class Actuator {
+    -id: Long
+    -name: String
+    -status: ActuatorStatus
+    -maxRunMinutes: int
+    -runningUntil: Instant
+    +activate(durationMin: int, now: Instant): boolean
+    +deactivate(): boolean
+    +isRunExpired(now: Instant): boolean
+    +reportFault(): void
+    +heartbeatLost(): void
+    +heartbeatRestored(): void
+    +startRepair(): void
+    +completeRepair(testPassed: boolean): boolean
+    +decommission(): void
+    -checkSafetyLimit(durationMin: int): boolean
+    +{abstract} getActionVerb(): String
+  }
+  class WaterPump
+  class Fan
+  class Feeder
+
+  enum ActuatorStatus {
+    IDLE
+    RUNNING
+    FAULT
+    OFFLINE
+    MAINTENANCE
+    DECOMMISSIONED
+  }
+
+  class AutomationRule {
+    -id: Long
+    -condition: Condition
+    -threshold: double
+    -durationMin: int
+    -severity: Severity
+    -active: boolean
+    -cooldownMinutes: int
+    -lastTriggeredAt: Instant
+    +isTriggered(r: SensorReading, now: Instant): boolean
+    +markTriggered(now: Instant): void
+    +getActuator(): Actuator
+    +describeBreach(r: SensorReading): String
+  }
+
+  class ScheduledTask {
+    -runTime: LocalTime
+    -repeatDays: Set<DayOfWeek>
+    -durationMin: int
+    -lastRunDate: LocalDate
+    +isDue(now: LocalDateTime): boolean
+    +markRun(date: LocalDate): void
+  }
+
+  class Alert {
+    -message: String
+    -severity: Severity
+    -status: AlertStatus
+    -raisedAt: Instant
+    +acknowledge(user: AppUser, now: Instant): void
+  }
+  class DeviceLog {
+    -action: String
+    -source: LogSource
+    -userName: String
+    -at: Instant
+  }
+  class AppUser {
+    -username: String
+    -passwordHash: String
+    -role: Role
+  }
+}
+
+package "service" {
+  class ReadingController <<controller>> {
+    +submitReading(key, request): ResponseEntity
+  }
+  class MonitoringService {
+    +processReading(sensorId: Long, value: double): ReadingResult
+    -respond(rule, reading, now): String
+  }
+  class AlertService {
+    +raise(message, severity, zoneId, ruleId): Alert
+    +acknowledge(userId, alertId): Alert
+  }
+  class ActuatorService {
+    +turnOn(userId, actuatorId, durationMin): Actuator
+    +turnOff(userId, actuatorId): Actuator
+    +lifecycle(userId, actuatorId, action, testPassed): Actuator
+    +stopExpiredRuns(): int
+  }
+  interface SensorReadingRepository <<interface>>
+  interface AutomationRuleRepository <<interface>>
+  interface NotificationService <<interface>> {
+    +send(alert: Alert): boolean
+  }
+  class ConsoleNotifier
+  class TelegramNotifier {
+    -chatId: String
+  }
+}
+
+Farm "1" *-- "1..*" Zone
+Zone <|-- CropZone
+Zone <|-- PoultryZone
+Zone "1" *-- "0..*" Sensor
+Zone "1" *-- "0..*" Actuator
+Sensor <|-- SoilMoistureSensor
+Sensor <|-- TemperatureSensor
+Sensor <|-- FeedLevelSensor
+Actuator <|-- WaterPump
+Actuator <|-- Fan
+Actuator <|-- Feeder
+Actuator --> ActuatorStatus
+Sensor ..> SensorReading : <<create>>
+SensorReading "0..*" --> "1" Sensor
+AutomationRule "0..*" --> "1" Sensor : monitors
+AutomationRule "0..*" --> "0..1" Actuator : controls
+ScheduledTask "0..*" --> "1" Actuator : triggers
+
+ReadingController --> MonitoringService
+MonitoringService --> SensorReadingRepository
+MonitoringService --> AutomationRuleRepository
+MonitoringService --> AlertService
+AlertService --> NotificationService : <<uses>>
+AlertService ..> Alert : <<create>>
+NotificationService <|.. ConsoleNotifier
+NotificationService <|.. TelegramNotifier
+ActuatorService ..> DeviceLog : <<create>>
+Alert ..> AppUser
+@enduml

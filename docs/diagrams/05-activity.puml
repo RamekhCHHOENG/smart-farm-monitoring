@@ -1,0 +1,46 @@
+@startuml activity
+!include style.iuml
+
+|Sensor Device|
+start
+:Capture reading;
+:Send reading with device key;
+|Monitoring System|
+if (Device key valid?) then (no)
+  :Reject request (403);
+  stop
+else (yes)
+endif
+:Validate reading range;
+if (Reading valid?) then (no)
+  :Log sensor fault;
+  :Mark sensor as suspect;
+  stop
+else (yes)
+endif
+:Save reading;
+:Update dashboard;
+:Evaluate active rules;
+if (Threshold breached\nand not in cooldown?) then (no)
+  stop
+else (yes)
+endif
+fork
+  |Actuator|
+  :Check safety limit and status;
+  :Activate pump / fan / feeder\n(refuse if unsafe or not IDLE);
+fork again
+  |Monitoring System|
+  :Create alert\n(CRITICAL if actuator refused);
+  :Send alert via Notification Service;
+end fork
+|Monitoring System|
+:Log device action;
+|Farm Worker|
+:Receive and acknowledge alert;
+:Verify zone condition on site;
+|Monitoring System|
+:Stop actuator after run time\n(safety shut-off);
+:Log resolution;
+stop
+@enduml

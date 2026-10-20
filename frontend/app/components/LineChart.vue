@@ -61,7 +61,8 @@ const hovered = computed(() => (hover.value === null ? null : props.points[hover
           <line :x1="PAD.l" :x2="W - PAD.r" :y1="y(v)" :y2="y(v)" stroke="var(--border)" />
           <text :x="PAD.l - 6" :y="y(v) + 4" text-anchor="end" fill="currentColor">{{ v.toFixed(0) }}</text>
         </g>
-        <text v-for="t in xTicks" :key="`x${t}`" :x="x(t)" :y="H - 8" text-anchor="middle" fill="currentColor">
+        <text v-for="(t, i) in xTicks" :key="`x${t}`" :x="x(t)" :y="H - 8"
+          :text-anchor="i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'" fill="currentColor">
           {{ new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }}
         </text>
       </g>

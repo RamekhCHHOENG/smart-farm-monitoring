@@ -1,0 +1,42 @@
+@startuml architecture
+!include style.iuml
+left to right direction
+
+node "User's browser" {
+  component "Nuxt 4 SPA\n(Vue 3 + designkit)" as SPA
+}
+
+node "Web server" {
+  component "Nuxt server\n/api proxy" as Proxy
+}
+
+node "Application server (Java 21)" {
+  component "REST controllers\n+ AuthInterceptor" as Web
+  component "Services\n(Monitoring, Actuator, Rule,\nTask, Alert, Auth)" as Svc
+  component "Domain model\n(entities, state machine)" as Dom
+  component "Spring Data JPA\nrepositories" as Repo
+  component "AutomationScheduler\n(every 10 s)" as Sched
+  component "DeviceSimulator\n(optional)" as Sim
+  interface NotificationService as NS
+}
+
+database "H2 (dev) /\nPostgreSQL (prod)" as DB
+
+node "Farm zone" {
+  component "ESP32 node\nsoil + temperature + relay" as ESP
+}
+
+cloud "Telegram Bot API" as TG
+
+SPA --> Proxy : HTTPS, Bearer token
+Proxy --> Web : HTTP /api/**
+ESP --> Web : HTTP X-Device-Key\nPOST readings, GET relay state
+Sim --> Svc : processReading()
+Web --> Svc
+Sched --> Svc
+Svc --> Dom
+Svc --> Repo
+Repo --> DB : JDBC
+Svc --> NS
+NS --> TG : sendMessage
+@enduml

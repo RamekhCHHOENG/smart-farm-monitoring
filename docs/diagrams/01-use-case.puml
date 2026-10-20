@@ -1,0 +1,45 @@
+@startuml use-case
+!include style.iuml
+left to right direction
+
+actor "Farm Owner" as Owner
+actor "Farm Worker" as Worker
+actor "Technician" as Tech
+actor "Sensor Device\n<<external system>>" as Device
+actor "Notification Service\n<<external system>>" as Notifier
+
+rectangle "Smart Farm Monitoring System" {
+  usecase "UC-1 Manage Zones" as UC1
+  usecase "UC-2 Register Device" as UC2
+  usecase "UC-3 Submit Sensor Reading" as UC3
+  usecase "UC-4 Configure Automation Rule" as UC4
+  usecase "UC-5 Schedule Farm Task" as UC5
+  usecase "UC-6 Control Actuator Manually" as UC6
+  usecase "UC-7 Monitor Zone Dashboard" as UC7
+  usecase "UC-8 View History & Reports" as UC8
+  usecase "UC-9 Acknowledge Alert" as UC9
+  usecase "UC-10 Maintain Device" as UC10
+  usecase "Evaluate Rules" as Eval
+  usecase "Log Device Action" as Log
+  usecase "Send Alert" as Alert
+}
+
+Owner --> UC1
+Owner --> UC4
+Owner --> UC5
+Owner --> UC7
+Owner --> UC8
+Worker --> UC6
+Worker --> UC7
+Worker --> UC9
+Tech --> UC2
+Tech --> UC10
+Tech --> UC9
+Device --> UC3
+
+UC3 ..> Eval : <<include>>
+UC6 ..> Log : <<include>>
+UC10 ..> Log : <<include>>
+Alert ..> Eval : <<extend>>\n[threshold breached]
+Alert --> Notifier
+@enduml
