@@ -26,7 +26,7 @@ public class SoilMoistureSensor extends Sensor {
     /** Soil dries slowly in the sun and gets wet quickly while the pump runs. */
     @Override
     public double simulateNext(double previous, boolean correcting, Random random) {
-        double delta = correcting ? 4 + random.nextDouble() * 3 : -(0.5 + random.nextDouble());
+        double delta = correcting ? 0.8 + random.nextDouble() * 0.6 : -(0.15 + random.nextDouble() * 0.35);
         return clamp(previous + delta);
     }
 }

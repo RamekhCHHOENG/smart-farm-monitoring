@@ -26,7 +26,7 @@ public class FeedLevelSensor extends Sensor {
     /** Birds eat steadily; the feeder refills the tray quickly. */
     @Override
     public double simulateNext(double previous, boolean correcting, Random random) {
-        double delta = correcting ? 12 + random.nextDouble() * 6 : -(0.8 + random.nextDouble());
+        double delta = correcting ? 2 + random.nextDouble() : -(0.1 + random.nextDouble() * 0.3);
         return clamp(previous + delta);
     }
 }
