@@ -60,14 +60,15 @@ The simulator starts sending readings right away. Each user can change their pas
 
 ### Real installation (your own farm)
 
-Start the backend once with `FARM_DEMO_DATA=false` and a fixed `FARM_DEVICE_KEY` to get an empty farm.
+Start the backend once with `FARM_DEMO_DATA=false`, a fixed `FARM_DEVICE_KEY` and `FARM_TIME_ZONE=Asia/Phnom_Penh`
+(schedules run on this clock, which matters on a cloud server set to UTC) to get an empty farm.
 Then follow **[docs/HARDWARE.md](docs/HARDWARE.md)**: name the farm, add a zone, register a real sensor,
 and test it with `scripts/fake-device.mjs` (no hardware) or an ESP32 (about USD 6-12 minimal kit).
 
 ### Tests
 
 ```bash
-cd backend && mvn test          # 22 tests: domain rules, state machine, API flows, permissions, real-device setup
+cd backend && mvn test          # 24 tests: domain rules, state machine, API flows, permissions, real-device setup
 cd frontend && npm run typecheck
 # Browser walkthrough of every use case as owner, technician and worker (23 steps), see the header of:
 scripts/e2e-walkthrough.mjs
