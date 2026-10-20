@@ -1,11 +1,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
+/* Khmer script: Geist has no Khmer glyphs, so Khmer text falls through to Noto Sans Khmer */
+@import "@fontsource-variable/noto-sans-khmer";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-sans: 'Geist Variable', 'Noto Sans Khmer Variable', sans-serif;
   --font-heading: var(--font-sans);
   --font-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",

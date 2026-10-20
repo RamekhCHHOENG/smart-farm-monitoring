@@ -1,7 +1,10 @@
-/** Error text from a Spring ProblemDetail response, or a generic fallback. */
+/** Error text a farm worker can act on: the server's own explanation, or what went wrong in plain words. */
 export function errorMessage(e: unknown): string {
-  const err = e as { data?: { detail?: string }; message?: string };
-  return err?.data?.detail || err?.message || "Something went wrong";
+  const err = e as { data?: { detail?: string }; statusCode?: number; message?: string };
+  if (err?.data?.detail) return err.data.detail;
+  if (!err?.statusCode) return "Cannot reach the server. Check that the backend is running and your network is on.";
+  if (err.statusCode >= 500) return "The server had a problem. Try again in a moment.";
+  return err.message || "Something went wrong";
 }
 
 /** $fetch with the login token attached. A 401 sends the user back to the login page. */
@@ -15,7 +18,7 @@ export function useApi() {
       async onResponseError({ response }) {
         if (response.status === 401) {
           clear();
-          await navigateTo("/login");
+          await navigateTo({ path: "/login", query: { expired: "1" } });
         }
       },
     }) as Promise<T>;

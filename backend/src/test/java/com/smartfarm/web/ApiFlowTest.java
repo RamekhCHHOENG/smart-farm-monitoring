@@ -54,6 +54,13 @@ class ApiFlowTest {
         mvc.perform(get("/api/alerts").param("status", "OPEN").header("Authorization", "Bearer " + owner))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].message").value(org.hamcrest.Matchers.containsString("Water pump A started")));
+
+        // Acknowledge all clears the open list
+        mvc.perform(post("/api/alerts/acknowledge-all").header("Authorization", "Bearer " + owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(org.hamcrest.Matchers.greaterThan(0)));
+        mvc.perform(get("/api/alerts").param("status", "OPEN").header("Authorization", "Bearer " + owner))
+                .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test
@@ -91,6 +98,28 @@ class ApiFlowTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"x\",\"sensorId\":1,\"condition\":\"BELOW\",\"threshold\":5,\"durationMin\":0,\"severity\":\"INFO\"}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void humanMistakesGetClearAnswers() throws Exception {
+        // People type "Owner " on phones: username is trimmed and case-insensitive
+        String owner = login("  Owner ");
+
+        // A threshold the sensor can never report is refused with the valid range
+        mvc.perform(post("/api/rules").header("Authorization", "Bearer " + owner)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"x\",\"sensorId\":1,\"condition\":\"BELOW\",\"threshold\":150,\"durationMin\":0,\"severity\":\"INFO\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Threshold must be between 0 and 100 % for Soil moisture A1"));
+
+        // Validation messages use the form's labels, not Java field names
+        mvc.perform(post("/api/zones").header("Authorization", "Bearer " + owner)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"POULTRY\",\"name\":\"  \",\"birdCount\":-5}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("Name: please fill this in"),
+                        org.hamcrest.Matchers.containsString("Number of birds: cannot be negative"))));
     }
 
     private String login(String username) throws Exception {

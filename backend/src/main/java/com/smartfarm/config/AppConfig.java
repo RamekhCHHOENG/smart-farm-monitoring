@@ -17,6 +17,7 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.time.Clock;
+import java.time.ZoneId;
 
 @Configuration
 @EnableScheduling
@@ -31,10 +32,13 @@ public class AppConfig implements WebMvcConfigurer {
         this.authInterceptor = authInterceptor;
     }
 
-    /** Injected clock so tests can control time. */
+    /**
+     * The farm's clock. Schedules such as "feed at 07:00" use this time zone, so a server
+     * running in UTC still feeds at 07:00 in Cambodia. Injected so tests can control time.
+     */
     @Bean
-    public Clock clock() {
-        return Clock.systemDefaultZone();
+    public Clock clock(@Value("${farm.time-zone:}") String timeZone) {
+        return timeZone.isBlank() ? Clock.systemDefaultZone() : Clock.system(ZoneId.of(timeZone));
     }
 
     @Bean

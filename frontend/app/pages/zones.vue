@@ -48,6 +48,7 @@ const farmForm = reactive({ name: "", location: "" });
 
 function openFarm() {
   Object.assign(farmForm, { name: farm.value?.name ?? "", location: farm.value?.location ?? "" });
+  error.value = "";
   farmDialog.value = true;
 }
 
@@ -65,6 +66,7 @@ function openZone(zone?: Zone) {
   Object.assign(zoneForm, zone
     ? { id: zone.id, type: zone.type, name: zone.name, cropName: zone.cropName ?? "", birdCount: zone.birdCount ?? 0 }
     : { id: 0, type: "CROP", name: "", cropName: "", birdCount: 0 });
+  error.value = "";
   zoneDialog.value = true;
 }
 
@@ -89,6 +91,7 @@ const deviceForm = reactive({ zoneId: 0, kind: "sensor" as "sensor" | "actuator"
 
 function openDevice(zone: Zone) {
   Object.assign(deviceForm, { zoneId: zone.id, kind: "sensor", name: "", simulated: true, maxRunMinutes: 10 });
+  error.value = "";
   deviceDialog.value = true;
 }
 
@@ -137,7 +140,7 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: object) {
       </CardHeader>
     </Card>
 
-    <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
+    <Alert v-if="error && !(farmDialog || zoneDialog || deviceDialog)" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
     <Alert v-if="notice" class="mb-4"><AlertDescription>{{ notice }}</AlertDescription></Alert>
 
     <div class="flex flex-col gap-4">
@@ -155,8 +158,36 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: object) {
             <Button v-if="can()" size="icon-sm" variant="ghost" :aria-label="`Delete ${zone.name}`" @click="deleteZone(zone)"><Trash2 /></Button>
           </CardAction>
         </CardHeader>
-        <CardContent class="overflow-x-auto">
-          <Table>
+        <CardContent>
+          <!-- Phones: one stacked card per device, so status and actions stay visible -->
+          <div class="flex flex-col gap-2 md:hidden">
+            <p v-if="!zone.sensors.length && !zone.actuators.length" class="py-4 text-center text-sm text-muted-foreground">No devices registered yet.</p>
+            <div v-for="s in zone.sensors" :key="`ms${s.id}`" class="flex flex-col gap-2 rounded-lg border p-3">
+              <div class="flex items-center gap-2">
+                <span class="font-medium">{{ s.name }}</span>
+                <span class="text-xs text-muted-foreground">#{{ s.id }}</span>
+                <span class="ml-auto"><StatusBadge :status="s.online ? (s.suspect ? 'WARNING' : 'ONLINE') : 'OFFLINE'" /></span>
+              </div>
+              <p class="text-sm text-muted-foreground">{{ sensorLabels[s.type] }} sensor · {{ s.simulated ? "simulated" : "real device" }}</p>
+              <Button v-if="can('TECHNICIAN')" size="sm" variant="outline" class="self-start"
+                @click="ask(`Remove ${s.name}?`) && act(() => api(`/api/sensors/${s.id}`, { method: 'DELETE' }), 'Sensor removed')">Remove</Button>
+            </div>
+            <div v-for="a in zone.actuators" :key="`ma${a.id}`" class="flex flex-col gap-2 rounded-lg border p-3">
+              <div class="flex items-center gap-2">
+                <span class="font-medium">{{ a.name }}</span>
+                <span class="text-xs text-muted-foreground">#{{ a.id }}</span>
+                <span class="ml-auto"><StatusBadge :status="a.status" /></span>
+              </div>
+              <p class="text-sm text-muted-foreground">{{ actuatorLabels[a.type] }} · max {{ a.maxRunMinutes }} min</p>
+              <div v-if="can('TECHNICIAN')" class="flex flex-wrap gap-1">
+                <Button v-for="o in lifecycleOptions[a.status] ?? []" :key="o.label" size="sm" variant="outline"
+                  @click="lifecycle(a, o.action, o.body)">{{ o.label }}</Button>
+                <Button v-if="a.status === 'DECOMMISSIONED'" size="sm" variant="ghost"
+                  @click="act(() => api(`/api/actuators/${a.id}`, { method: 'DELETE' }), 'Actuator removed')">Remove</Button>
+              </div>
+            </div>
+          </div>
+          <Table class="hidden md:table">
             <TableHeader>
               <TableRow>
                 <TableHead>Device</TableHead>
@@ -212,6 +243,7 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: object) {
             <Label for="farm-location">Location</Label>
             <Input id="farm-location" v-model="farmForm.location" maxlength="120" placeholder="e.g. Takeo, Cambodia" />
           </div>
+          <FormError :message="error" />
           <DialogFooter><Button type="submit">Save</Button></DialogFooter>
         </form>
       </DialogContent>
@@ -243,6 +275,7 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: object) {
             <Label for="birds">Number of birds</Label>
             <Input id="birds" v-model.number="zoneForm.birdCount" type="number" min="0" />
           </div>
+          <FormError :message="error" />
           <DialogFooter><Button type="submit">Save</Button></DialogFooter>
         </form>
       </DialogContent>
@@ -288,6 +321,7 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: object) {
             <Label for="maxrun">Safety limit (max minutes per run)</Label>
             <Input id="maxrun" v-model.number="deviceForm.maxRunMinutes" type="number" min="1" max="240" />
           </div>
+          <FormError :message="error" />
           <DialogFooter><Button type="submit">Register</Button></DialogFooter>
         </form>
       </DialogContent>

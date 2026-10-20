@@ -11,6 +11,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /** Maps domain errors to HTTP status codes with an RFC 9457 problem body. */
@@ -55,11 +56,36 @@ public class ApiExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid value '" + e.getValue() + "' for " + e.getName());
     }
 
+    /** Field names as people see them on the forms. */
+    private static final Map<String, String> LABELS = Map.ofEntries(
+            Map.entry("name", "Name"), Map.entry("type", "Type"), Map.entry("location", "Location"),
+            Map.entry("birdCount", "Number of birds"), Map.entry("cropName", "Crop"),
+            Map.entry("sensorId", "Sensor"), Map.entry("actuatorId", "Actuator"), Map.entry("condition", "Condition"),
+            Map.entry("threshold", "Threshold"), Map.entry("durationMin", "Run time (minutes)"),
+            Map.entry("severity", "Severity"), Map.entry("cooldownMinutes", "Cooldown (minutes)"),
+            Map.entry("maxRunMinutes", "Safety limit (minutes)"), Map.entry("runTime", "Time"),
+            Map.entry("repeatDays", "Days"), Map.entry("value", "Value"),
+            Map.entry("username", "Username"), Map.entry("password", "Password"),
+            Map.entry("currentPassword", "Current password"), Map.entry("newPassword", "New password"));
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ProblemDetail invalid(MethodArgumentNotValidException e) {
         String detail = e.getBindingResult().getFieldErrors().stream()
-                .map(f -> f.getField() + " " + f.getDefaultMessage())
+                .map(f -> LABELS.getOrDefault(f.getField(), f.getField()) + ": " + friendly(f.getCode(), f.getDefaultMessage()))
+                .distinct()
                 .collect(Collectors.joining("; "));
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
+    }
+
+    private static String friendly(String code, String fallback) {
+        if (code == null) {
+            return fallback;
+        }
+        return switch (code) {
+            case "NotBlank", "NotNull", "NotEmpty" -> "please fill this in";
+            case "PositiveOrZero" -> "cannot be negative";
+            case "Positive" -> "must be more than 0";
+            default -> fallback;
+        };
     }
 }

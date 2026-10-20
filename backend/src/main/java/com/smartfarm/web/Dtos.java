@@ -6,6 +6,7 @@ import jakarta.validation.constraints.*;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
@@ -52,7 +53,7 @@ public final class Dtos {
                           List<SensorDto> sensors, List<ActuatorDto> actuators) {
     }
 
-    public record FarmDto(Long id, String name, String location, long openAlerts, List<ZoneDto> zones) {
+    public record FarmDto(Long id, String name, String location, String timeZone, long openAlerts, List<ZoneDto> zones) {
     }
 
     public record RuleDto(Long id, String name, Long sensorId, String sensorName, Long zoneId, String zoneName,
@@ -71,11 +72,11 @@ public final class Dtos {
 
     public record TaskDto(Long id, String name, Long actuatorId, String actuatorName, Long zoneId, String zoneName,
                           LocalTime runTime, Set<DayOfWeek> repeatDays, int durationMin, boolean active,
-                          LocalDate lastRunDate) {
-        static TaskDto of(ScheduledTask t) {
+                          LocalDate lastRunDate, LocalDateTime nextRun) {
+        static TaskDto of(ScheduledTask t, LocalDateTime now) {
             Actuator a = t.getActuator();
             return new TaskDto(t.getId(), t.getName(), a.getId(), a.getName(), a.getZone().getId(), a.getZone().getName(),
-                    t.getRunTime(), t.getRepeatDays(), t.getDurationMin(), t.isActive(), t.getLastRunDate());
+                    t.getRunTime(), t.getRepeatDays(), t.getDurationMin(), t.isActive(), t.getLastRunDate(), t.nextRun(now));
         }
     }
 

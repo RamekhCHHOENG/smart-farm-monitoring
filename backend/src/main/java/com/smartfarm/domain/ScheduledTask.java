@@ -62,6 +62,22 @@ public class ScheduledTask {
                 && (lastRunDate == null || lastRunDate.isBefore(now.toLocalDate()));
     }
 
+    /** The next time this task will start, or null when it is paused. */
+    public LocalDateTime nextRun(LocalDateTime now) {
+        if (!active) {
+            return null;
+        }
+        for (int day = 0; day <= 7; day++) {
+            LocalDate date = now.toLocalDate().plusDays(day);
+            boolean alreadyRan = lastRunDate != null && !lastRunDate.isBefore(date);
+            boolean stillInWindow = day > 0 || now.toLocalTime().isBefore(runTime.plusMinutes(GRACE_MINUTES));
+            if (repeatDays.contains(date.getDayOfWeek()) && !alreadyRan && stillInWindow) {
+                return LocalDateTime.of(date, runTime);
+            }
+        }
+        return null;
+    }
+
     public void markRun(LocalDate date) {
         lastRunDate = date;
     }

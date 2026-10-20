@@ -25,6 +25,8 @@ farm:
   demo-password: ${FARM_DEMO_PASSWORD:}
   # false = start with an empty farm (no demo zones) for a real installation
   demo-data: ${FARM_DEMO_DATA:true}
+  # Time zone of the farm for schedules, e.g. Asia/Phnom_Penh (empty = the server's own zone)
+  time-zone: ${FARM_TIME_ZONE:}
   session-ttl: PT12H
   sensor-offline-after: PT2M
   cors:

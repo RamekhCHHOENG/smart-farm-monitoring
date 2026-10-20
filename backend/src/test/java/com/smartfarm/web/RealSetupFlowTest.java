@@ -26,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:realsetup;DB_CLOSE_DELAY=-1",
         "farm.demo-data=false",
+        "farm.time-zone=Asia/Phnom_Penh",
         "farm.simulator.enabled=false",
         "farm.scheduler.interval-ms=3600000",
         "farm.device-key=test-device-key",
@@ -54,7 +55,8 @@ class RealSetupFlowTest {
 
         // Clean start: farm exists, no zones
         call(get("/api/farm"), owner).andExpect(status().isOk())
-                .andExpect(jsonPath("$.zones.length()").value(0));
+                .andExpect(jsonPath("$.zones.length()").value(0))
+                .andExpect(jsonPath("$.timeZone").value("Asia/Phnom_Penh"));
 
         // UC-1: owner names the farm and adds a zone
         call(put("/api/farm").contentType(MediaType.APPLICATION_JSON)

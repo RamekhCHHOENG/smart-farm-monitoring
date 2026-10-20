@@ -8,7 +8,9 @@ import type { Alert as FarmAlert, Farm } from "~/utils/types";
 const api = useApi();
 const farm = ref<Farm | null>(null);
 const recentAlerts = ref<FarmAlert[]>([]);
-const error = ref("");
+// Connection problems clear themselves when the server answers again;
+// errors from a button show next to that button (ActuatorControl).
+const connectionError = ref("");
 const openAlerts = useState<number>("openAlerts", () => 0);
 
 async function load() {
@@ -20,8 +22,9 @@ async function load() {
     farm.value = f;
     recentAlerts.value = alerts.slice(0, 5);
     openAlerts.value = f.openAlerts;
+    connectionError.value = "";
   } catch (e) {
-    error.value = errorMessage(e);
+    connectionError.value = `${errorMessage(e)} Retrying every 4 seconds...`;
   }
 }
 usePolling(load, 4000);
@@ -43,8 +46,8 @@ const stats = computed(() => {
   <div>
     <PageHeader :title="farm?.name ?? 'Dashboard'" :description="farm ? `${farm.location} · live, refreshes every 4 seconds` : 'Loading…'" />
 
-    <Alert v-if="error" variant="destructive" class="mb-4">
-      <AlertDescription>{{ error }}</AlertDescription>
+    <Alert v-if="connectionError" variant="destructive" class="mb-4">
+      <AlertDescription>{{ connectionError }}</AlertDescription>
     </Alert>
 
     <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -93,7 +96,6 @@ const stats = computed(() => {
               :key="a.id"
               :actuator="a"
               @changed="load"
-              @error="(m) => (error = m)"
             />
           </CardContent>
         </Card>

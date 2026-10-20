@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,7 +48,8 @@ public class AuthService {
     }
 
     public LoginResult login(String username, String password) {
-        AppUser user = users.findByUsername(username)
+        String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
+        AppUser user = users.findByUsername(normalized)
                 .filter(u -> encoder.matches(password, u.getPasswordHash()))
                 // Same message for unknown user and wrong password, so usernames cannot be discovered.
                 .orElseThrow(() -> new UnauthorizedException("Wrong username or password"));

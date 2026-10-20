@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check } from "lucide-vue-next";
+import { Check, CheckCheck } from "lucide-vue-next";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +25,18 @@ async function load() {
 usePolling(load, 5000);
 watch(filter, load);
 
+const openCount = computed(() => alerts.value.filter((a) => a.status === "OPEN").length);
+
+async function acknowledgeAll() {
+  if (!window.confirm(`Acknowledge all ${openCount.value} open alerts? Do this after checking the farm.`)) return;
+  try {
+    await api("/api/alerts/acknowledge-all", { method: "POST" });
+    await load();
+  } catch (e) {
+    error.value = errorMessage(e);
+  }
+}
+
 async function acknowledge(a: FarmAlert) {
   try {
     await api(`/api/alerts/${a.id}/acknowledge`, { method: "POST" });
@@ -38,6 +50,9 @@ async function acknowledge(a: FarmAlert) {
 <template>
   <div>
     <PageHeader title="Alerts" description="Threshold breaches, device faults and offline sensors. Staff acknowledge an alert after checking the zone on site.">
+      <Button v-if="openCount > 0 && can('WORKER', 'TECHNICIAN')" variant="outline" @click="acknowledgeAll">
+        <CheckCheck /> Acknowledge all ({{ openCount }})
+      </Button>
       <Tabs v-model="filter">
         <TabsList>
           <TabsTrigger value="OPEN">Open</TabsTrigger>
@@ -48,7 +63,26 @@ async function acknowledge(a: FarmAlert) {
 
     <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
 
-    <Card>
+    <!-- Phones: stacked cards so the whole message is readable -->
+    <div class="flex flex-col gap-3 md:hidden">
+      <p v-if="!alerts.length" class="py-6 text-center text-sm text-muted-foreground">No alerts.</p>
+      <Card v-for="a in alerts" :key="`m${a.id}`" class="gap-3 py-4">
+        <CardContent class="flex flex-col gap-2 px-4">
+          <div class="flex items-center gap-2">
+            <StatusBadge :status="a.severity" />
+            <StatusBadge :status="a.status" />
+            <span class="ml-auto text-xs text-muted-foreground">{{ timeAgo(a.raisedAt) }}</span>
+          </div>
+          <p class="text-sm">{{ a.message }}</p>
+          <p v-if="a.acknowledgedBy" class="text-xs text-muted-foreground">Acknowledged by {{ a.acknowledgedBy }}</p>
+          <Button v-if="a.status === 'OPEN' && can('WORKER', 'TECHNICIAN')" size="sm" variant="outline" class="self-start" @click="acknowledge(a)">
+            <Check /> Acknowledge
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+
+    <Card class="hidden md:flex">
       <CardContent class="overflow-x-auto">
         <Table>
           <TableHeader>

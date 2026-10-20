@@ -36,6 +36,7 @@ const form = reactive({ name: "", actuatorId: 0, runTime: "07:00", durationMin: 
 
 function open() {
   Object.assign(form, { name: "", actuatorId: actuators.value[0]?.id ?? 0, runTime: "07:00", durationMin: 3, repeatDays: [...DAYS] });
+  error.value = "";
   dialog.value = true;
 }
 
@@ -66,11 +67,12 @@ function days(list: string[]) {
 
 <template>
   <div>
-    <PageHeader title="Schedules" description="Recurring farm tasks such as feeding at 07:00 or watering at 17:00.">
+    <PageHeader title="Schedules"
+      :description="`Recurring farm tasks such as feeding at 07:00 or watering at 17:00. Times are farm time${farm ? ` (${farm.timeZone})` : ''}.`">
       <Button v-if="can()" :disabled="!actuators.length" @click="open()"><Plus /> New schedule</Button>
     </PageHeader>
 
-    <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
+    <Alert v-if="error && !(dialog)" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
 
     <Card>
       <CardContent class="overflow-x-auto">
@@ -82,7 +84,7 @@ function days(list: string[]) {
               <TableHead>Time</TableHead>
               <TableHead>Days</TableHead>
               <TableHead>Actuator</TableHead>
-              <TableHead>Last run</TableHead>
+              <TableHead>Next run</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -96,7 +98,7 @@ function days(list: string[]) {
               <TableCell class="tabular-nums">{{ t.runTime.slice(0, 5) }}</TableCell>
               <TableCell>{{ days(t.repeatDays) }}</TableCell>
               <TableCell>{{ t.actuatorName }} · {{ t.durationMin }} min <span class="text-muted-foreground">({{ t.zoneName }})</span></TableCell>
-              <TableCell class="text-muted-foreground">{{ t.lastRunDate ?? "—" }}</TableCell>
+              <TableCell :class="t.nextRun ? 'font-medium' : 'text-muted-foreground'">{{ formatNextRun(t.nextRun) }}</TableCell>
               <TableCell class="text-right">
                 <Button v-if="can()" size="icon-sm" variant="ghost" :aria-label="`Delete ${t.name}`"
                   @click="run(() => api(`/api/tasks/${t.id}`, { method: 'DELETE' }))"><Trash2 /></Button>
@@ -144,6 +146,7 @@ function days(list: string[]) {
                 :aria-pressed="form.repeatDays.includes(d)" @click="toggleDay(d)">{{ d.slice(0, 3) }}</Button>
             </div>
           </div>
+          <FormError :message="error" />
           <DialogFooter><Button type="submit" :disabled="!form.repeatDays.length">Save schedule</Button></DialogFooter>
         </form>
       </DialogContent>

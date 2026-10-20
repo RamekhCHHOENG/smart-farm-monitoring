@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useResizeObserver } from "@vueuse/core";
+
 /** Small dependency-free SVG line chart for sensor history, with optional threshold lines. */
 const props = defineProps<{
   points: { t: number; v: number }[];
@@ -6,8 +8,14 @@ const props = defineProps<{
   thresholds?: { value: number; label: string }[];
 }>();
 
-const W = 720;
+// Drawn at the container's real width, so labels keep their size on a phone.
+const wrap = ref<HTMLElement | null>(null);
+const W = ref(720);
 const H = 260;
+useResizeObserver(wrap, (entries) => {
+  const width = entries[0]?.contentRect.width;
+  if (width) W.value = Math.max(300, Math.round(width));
+});
 const PAD = { l: 44, r: 12, t: 12, b: 28 };
 
 const hover = ref<number | null>(null);
@@ -23,7 +31,7 @@ const domain = computed(() => {
   return { lo: lo - pad, hi: hi + pad, t0: Math.min(...times), t1: Math.max(...times, Math.min(...times) + 1) };
 });
 
-const x = (t: number) => PAD.l + ((t - domain.value.t0) / (domain.value.t1 - domain.value.t0)) * (W - PAD.l - PAD.r);
+const x = (t: number) => PAD.l + ((t - domain.value.t0) / (domain.value.t1 - domain.value.t0)) * (W.value - PAD.l - PAD.r);
 const y = (v: number) => PAD.t + (1 - (v - domain.value.lo) / (domain.value.hi - domain.value.lo)) * (H - PAD.t - PAD.b);
 
 const path = computed(() => props.points.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(""));
@@ -35,13 +43,14 @@ const yTicks = computed(() => {
 
 const xTicks = computed(() => {
   const { t0, t1 } = domain.value;
-  return Array.from({ length: 4 }, (_, i) => t0 + ((t1 - t0) * i) / 3);
+  const count = W.value < 520 ? 3 : 4;
+  return Array.from({ length: count }, (_, i) => t0 + ((t1 - t0) * i) / (count - 1));
 });
 
 function onMove(e: MouseEvent) {
   const svg = e.currentTarget as SVGSVGElement;
   const rect = svg.getBoundingClientRect();
-  const px = ((e.clientX - rect.left) / rect.width) * W;
+  const px = ((e.clientX - rect.left) / rect.width) * W.value;
   let best = 0;
   props.points.forEach((p, i) => {
     if (Math.abs(x(p.t) - px) < Math.abs(x(props.points[best]!.t) - px)) best = i;
@@ -53,7 +62,7 @@ const hovered = computed(() => (hover.value === null ? null : props.points[hover
 </script>
 
 <template>
-  <div class="relative">
+  <div ref="wrap" class="relative">
     <svg :viewBox="`0 0 ${W} ${H}`" class="h-auto w-full" role="img" :aria-label="`Sensor history in ${unit}`"
       @mousemove="onMove" @mouseleave="hover = null">
       <g class="text-muted-foreground" font-size="11">

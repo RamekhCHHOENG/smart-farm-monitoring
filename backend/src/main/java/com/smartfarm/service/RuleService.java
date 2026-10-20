@@ -39,6 +39,7 @@ public class RuleService {
     public AutomationRule create(Long userId, RuleCommand cmd) {
         access.require(userId);
         Sensor sensor = sensors.findById(cmd.sensorId()).orElseThrow(() -> new NotFoundException("Sensor", cmd.sensorId()));
+        checkThreshold(sensor, cmd.threshold());
         Actuator actuator = actuator(cmd, sensor);
         AutomationRule rule = new AutomationRule(cmd.name(), sensor, cmd.condition(), cmd.threshold(),
                 actuator, cmd.durationMin(), cmd.severity());
@@ -51,6 +52,7 @@ public class RuleService {
     public AutomationRule update(Long userId, Long ruleId, RuleCommand cmd) {
         access.require(userId);
         AutomationRule rule = get(ruleId);
+        checkThreshold(rule.getSensor(), cmd.threshold());
         rule.update(cmd.name(), cmd.condition(), cmd.threshold(), actuator(cmd, rule.getSensor()), cmd.durationMin(),
                 cmd.severity(), cmd.cooldownMinutes() != null ? cmd.cooldownMinutes() : rule.getCooldownMinutes());
         return rule;
@@ -68,6 +70,18 @@ public class RuleService {
         rules.delete(get(ruleId));
     }
 
+    /** A threshold the sensor can never report would make the rule fire on every reading, or never. */
+    private static void checkThreshold(Sensor sensor, double threshold) {
+        if (threshold < sensor.getMinValid() || threshold > sensor.getMaxValid()) {
+            throw new IllegalArgumentException("Threshold must be between %s and %s %s for %s".formatted(
+                    format(sensor.getMinValid()), format(sensor.getMaxValid()), sensor.getUnit(), sensor.getName()));
+        }
+    }
+
+    private static String format(double value) {
+        return value == Math.rint(value) ? String.valueOf((long) value) : String.valueOf(value);
+    }
+
     private Actuator actuator(RuleCommand cmd, Sensor sensor) {
         if (cmd.actuatorId() == null) {
             return null;
@@ -77,7 +91,7 @@ public class RuleService {
             throw new IllegalArgumentException("Sensor and actuator must be in the same zone");
         }
         if (cmd.durationMin() <= 0 || cmd.durationMin() > actuator.getMaxRunMinutes()) {
-            throw new IllegalArgumentException("Duration must be 1-" + actuator.getMaxRunMinutes() + " min for " + actuator.getName());
+            throw new IllegalArgumentException("Run time must be 1-" + actuator.getMaxRunMinutes() + " minutes for " + actuator.getName());
         }
         return actuator;
     }

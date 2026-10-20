@@ -11,7 +11,9 @@ definePageMeta({ layout: false });
 const { login } = useAuth();
 const username = ref("owner");
 const password = ref("");
+const route = useRoute();
 const error = ref("");
+const expired = computed(() => route.query.expired === "1");
 const busy = ref(false);
 
 async function submit() {
@@ -49,6 +51,9 @@ async function submit() {
             <Label for="password">Password</Label>
             <Input id="password" v-model="password" type="password" autocomplete="current-password" required />
           </div>
+          <Alert v-if="expired && !error">
+            <AlertDescription>Your session ended (for example, the server restarted). Please sign in again.</AlertDescription>
+          </Alert>
           <Alert v-if="error" variant="destructive">
             <AlertDescription>{{ error }}</AlertDescription>
           </Alert>

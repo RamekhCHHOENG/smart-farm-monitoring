@@ -5,16 +5,27 @@ import { Input } from "@/components/ui/input";
 import type { Actuator } from "~/utils/types";
 
 const props = defineProps<{ actuator: Actuator }>();
-const emit = defineEmits<{ changed: []; error: [message: string] }>();
+const emit = defineEmits<{ changed: [] }>();
 
 const api = useApi();
 const { can } = useAuth();
 const minutes = ref(Math.min(5, props.actuator.maxRunMinutes));
 const busy = ref(false);
+// Shown right under the controls, where the person just clicked
+const message = ref("");
 
 const icon = computed(() => ({ WATER_PUMP: Waves, FAN: Fan, FEEDER: Utensils })[props.actuator.type]);
 
 async function run(path: "on" | "off") {
+  if (path === "on") {
+    const m = Number(minutes.value);
+    if (!Number.isInteger(m) || m < 1 || m > props.actuator.maxRunMinutes) {
+      message.value = `Enter whole minutes from 1 to ${props.actuator.maxRunMinutes}.`;
+      return;
+    }
+  }
+  if (busy.value) return; // a double click sends one request
+  message.value = "";
   busy.value = true;
   try {
     await api(`/api/actuators/${props.actuator.id}/${path}`, {
@@ -23,7 +34,7 @@ async function run(path: "on" | "off") {
     });
     emit("changed");
   } catch (e) {
-    emit("error", errorMessage(e));
+    message.value = errorMessage(e);
   } finally {
     busy.value = false;
   }
@@ -63,5 +74,6 @@ async function run(path: "on" | "off") {
         <Button size="sm" :disabled="busy" @click="run('on')"><Power /> Start</Button>
       </div>
     </template>
+    <p v-if="message" role="alert" class="w-full text-sm text-destructive">{{ message }}</p>
   </div>
 </template>

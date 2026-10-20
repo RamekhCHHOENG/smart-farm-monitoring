@@ -28,7 +28,9 @@ async function step(name, fn) {
     await page.screenshot({ path: `${SHOTS}/fail-${results.length}.png`, fullPage: true });
   }
 }
-const expectText = async (text, timeout = 8000) => page.getByText(text, { exact: false }).first().waitFor({ timeout });
+// Only visible elements count: phone and desktop layouts both exist in the page, one hidden.
+const expectText = async (text, timeout = 8000) =>
+  page.getByText(text, { exact: false }).filter({ visible: true }).first().waitFor({ timeout });
 const button = (name) => page.getByRole("button", { name, exact: false });
 const dialog = () => page.getByRole("dialog");
 
@@ -224,7 +226,7 @@ await step("Worker stops the running pump and starts it manually", async () => {
   await pump.getByText("IDLE").waitFor();
   await pump.locator("input[type=number]").fill("9");
   await pump.getByRole("button", { name: "Start" }).click();
-  await expectText("runs at most 3 min");
+  await pump.getByText("Enter whole minutes from 1 to 3.").waitFor(); // checked before sending, shown next to the button
   await pump.locator("input[type=number]").fill("1");
   await pump.getByRole("button", { name: "Start" }).click();
   await pump.getByText("RUNNING").waitFor();

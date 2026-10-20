@@ -62,6 +62,14 @@ public class OperationsController {
         return alertService.list(status).stream().map(AlertDto::of).toList();
     }
 
+    public record CountDto(int count) {
+    }
+
+    @PostMapping("/alerts/acknowledge-all")
+    public CountDto acknowledgeAll(@RequestAttribute(AuthInterceptor.USER_ID) Long userId) {
+        return new CountDto(alertService.acknowledgeAll(userId));
+    }
+
     @PostMapping("/alerts/{id}/acknowledge")
     public AlertDto acknowledge(@RequestAttribute(AuthInterceptor.USER_ID) Long userId, @PathVariable Long id) {
         return AlertDto.of(alertService.acknowledge(userId, id));

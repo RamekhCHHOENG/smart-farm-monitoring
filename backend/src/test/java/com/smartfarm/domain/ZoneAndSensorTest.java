@@ -69,4 +69,18 @@ class ZoneAndSensorTest {
         task.markRun(tuesday7.toLocalDate());
         assertThat(task.isDue(tuesday7.plusMinutes(1))).isFalse();
     }
+
+    @Test
+    void nextRunSkipsTodayOnceDoneAndWaitsForTheNextSelectedDay() {
+        Actuator feeder = new Farm("F", "L").addPoultryZone("H", 10).addActuator(ActuatorType.FEEDER, "Feeder", null);
+        ScheduledTask task = new ScheduledTask("Feed", feeder, LocalTime.of(7, 0),
+                EnumSet.of(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY), 2);
+        LocalDateTime tuesday6 = LocalDateTime.of(2026, 10, 20, 6, 0);
+
+        assertThat(task.nextRun(tuesday6)).isEqualTo(LocalDateTime.of(2026, 10, 20, 7, 0));
+        task.markRun(tuesday6.toLocalDate());
+        assertThat(task.nextRun(tuesday6.plusHours(2))).isEqualTo(LocalDateTime.of(2026, 10, 22, 7, 0)); // Thursday
+        task.setActive(false);
+        assertThat(task.nextRun(tuesday6)).isNull();
+    }
 }

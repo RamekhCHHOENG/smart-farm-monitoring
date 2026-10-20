@@ -62,6 +62,7 @@ export interface Farm {
   id: number;
   name: string;
   location: string;
+  timeZone: string;
   openAlerts: number;
   zones: Zone[];
 }
@@ -97,6 +98,7 @@ export interface Task {
   durationMin: number;
   active: boolean;
   lastRunDate: string | null;
+  nextRun: string | null;
 }
 
 export interface Alert {

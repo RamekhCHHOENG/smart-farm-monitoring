@@ -39,6 +39,7 @@ const zoneActuators = computed(() => {
   const zone = farm.value?.zones.find((z) => z.sensors.some((s) => s.id === form.sensorId));
   return zone?.actuators.filter((a) => a.status !== "DECOMMISSIONED") ?? [];
 });
+const selectedSensor = computed(() => sensors.value.find((s) => s.id === form.sensorId));
 const selectedActuator = computed(() => zoneActuators.value.find((a) => a.id === form.actuatorId));
 
 function open(rule?: Rule) {
@@ -46,6 +47,7 @@ function open(rule?: Rule) {
     ? { ...rule, actuatorId: rule.actuatorId ?? "" }
     : { id: 0, name: "", sensorId: sensors.value[0]?.id ?? 0, condition: "BELOW", threshold: 30, actuatorId: "",
         durationMin: 3, severity: "WARNING", cooldownMinutes: 5 });
+  error.value = "";
   dialog.value = true;
 }
 
@@ -89,7 +91,7 @@ async function remove(rule: Rule) {
       <Button v-if="can()" :disabled="!sensors.length" @click="open()"><Plus /> New rule</Button>
     </PageHeader>
 
-    <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
+    <Alert v-if="error && !(dialog)" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
 
     <Card>
       <CardContent class="overflow-x-auto">
@@ -160,7 +162,11 @@ async function remove(rule: Rule) {
           </div>
           <div class="flex flex-col gap-1.5">
             <Label for="rthr">Threshold</Label>
-            <Input id="rthr" v-model.number="form.threshold" type="number" step="0.1" required />
+            <Input id="rthr" v-model.number="form.threshold" type="number" step="0.1" required
+              :min="selectedSensor?.minValid" :max="selectedSensor?.maxValid" />
+            <p v-if="selectedSensor" class="text-xs text-muted-foreground">
+              {{ selectedSensor.minValid }} to {{ selectedSensor.maxValid }} {{ selectedSensor.unit }}
+            </p>
           </div>
           <div class="flex flex-col gap-1.5">
             <Label for="ract">Actuator</Label>
@@ -186,6 +192,7 @@ async function remove(rule: Rule) {
             <Label for="rcool">Cooldown (min)</Label>
             <Input id="rcool" v-model.number="form.cooldownMinutes" type="number" min="1" />
           </div>
+          <FormError :message="error" class="col-span-2" />
           <DialogFooter class="col-span-2"><Button type="submit">Save rule</Button></DialogFooter>
         </form>
       </DialogContent>

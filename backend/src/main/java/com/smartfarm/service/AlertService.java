@@ -39,6 +39,14 @@ public class AlertService {
         return alert;
     }
 
+    /** After checking the farm, staff clear every open alert at once. Returns how many were acknowledged. */
+    public int acknowledgeAll(Long userId) {
+        AppUser user = access.require(userId, Role.WORKER, Role.TECHNICIAN);
+        List<Alert> open = alerts.findByStatusOrderByRaisedAtDesc(AlertStatus.OPEN);
+        open.forEach(a -> a.acknowledge(user, clock.instant()));
+        return open.size();
+    }
+
     @Transactional(readOnly = true)
     public List<Alert> list(AlertStatus status) {
         return status == null ? alerts.findTop200ByOrderByRaisedAtDesc() : alerts.findByStatusOrderByRaisedAtDesc(status);
