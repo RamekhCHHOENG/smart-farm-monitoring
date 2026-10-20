@@ -29,8 +29,9 @@ backend/src/main/java/com/smartfarm
 ├── simulation/    DeviceSimulator (plays the Sensor Device actor)
 └── config/        Wiring, device key, demo data
 frontend/app       pages/ (dashboard, zones, rules, schedules, alerts, history), components/
-firmware/          ESP32 sensor node
-docs/              Hardware guide
+firmware/          ESP32 sensor node (works with soil sensor only; DHT22 and relay optional)
+scripts/           fake-device.mjs (ESP32 stand-in), e2e-walkthrough.mjs (browser test)
+docs/              Hardware guide, PlantUML diagram sources
 ```
 
 ## Run it locally
@@ -55,13 +56,21 @@ npm run dev
 ```
 
 Open http://localhost:3000 and sign in as `owner` with the demo password.
-The simulator starts sending readings right away.
+The simulator starts sending readings right away. Each user can change their password with the key icon.
+
+### Real installation (your own farm)
+
+Start the backend once with `FARM_DEMO_DATA=false` and a fixed `FARM_DEVICE_KEY` to get an empty farm.
+Then follow **[docs/HARDWARE.md](docs/HARDWARE.md)**: name the farm, add a zone, register a real sensor,
+and test it with `scripts/fake-device.mjs` (no hardware) or an ESP32 (about USD 6-12 minimal kit).
 
 ### Tests
 
 ```bash
-cd backend && mvn test          # 20 tests: domain rules, state machine, API flow and permissions
+cd backend && mvn test          # 22 tests: domain rules, state machine, API flows, permissions, real-device setup
 cd frontend && npm run typecheck
+# Browser walkthrough of every use case as owner, technician and worker (23 steps), see the header of:
+scripts/e2e-walkthrough.mjs
 ```
 
 ## How the design maps to the code
@@ -96,8 +105,10 @@ cd frontend && npm run typecheck
 
 ## Hardware
 
-Not required. See [docs/HARDWARE.md](docs/HARDWARE.md) for an optional ~USD 15-30 kit,
-wiring, and safety rules.
+Not required for the demo. To test with a real sensor, the minimal kit is an ESP32 DevKit,
+a capacitive soil moisture sensor and a USB data cable (about USD 6-12); the ESP32's built-in LED
+stands in for the pump. See [docs/HARDWARE.md](docs/HARDWARE.md) for the full kit, wiring,
+safety rules, and a step-by-step acceptance test.
 
 ## Credits
 

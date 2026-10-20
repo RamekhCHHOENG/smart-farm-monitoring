@@ -13,6 +13,7 @@ package "domain" {
     +addCropZone(name, cropName): CropZone
     +addPoultryZone(name, birdCount): PoultryZone
     +removeZone(zone): void
+    +update(name, location): void
   }
 
   abstract class Zone {
@@ -131,6 +132,7 @@ package "domain" {
     -username: String
     -passwordHash: String
     -role: Role
+    +changePasswordHash(hash: String): void
   }
 }
 
@@ -163,7 +165,7 @@ package "service" {
   }
 }
 
-Farm "1" *-- "1..*" Zone
+Farm "1" *-- "0..*" Zone
 Zone <|-- CropZone
 Zone <|-- PoultryZone
 Zone "1" *-- "0..*" Sensor
