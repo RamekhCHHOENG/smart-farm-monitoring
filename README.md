@@ -104,6 +104,11 @@ scripts/e2e-walkthrough.mjs
   (restart = log in again), there is no login rate limiting, and the ESP32 talks plain HTTP
   on the local network. Put the server behind HTTPS before exposing it to the internet.
 
+## User manual
+
+Step-by-step guide for owners, workers and technicians, with screenshots of every screen:
+[docs/manual/USER_MANUAL.md](docs/manual/USER_MANUAL.md).
+
 ## Hardware
 
 Not required for the demo. To test with a real sensor, the minimal kit is an ESP32 DevKit,

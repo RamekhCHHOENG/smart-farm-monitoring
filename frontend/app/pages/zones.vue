@@ -106,7 +106,7 @@ async function saveDevice() {
 }
 
 // ----- technician lifecycle (Deliverable 9) -----
-const lifecycleOptions: Record<string, { action: LifecycleAction; label: string; body?: object }[]> = {
+const lifecycleOptions: Record<string, { action: LifecycleAction; label: string; body?: { testPassed?: boolean } }[]> = {
   IDLE: [{ action: "FAULT", label: "Report fault" }, { action: "OFFLINE", label: "Mark offline" }],
   RUNNING: [{ action: "FAULT", label: "Report fault" }, { action: "OFFLINE", label: "Mark offline" }],
   OFFLINE: [{ action: "RESTORE", label: "Heartbeat restored" }, { action: "START_REPAIR", label: "Start repair" }],
@@ -118,8 +118,18 @@ const lifecycleOptions: Record<string, { action: LifecycleAction; label: string;
   ],
 };
 
-function lifecycle(a: Actuator, action: LifecycleAction, body?: object) {
-  act(() => api(`/api/actuators/${a.id}/lifecycle/${action}`, { method: "POST", body: body ?? {} }), `${a.name}: ${action.replace("_", " ").toLowerCase()}`);
+const lifecycleDone: Record<LifecycleAction, string> = {
+  FAULT: "fault reported",
+  OFFLINE: "marked offline",
+  RESTORE: "back online",
+  START_REPAIR: "repair started",
+  COMPLETE_REPAIR: "repair finished",
+  DECOMMISSION: "decommissioned",
+};
+
+function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: boolean }) {
+  const done = action === "COMPLETE_REPAIR" && body?.testPassed === false ? "test failed, still in maintenance" : lifecycleDone[action];
+  act(() => api(`/api/actuators/${a.id}/lifecycle/${action}`, { method: "POST", body: body ?? {} }), `${a.name}: ${done}`);
 }
 </script>
 
