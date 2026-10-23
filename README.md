@@ -11,6 +11,22 @@ from the midterm report (use cases, class diagram, sequence, activity and state 
 | Frontend | Nuxt 4 (Vue 3), Tailwind CSS 4, [designkit](https://github.com/RamekhCHHOENG/designkit) shadcn-vue components |
 | Devices | Built-in simulator, or an ESP32 node ([firmware](firmware/esp32-node)) |
 
+## What staff can do
+
+| Who | Main screens |
+|---|---|
+| Farm Worker | Live dashboard (tap a sensor for its history), start/stop pumps, fans and feeders, acknowledge alerts |
+| Technician | Everything a worker can, plus register, rename and repair devices (fault → repair state machine) |
+| Farm Owner | Everything, plus zones, automation rules, schedules, staff accounts (add, change role, reset password) |
+
+For people working in the field:
+- **Khmer / English** switch for the daily screens (menus, dashboard, alerts, history). Setup forms and
+  messages from the server stay in English. The Khmer wording should be checked by a native speaker.
+- **Phone layout** with a bottom tab bar (Home, Alerts, History, Zones, More).
+- **Critical alerts** show a red banner on every page; with *Alert sound* on, they also beep and show a
+  system pop-up. The same problem happening again is counted on one alert ("×3") instead of flooding the list.
+- **History**: quick ranges (1 h, 24 h, 7 days, 30 days) and a **CSV download** of every reading for Excel.
+
 ## Architecture
 
 ```
@@ -28,7 +44,8 @@ backend/src/main/java/com/smartfarm
 ├── web/           REST controllers, DTOs, login interceptor, error handling
 ├── simulation/    DeviceSimulator (plays the Sensor Device actor)
 └── config/        Wiring, device key, demo data
-frontend/app       pages/ (dashboard, zones, rules, schedules, alerts, history), components/
+frontend/app       pages/ (dashboard, zones, rules, schedules, alerts, history, users), components/,
+                   utils/i18n.ts (Khmer / English), composables/useCriticalAlerts.ts
 firmware/          ESP32 sensor node (works with soil sensor only; DHT22 and relay optional)
 scripts/           fake-device.mjs (ESP32 stand-in), e2e-walkthrough.mjs (browser test)
 docs/              Hardware guide, PlantUML diagram sources
@@ -68,9 +85,10 @@ and test it with `scripts/fake-device.mjs` (no hardware) or an ESP32 (about USD 
 ### Tests
 
 ```bash
-cd backend && mvn test          # 24 tests: domain rules, state machine, API flows, permissions, real-device setup
+cd backend && mvn test          # 30 tests: domain rules, state machine, API flows, permissions, real-device setup,
+                                #           accounts, lockout, editing, CSV export, alert grouping
 cd frontend && npm run typecheck
-# Browser walkthrough of every use case as owner, technician and worker (23 steps), see the header of:
+# Browser walkthrough of every use case as owner, technician and worker (32 steps), see the header of:
 scripts/e2e-walkthrough.mjs
 ```
 
@@ -99,10 +117,14 @@ scripts/e2e-walkthrough.mjs
   are git-ignored. If a value is missing, a random one is generated at startup.
 - Users sign in with a password (BCrypt hash) and get a random bearer token (12 h).
   Each write action checks the user's role on the server, not only in the UI.
+- After 5 wrong passwords a username is locked for 15 minutes (the owner's password reset unlocks it).
+  Trade-off: someone who knows a username can lock it for a while; the lock is short and per username.
+- The owner manages staff accounts; a password reset or removal signs that person out everywhere.
+- Raw readings older than 90 days are deleted (`FARM_READING_RETENTION_DAYS`); alerts and device logs are kept.
 - Devices authenticate with the `X-Device-Key` header (constant-time comparison).
-- Limitations (fine for a class project, fix before real use): tokens are kept in memory
-  (restart = log in again), there is no login rate limiting, and the ESP32 talks plain HTTP
-  on the local network. Put the server behind HTTPS before exposing it to the internet.
+- Limitations (fine for a class project, fix before real use): tokens and login lockouts are kept
+  in memory (restart = log in again), and the ESP32 talks plain HTTP on the local network.
+  Put the server behind HTTPS before exposing it to the internet.
 
 ## User manual
 

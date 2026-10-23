@@ -3,11 +3,12 @@ import { Activity, Bell, Cpu, Sprout } from "lucide-vue-next";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Alert as FarmAlert, Farm } from "~/utils/types";
+import type { Alert as FarmAlert, Farm, Rule } from "~/utils/types";
 
 const api = useApi();
 const farm = ref<Farm | null>(null);
 const recentAlerts = ref<FarmAlert[]>([]);
+const rules = ref<Rule[]>([]);
 // Connection problems clear themselves when the server answers again;
 // errors from a button show next to that button (ActuatorControl).
 const connectionError = ref("");
@@ -15,16 +16,18 @@ const openAlerts = useState<number>("openAlerts", () => 0);
 
 async function load() {
   try {
-    const [f, alerts] = await Promise.all([
+    const [f, alerts, r] = await Promise.all([
       api<Farm>("/api/farm"),
       api<FarmAlert[]>("/api/alerts", { query: { status: "OPEN" } }),
+      api<Rule[]>("/api/rules"),
     ]);
     farm.value = f;
+    rules.value = r;
     recentAlerts.value = alerts.slice(0, 5);
     openAlerts.value = f.openAlerts;
     connectionError.value = "";
   } catch (e) {
-    connectionError.value = `${errorMessage(e)} Retrying every 4 seconds...`;
+    connectionError.value = `${errorMessage(e)} ${t("Retrying every 4 seconds...")}`;
   }
 }
 usePolling(load, 4000);
@@ -34,34 +37,36 @@ const stats = computed(() => {
   const sensors = zones.flatMap((z) => z.sensors);
   const actuators = zones.flatMap((z) => z.actuators);
   return [
-    { label: "Zones", value: zones.length, icon: Sprout },
-    { label: "Sensors online", value: `${sensors.filter((s) => s.online).length}/${sensors.length}`, icon: Activity },
-    { label: "Actuators running", value: actuators.filter((a) => a.status === "RUNNING").length, icon: Cpu },
-    { label: "Open alerts", value: farm.value?.openAlerts ?? 0, icon: Bell },
+    { label: "Zones", value: zones.length, icon: Sprout, to: "/zones" },
+    { label: "Sensors online", value: `${sensors.filter((s) => s.online).length}/${sensors.length}`, icon: Activity, to: "/zones" },
+    { label: "Actuators running", value: actuators.filter((a) => a.status === "RUNNING").length, icon: Cpu, to: "/history" },
+    { label: "Open alerts", value: farm.value?.openAlerts ?? 0, icon: Bell, to: "/alerts" },
   ];
 });
 </script>
 
 <template>
   <div>
-    <PageHeader :title="farm?.name ?? 'Dashboard'" :description="farm ? `${farm.location} · live, refreshes every 4 seconds` : 'Loading…'" />
+    <PageHeader :title="farm?.name ?? t('Dashboard')" :description="farm ? `${farm.location ? `${farm.location} · ` : ''}${t('live, refreshes every 4 seconds')}` : '…'" />
 
     <Alert v-if="connectionError" variant="destructive" class="mb-4">
       <AlertDescription>{{ connectionError }}</AlertDescription>
     </Alert>
 
     <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <Card v-for="s in stats" :key="s.label" class="gap-1 py-4">
+      <NuxtLink v-for="s in stats" :key="s.label" :to="s.to" class="rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+      <Card class="h-full gap-1 py-4 transition-colors hover:border-primary/50">
         <CardContent class="flex items-center gap-3 px-4">
           <div class="flex size-9 items-center justify-center rounded-lg bg-accent text-accent-foreground">
             <component :is="s.icon" class="size-4" />
           </div>
           <div>
             <div class="text-xl font-semibold tabular-nums">{{ s.value }}</div>
-            <div class="text-xs text-muted-foreground">{{ s.label }}</div>
+            <div class="text-xs text-muted-foreground">{{ t(s.label) }}</div>
           </div>
         </CardContent>
       </Card>
+      </NuxtLink>
     </div>
 
     <Card v-if="farm && farm.zones.length === 0" class="mb-6">
@@ -82,15 +87,15 @@ const stats = computed(() => {
           <CardHeader>
             <CardTitle class="flex items-center gap-2">
               {{ zone.name }}
-              <span class="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">{{ zone.type }}</span>
+              <span class="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">{{ t(zone.type) }}</span>
             </CardTitle>
             <CardDescription>{{ zone.detail }}</CardDescription>
           </CardHeader>
           <CardContent class="flex flex-col gap-3">
             <div class="grid grid-cols-2 gap-2">
-              <SensorTile v-for="s in zone.sensors" :key="s.id" :sensor="s" />
+              <SensorTile v-for="s in zone.sensors" :key="s.id" :sensor="s" :rules="rules" />
             </div>
-            <p v-if="zone.sensors.length === 0" class="text-sm text-muted-foreground">No sensors yet.</p>
+            <p v-if="zone.sensors.length === 0" class="text-sm text-muted-foreground">{{ t("No sensors yet.") }}</p>
             <ActuatorControl
               v-for="a in zone.actuators.filter((x) => x.status !== 'DECOMMISSIONED')"
               :key="a.id"
@@ -103,20 +108,21 @@ const stats = computed(() => {
 
       <Card class="h-fit">
         <CardHeader>
-          <CardTitle>Open alerts</CardTitle>
-          <CardDescription>Newest first</CardDescription>
+          <CardTitle>{{ t("Open alerts") }}</CardTitle>
+          <CardDescription>{{ t("Newest first") }}</CardDescription>
         </CardHeader>
         <CardContent class="flex flex-col gap-2">
-          <p v-if="recentAlerts.length === 0" class="text-sm text-muted-foreground">All clear.</p>
+          <p v-if="recentAlerts.length === 0" class="text-sm text-muted-foreground">{{ t("All clear.") }}</p>
           <div v-for="a in recentAlerts" :key="a.id" class="rounded-lg border p-3">
             <div class="mb-1 flex items-center gap-2">
               <StatusBadge :status="a.severity" />
-              <span class="text-xs text-muted-foreground">{{ timeAgo(a.raisedAt) }}</span>
+              <span v-if="a.repeatCount > 1" class="text-xs font-medium">×{{ a.repeatCount }}</span>
+              <span class="text-xs text-muted-foreground">{{ timeAgo(a.lastRaisedAt) }}</span>
             </div>
             <p class="text-sm">{{ a.message }}</p>
           </div>
           <Button v-if="recentAlerts.length" as-child variant="outline" size="sm">
-            <NuxtLink to="/alerts">View all alerts</NuxtLink>
+            <NuxtLink to="/alerts">{{ t("View all alerts") }}</NuxtLink>
           </Button>
         </CardContent>
       </Card>

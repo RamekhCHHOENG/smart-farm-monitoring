@@ -42,6 +42,15 @@ public abstract class Actuator {
         this.maxRunMinutes = maxRunMinutes;
     }
 
+    /** Name and safety limit can change; the status only changes through the state machine. */
+    public void update(String name, int maxRunMinutes) {
+        if (maxRunMinutes <= 0) {
+            throw new IllegalArgumentException("maxRunMinutes must be positive");
+        }
+        this.name = name;
+        this.maxRunMinutes = maxRunMinutes;
+    }
+
     static Actuator create(ActuatorType type, Zone zone, String name, Integer maxRunMinutes) {
         return switch (type) {
             case WATER_PUMP -> new WaterPump(zone, name, maxRunMinutes != null ? maxRunMinutes : WaterPump.DEFAULT_MAX_MINUTES);

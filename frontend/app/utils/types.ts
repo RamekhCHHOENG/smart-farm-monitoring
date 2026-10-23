@@ -11,6 +11,7 @@ export type LifecycleAction = "FAULT" | "OFFLINE" | "RESTORE" | "START_REPAIR" |
 
 export interface User {
   id: number;
+  username: string;
   name: string;
   role: Role;
 }
@@ -107,6 +108,8 @@ export interface Alert {
   severity: Severity;
   status: AlertStatus;
   raisedAt: string;
+  repeatCount: number;
+  lastRaisedAt: string;
   zoneId: number | null;
   ruleId: number | null;
   delivered: boolean;

@@ -1,3 +1,5 @@
+import { t } from "./i18n";
+
 export function formatTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleString(undefined, {
@@ -10,17 +12,17 @@ export function formatTime(iso: string | null | undefined): string {
 }
 
 export function timeAgo(iso: string | null | undefined): string {
-  if (!iso) return "never";
+  if (!iso) return t("never");
   const seconds = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
-  if (seconds < 60) return `${Math.max(seconds, 0)}s ago`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)} min ago`;
-  return `${Math.round(seconds / 3600)} h ago`;
+  if (seconds < 60) return t("{n}s ago", { n: Math.max(seconds, 0) });
+  if (seconds < 3600) return t("{n} min ago", { n: Math.round(seconds / 60) });
+  return t("{n} h ago", { n: Math.round(seconds / 3600) });
 }
 
 export function minutesLeft(iso: string | null): string {
   if (!iso) return "";
   const s = Math.max(0, Math.round((new Date(iso).getTime() - Date.now()) / 1000));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} left`;
+  return t("{t} left", { t: `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` });
 }
 
 /** "Today 17:00", "Tomorrow 07:00" or "Thu 07:00" for a farm-local date-time like 2026-10-22T07:00:00. */

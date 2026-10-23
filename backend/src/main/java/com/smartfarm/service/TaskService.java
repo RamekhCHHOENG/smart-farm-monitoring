@@ -42,11 +42,25 @@ public class TaskService {
     public ScheduledTask create(Long userId, String name, Long actuatorId, LocalTime runTime,
                                 Set<DayOfWeek> days, int durationMin) {
         access.require(userId);
+        Actuator actuator = checkedActuator(actuatorId, durationMin);
+        return tasks.save(new ScheduledTask(name, actuator, runTime, days, durationMin));
+    }
+
+    private Actuator checkedActuator(Long actuatorId, int durationMin) {
         Actuator actuator = actuators.findById(actuatorId).orElseThrow(() -> new NotFoundException("Actuator", actuatorId));
         if (durationMin <= 0 || durationMin > actuator.getMaxRunMinutes()) {
             throw new IllegalArgumentException("Duration must be 1-" + actuator.getMaxRunMinutes() + " min for " + actuator.getName());
         }
-        return tasks.save(new ScheduledTask(name, actuator, runTime, days, durationMin));
+        return actuator;
+    }
+
+    public ScheduledTask update(Long userId, Long taskId, String name, Long actuatorId, LocalTime runTime,
+                                Set<DayOfWeek> days, int durationMin) {
+        access.require(userId);
+        ScheduledTask task = tasks.findById(taskId).orElseThrow(() -> new NotFoundException("Task", taskId));
+        Actuator actuator = checkedActuator(actuatorId, durationMin);
+        task.update(name, actuator, runTime, days, durationMin);
+        return task;
     }
 
     public ScheduledTask setActive(Long userId, Long taskId, boolean active) {

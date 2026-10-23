@@ -20,7 +20,7 @@ async function run(path: "on" | "off") {
   if (path === "on") {
     const m = Number(minutes.value);
     if (!Number.isInteger(m) || m < 1 || m > props.actuator.maxRunMinutes) {
-      message.value = `Enter whole minutes from 1 to ${props.actuator.maxRunMinutes}.`;
+      message.value = t("Enter whole minutes from 1 to {n}.", { n: props.actuator.maxRunMinutes });
       return;
     }
   }
@@ -53,14 +53,14 @@ async function run(path: "on" | "off") {
         <div class="text-sm font-medium">{{ actuator.name }}</div>
         <div class="text-xs text-muted-foreground">
           <template v-if="actuator.status === 'RUNNING'">{{ minutesLeft(actuator.runningUntil) }}</template>
-          <template v-else>max {{ actuator.maxRunMinutes }} min</template>
+          <template v-else>{{ t("max {n} min", { n: actuator.maxRunMinutes }) }}</template>
         </div>
       </div>
       <StatusBadge :status="actuator.status" />
     </div>
     <template v-if="can('WORKER')">
       <Button v-if="actuator.status === 'RUNNING'" size="sm" variant="outline" :disabled="busy" @click="run('off')">
-        <PowerOff /> Stop
+        <PowerOff /> {{ t("Stop") }}
       </Button>
       <div v-else-if="actuator.status === 'IDLE'" class="flex items-center gap-1.5">
         <Input
@@ -71,7 +71,8 @@ async function run(path: "on" | "off") {
           class="h-8 w-16"
           :aria-label="`Minutes to run ${actuator.name}`"
         />
-        <Button size="sm" :disabled="busy" @click="run('on')"><Power /> Start</Button>
+        <span class="text-xs text-muted-foreground">{{ t("min") }}</span>
+        <Button size="sm" :disabled="busy" @click="run('on')"><Power /> {{ t("Start") }}</Button>
       </div>
     </template>
     <p v-if="message" role="alert" class="w-full text-sm text-destructive">{{ message }}</p>

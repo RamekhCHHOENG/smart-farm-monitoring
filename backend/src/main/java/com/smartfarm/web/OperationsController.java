@@ -1,6 +1,9 @@
 package com.smartfarm.web;
 
 import com.smartfarm.domain.AlertStatus;
+import com.smartfarm.domain.SensorReading;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import com.smartfarm.service.ActuatorService;
 import com.smartfarm.service.ActuatorService.LifecycleAction;
 import com.smartfarm.service.AlertService;
@@ -11,7 +14,9 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Clock;
 import java.time.Duration;
+import java.time.format.DateTimeFormatter;
 import java.time.Instant;
 import java.util.List;
 
@@ -24,11 +29,13 @@ public class OperationsController {
     private final ActuatorService actuatorService;
     private final AlertService alertService;
     private final QueryService queries;
+    private final Clock clock;
 
-    public OperationsController(ActuatorService actuatorService, AlertService alertService, QueryService queries) {
+    public OperationsController(ActuatorService actuatorService, AlertService alertService, QueryService queries, Clock clock) {
         this.actuatorService = actuatorService;
         this.alertService = alertService;
         this.queries = queries;
+        this.clock = clock;
     }
 
     @PostMapping("/actuators/{id}/on")
@@ -83,6 +90,23 @@ public class OperationsController {
                                      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
         Range r = Range.of(from, to);
         return queries.history(id, r.from(), r.to()).stream().map(ReadingDto::of).toList();
+    }
+
+    /** FR-10: the same readings as a spreadsheet file, every reading (not thinned), in farm-local time. */
+    @GetMapping(value = "/sensors/{id}/readings.csv", produces = "text/csv")
+    @Transactional(readOnly = true)
+    public ResponseEntity<String> readingsCsv(@PathVariable Long id,
+                                              @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+                                              @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+        Range r = Range.of(from, to);
+        DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(clock.getZone());
+        StringBuilder csv = new StringBuilder("time,value\n");
+        for (SensorReading reading : queries.allReadings(id, r.from(), r.to())) {
+            csv.append(format.format(reading.getRecordedAt())).append(',').append(reading.getValue()).append('\n');
+        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"sensor-" + id + "-readings.csv\"")
+                .body(csv.toString());
     }
 
     /** FR-10: device activity log of one zone in a date range. */

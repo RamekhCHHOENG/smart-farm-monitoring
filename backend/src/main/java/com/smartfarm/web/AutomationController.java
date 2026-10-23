@@ -71,6 +71,12 @@ public class AutomationController {
         return TaskDto.of(taskService.create(userId, req.name(), req.actuatorId(), req.runTime(), req.repeatDays(), req.durationMin()), now());
     }
 
+    @PutMapping("/tasks/{id}")
+    public TaskDto updateTask(@RequestAttribute(AuthInterceptor.USER_ID) Long userId, @PathVariable Long id,
+                              @Valid @RequestBody TaskRequest req) {
+        return TaskDto.of(taskService.update(userId, id, req.name(), req.actuatorId(), req.runTime(), req.repeatDays(), req.durationMin()), now());
+    }
+
     @PatchMapping("/tasks/{id}/active")
     public TaskDto setTaskActive(@RequestAttribute(AuthInterceptor.USER_ID) Long userId, @PathVariable Long id,
                                  @RequestBody ActiveRequest req) {

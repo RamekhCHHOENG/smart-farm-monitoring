@@ -86,6 +86,20 @@ public class FarmService {
         return actuator;
     }
 
+    public Sensor renameSensor(Long userId, Long sensorId, String name) {
+        access.require(userId, Role.TECHNICIAN);
+        Sensor sensor = sensors.findById(sensorId).orElseThrow(() -> new NotFoundException("Sensor", sensorId));
+        sensor.rename(name.trim());
+        return sensor;
+    }
+
+    public Actuator updateActuator(Long userId, Long actuatorId, String name, int maxRunMinutes) {
+        access.require(userId, Role.TECHNICIAN);
+        Actuator actuator = actuators.findById(actuatorId).orElseThrow(() -> new NotFoundException("Actuator", actuatorId));
+        actuator.update(name.trim(), maxRunMinutes);
+        return actuator;
+    }
+
     public void removeSensor(Long userId, Long sensorId) {
         access.require(userId, Role.TECHNICIAN);
         Sensor sensor = sensors.findById(sensorId).orElseThrow(() -> new NotFoundException("Sensor", sensorId));

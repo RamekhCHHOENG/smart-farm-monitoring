@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Plus, Trash2 } from "lucide-vue-next";
+import { Pencil, Plus, Trash2 } from "lucide-vue-next";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,10 +32,14 @@ const actuators = computed(() => (farm.value?.zones ?? []).flatMap((z) =>
   z.actuators.filter((a) => a.status !== "DECOMMISSIONED").map((a) => ({ ...a, zoneName: z.name }))));
 
 const dialog = ref(false);
+const editingId = ref<number | null>(null);
 const form = reactive({ name: "", actuatorId: 0, runTime: "07:00", durationMin: 3, repeatDays: [...DAYS] });
 
-function open() {
-  Object.assign(form, { name: "", actuatorId: actuators.value[0]?.id ?? 0, runTime: "07:00", durationMin: 3, repeatDays: [...DAYS] });
+function open(task?: Task) {
+  editingId.value = task?.id ?? null;
+  Object.assign(form, task
+    ? { name: task.name, actuatorId: task.actuatorId, runTime: task.runTime.slice(0, 5), durationMin: task.durationMin, repeatDays: [...task.repeatDays] }
+    : { name: "", actuatorId: actuators.value[0]?.id ?? 0, runTime: "07:00", durationMin: 3, repeatDays: [...DAYS] });
   error.value = "";
   dialog.value = true;
 }
@@ -57,7 +61,14 @@ async function run(fn: () => Promise<unknown>) {
 }
 
 async function save() {
-  if (await run(() => api("/api/tasks", { method: "POST", body: form }))) dialog.value = false;
+  const request = editingId.value
+    ? () => api(`/api/tasks/${editingId.value}`, { method: "PUT", body: form })
+    : () => api("/api/tasks", { method: "POST", body: form });
+  if (await run(request)) dialog.value = false;
+}
+
+function confirmDelete(task: Task) {
+  if (window.confirm(`Delete schedule "${task.name}"?`)) run(() => api(`/api/tasks/${task.id}`, { method: "DELETE" }));
 }
 
 function days(list: string[]) {
@@ -99,9 +110,10 @@ function days(list: string[]) {
               <TableCell>{{ days(t.repeatDays) }}</TableCell>
               <TableCell>{{ t.actuatorName }} · {{ t.durationMin }} min <span class="text-muted-foreground">({{ t.zoneName }})</span></TableCell>
               <TableCell :class="t.nextRun ? 'font-medium' : 'text-muted-foreground'">{{ formatNextRun(t.nextRun) }}</TableCell>
-              <TableCell class="text-right">
+              <TableCell class="text-right whitespace-nowrap">
+                <Button v-if="can()" size="icon-sm" variant="ghost" :aria-label="`Edit ${t.name}`" @click="open(t)"><Pencil /></Button>
                 <Button v-if="can()" size="icon-sm" variant="ghost" :aria-label="`Delete ${t.name}`"
-                  @click="run(() => api(`/api/tasks/${t.id}`, { method: 'DELETE' }))"><Trash2 /></Button>
+                  @click="confirmDelete(t)"><Trash2 /></Button>
               </TableCell>
             </TableRow>
             <TableRow v-if="!tasks.length">
@@ -115,13 +127,13 @@ function days(list: string[]) {
     <Dialog v-model:open="dialog">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>New schedule</DialogTitle>
+          <DialogTitle>{{ editingId ? "Edit schedule" : "New schedule" }}</DialogTitle>
           <DialogDescription>The actuator starts at this time on the selected days.</DialogDescription>
         </DialogHeader>
         <form class="flex flex-col gap-4" @submit.prevent="save">
           <div class="flex flex-col gap-1.5">
             <Label for="tname">Name</Label>
-            <Input id="tname" v-model="form.name" required placeholder="e.g. Morning feeding" />
+            <Input id="tname" v-model="form.name" required maxlength="80" placeholder="e.g. Morning feeding" />
           </div>
           <div class="flex flex-col gap-1.5">
             <Label for="tact">Actuator</Label>

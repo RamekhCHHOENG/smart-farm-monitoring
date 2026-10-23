@@ -6,9 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Download } from "lucide-vue-next";
 import type { DeviceLog, Farm, Reading, Rule } from "~/utils/types";
 
 const api = useApi();
+const route = useRoute();
+const { token } = useAuth();
 const farm = ref<Farm | null>(null);
 const rules = ref<Rule[]>([]);
 const zoneId = ref<number>(0);
@@ -34,15 +37,55 @@ const stats = computed(() => {
 onMounted(async () => {
   try {
     [farm.value, rules.value] = await Promise.all([api<Farm>("/api/farm"), api<Rule[]>("/api/rules")]);
-    zoneId.value = farm.value.zones[0]?.id ?? 0;
+    // Opened from a sensor tile on the dashboard: show that sensor straight away
+    const wantedZone = Number(route.query.zone);
+    zoneId.value = farm.value.zones.some((z) => z.id === wantedZone) ? wantedZone : farm.value.zones[0]?.id ?? 0;
   } catch (e) {
     error.value = errorMessage(e);
   }
 });
 
 watch(zoneId, () => {
-  sensorId.value = zone.value?.sensors[0]?.id ?? 0;
+  const wantedSensor = Number(route.query.sensor);
+  sensorId.value = zone.value?.sensors.some((s) => s.id === wantedSensor) ? wantedSensor : zone.value?.sensors[0]?.id ?? 0;
 });
+
+const PRESETS = [
+  { label: "Last hour", hours: 1 },
+  { label: "24 hours", hours: 24 },
+  { label: "7 days", hours: 24 * 7 },
+  { label: "30 days", hours: 24 * 30 },
+];
+function preset(hours: number) {
+  from.value = toLocalInput(new Date(Date.now() - hours * 3600 * 1000));
+  to.value = toLocalInput(new Date(Date.now() + 60 * 1000));
+  load();
+}
+
+const downloading = ref(false);
+/** Every reading in the range as a spreadsheet file (the chart shows at most 500 points). */
+async function downloadCsv() {
+  if (!sensor.value) return;
+  downloading.value = true;
+  error.value = "";
+  try {
+    const query = new URLSearchParams({ from: localInputToIso(from.value), to: localInputToIso(to.value) });
+    const res = await fetch(`/api/sensors/${sensor.value.id}/readings.csv?${query}`, {
+      headers: { Authorization: `Bearer ${token.value ?? ""}` },
+    });
+    if (!res.ok) throw { statusCode: res.status, message: `Download failed (${res.status})` };
+    const url = URL.createObjectURL(await res.blob());
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${sensor.value.name.replace(/[^\p{L}\p{N}]+/gu, "-")}-${from.value.slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    error.value = errorMessage(e);
+  } finally {
+    downloading.value = false;
+  }
+}
 watch([sensorId, zoneId], load);
 
 async function load() {
@@ -62,34 +105,39 @@ async function load() {
 
 <template>
   <div>
-    <PageHeader title="History & reports" description="Reading history and device activity per zone for a selected date range." />
+    <PageHeader :title="t('History & reports')" :description="t('Reading history and device activity per zone for a selected date range.')">
+      <Button variant="outline" :disabled="!sensor || downloading" @click="downloadCsv"><Download /> {{ t("Download CSV") }}</Button>
+    </PageHeader>
 
     <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
 
     <Card class="mb-4">
-      <CardContent>
+      <CardContent class="flex flex-col gap-3">
+        <div class="flex flex-wrap gap-1.5">
+          <Button v-for="p in PRESETS" :key="p.hours" type="button" size="sm" variant="outline" @click="preset(p.hours)">{{ t(p.label) }}</Button>
+        </div>
         <form class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:items-end" @submit.prevent="load">
           <div class="flex flex-col gap-1.5">
-            <Label for="hzone">Zone</Label>
+            <Label for="hzone">{{ t("Zone") }}</Label>
             <NativeSelect id="hzone" v-model.number="zoneId" class="w-full">
               <NativeSelectOption v-for="z in farm?.zones ?? []" :key="z.id" :value="z.id">{{ z.name }}</NativeSelectOption>
             </NativeSelect>
           </div>
           <div class="flex flex-col gap-1.5">
-            <Label for="hsensor">Sensor</Label>
+            <Label for="hsensor">{{ t("Sensor") }}</Label>
             <NativeSelect id="hsensor" v-model.number="sensorId" class="w-full">
               <NativeSelectOption v-for="s in zone?.sensors ?? []" :key="s.id" :value="s.id">{{ s.name }}</NativeSelectOption>
             </NativeSelect>
           </div>
           <div class="flex flex-col gap-1.5">
-            <Label for="hfrom">From</Label>
+            <Label for="hfrom">{{ t("From") }}</Label>
             <Input id="hfrom" v-model="from" type="datetime-local" />
           </div>
           <div class="flex flex-col gap-1.5">
-            <Label for="hto">To</Label>
+            <Label for="hto">{{ t("To") }}</Label>
             <Input id="hto" v-model="to" type="datetime-local" />
           </div>
-          <Button type="submit">Show</Button>
+          <Button type="submit">{{ t("Show") }}</Button>
         </form>
       </CardContent>
     </Card>
@@ -97,29 +145,29 @@ async function load() {
     <div class="grid gap-4 xl:grid-cols-[1fr_380px]">
       <Card>
         <CardHeader>
-          <CardTitle>{{ sensor?.name ?? "Sensor" }}</CardTitle>
+          <CardTitle>{{ sensor?.name ?? t("Sensor") }}</CardTitle>
           <CardDescription v-if="stats">
-            {{ stats.count }} readings · min {{ stats.min.toFixed(1) }} · avg {{ stats.avg.toFixed(1) }} · max {{ stats.max.toFixed(1) }} {{ sensor?.unit }}
+            {{ t("{n} readings", { n: stats.count }) }} · min {{ stats.min.toFixed(1) }} · avg {{ stats.avg.toFixed(1) }} · max {{ stats.max.toFixed(1) }} {{ sensor?.unit }}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <LineChart v-if="points.length > 1" :points="points" :unit="sensor?.unit ?? ''" :thresholds="thresholds" />
-          <p v-else class="py-12 text-center text-sm text-muted-foreground">Not enough readings in this range.</p>
+          <p v-else class="py-12 text-center text-sm text-muted-foreground">{{ t("Not enough readings in this range.") }}</p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Device activity</CardTitle>
-          <CardDescription>{{ logs.length }} actions in this zone</CardDescription>
+          <CardTitle>{{ t("Device activity") }}</CardTitle>
+          <CardDescription>{{ t("{n} actions in this zone", { n: logs.length }) }}</CardDescription>
         </CardHeader>
         <CardContent class="max-h-[420px] overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>When</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>By</TableHead>
+                <TableHead>{{ t("When") }}</TableHead>
+                <TableHead>{{ t("Action") }}</TableHead>
+                <TableHead>{{ t("By") }}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -132,7 +180,7 @@ async function load() {
                 <TableCell class="text-xs">{{ l.userName ?? l.source.toLowerCase() }}</TableCell>
               </TableRow>
               <TableRow v-if="!logs.length">
-                <TableCell colspan="3" class="text-center text-muted-foreground">No activity.</TableCell>
+                <TableCell colspan="3" class="text-center text-muted-foreground">{{ t("No activity.") }}</TableCell>
               </TableRow>
             </TableBody>
           </Table>

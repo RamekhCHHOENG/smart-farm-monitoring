@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Sprout } from "lucide-vue-next";
+import { Languages, Sprout } from "lucide-vue-next";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,33 +31,37 @@ async function submit() {
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-muted/40 px-4">
+  <div class="relative flex min-h-screen items-center justify-center bg-muted/40 px-4">
+    <Button variant="ghost" size="sm" class="absolute top-3 right-3" :aria-label="t('Language')"
+      @click="setLang(lang === 'en' ? 'km' : 'en')">
+      <Languages /> {{ lang === "en" ? "ខ្មែរ" : "EN" }}
+    </Button>
     <Card class="w-full max-w-sm">
       <CardHeader class="items-center text-center">
         <div class="mx-auto mb-2 flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
           <Sprout class="size-5" />
         </div>
         <CardTitle class="text-xl">Smart Farm Monitoring</CardTitle>
-        <CardDescription>Sign in to monitor your zones</CardDescription>
+        <CardDescription>{{ t("Sign in to monitor your zones") }}</CardDescription>
       </CardHeader>
       <CardContent>
         <form class="flex flex-col gap-4" @submit.prevent="submit">
           <div class="flex flex-col gap-1.5">
-            <Label for="username">Username</Label>
+            <Label for="username">{{ t("Username") }}</Label>
             <Input id="username" v-model="username" autocomplete="username" required />
             <p class="text-xs text-muted-foreground">Demo users: owner, worker, technician</p>
           </div>
           <div class="flex flex-col gap-1.5">
-            <Label for="password">Password</Label>
+            <Label for="password">{{ t("Password") }}</Label>
             <Input id="password" v-model="password" type="password" autocomplete="current-password" required />
           </div>
           <Alert v-if="expired && !error">
-            <AlertDescription>Your session ended (for example, the server restarted). Please sign in again.</AlertDescription>
+            <AlertDescription>{{ t("Your session ended (for example, the server restarted). Please sign in again.") }}</AlertDescription>
           </Alert>
           <Alert v-if="error" variant="destructive">
             <AlertDescription>{{ error }}</AlertDescription>
           </Alert>
-          <Button type="submit" :disabled="busy">{{ busy ? "Signing in…" : "Sign in" }}</Button>
+          <Button type="submit" :disabled="busy">{{ busy ? t("Signing in…") : t("Sign in") }}</Button>
         </form>
       </CardContent>
     </Card>

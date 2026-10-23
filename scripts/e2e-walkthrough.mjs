@@ -1,4 +1,4 @@
-// Browser walkthrough of every use case as Owner, Technician and Worker (23 steps).
+// Browser walkthrough of every use case as Owner, Technician and Worker (32 steps).
 // Run from the repository root against the demo farm on a FRESH database, while both servers run:
 //   npm i --no-save playwright && npx playwright install chromium     (once)
 //   PW=<demo password> KEY=<device key> node scripts/e2e-walkthrough.mjs
@@ -15,7 +15,7 @@ const problems = [];
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1366, height: 860 } });
 page.on("pageerror", (e) => problems.push(`pageerror: ${e}`));
-page.on("console", (m) => m.type() === "error" && !m.text().includes("401") && !m.text().includes("403") && !m.text().includes("409") && problems.push(`console: ${m.text()}`));
+page.on("console", (m) => m.type() === "error" && !m.text().includes("401") && !m.text().includes("403") && !m.text().includes("409") && !m.text().includes("429") && problems.push(`console: ${m.text()}`));
 page.on("response", (r) => r.status() >= 500 && problems.push(`HTTP ${r.status()} ${r.url()}`));
 page.on("dialog", (d) => d.accept());
 
@@ -269,6 +269,96 @@ await step("Owner deletes the test zone (cascade)", async () => {
   if (await page.getByText("E2E evening water").count()) throw new Error("schedule still listed");
 });
 
+// ---------- Added in round 2: accounts, editing, export, language, alerts, phone ----------
+
+await step("Owner adds a worker account; the new worker signs in", async () => {
+  await page.goto(`${BASE}/users`);
+  await button("Add user").click();
+  await page.fill("#uname", "Srey Mom");
+  await page.fill("#uuser", "sreymom");
+  await page.fill("#upass", "first-pass-1");
+  await dialog().getByRole("button", { name: "Save" }).click();
+  await expectText('can now sign in as "sreymom"');
+  await logout();
+  await login("sreymom", "first-pass-1");
+  await expectText("Group 1 Test Farm");
+  if (await page.getByRole("link", { name: "Users" }).filter({ visible: true }).count()) throw new Error("worker sees Users menu");
+  await logout();
+  await login("owner");
+});
+
+await step("Owner edits a schedule in place", async () => {
+  await page.goto(`${BASE}/schedules`);
+  await page.getByRole("button", { name: "Edit Evening watering" }).click();
+  await page.fill("#ttime", "17:30");
+  await dialog().getByRole("button", { name: "Save schedule" }).click();
+  await page.getByRole("row").filter({ hasText: "Evening watering" }).getByText("17:30").first().waitFor();
+});
+
+await step("Sensor renamed without changing its #id", async () => {
+  await page.goto(`${BASE}/zones`);
+  const row = page.getByRole("row").filter({ hasText: "Air temperature A" });
+  const before = await idOf("Air temperature A");
+  await row.getByRole("button", { name: "Edit" }).click();
+  await page.fill("#ename", "Air temperature A (shade)");
+  await dialog().getByRole("button", { name: "Save" }).click();
+  await expectText("Device updated");
+  if ((await idOf("Air temperature A (shade)")) !== before) throw new Error("id changed");
+});
+
+await step("Dashboard tile shows the rule mark and opens its history", async () => {
+  await page.goto(`${BASE}/`);
+  const tile = page.locator("a[href*='/history?']").filter({ hasText: "Soil moisture A1" }).filter({ visible: true }).first();
+  await tile.getByText("< 30").waitFor();
+  await tile.click();
+  await page.waitForURL(/\/history\?zone=\d+&sensor=\d+/);
+  await page.getByRole("heading", { name: "Soil moisture A1" }).or(page.getByText("Soil moisture A1").filter({ visible: true })).first().waitFor();
+  const selected = await page.locator("#hsensor option:checked").innerText();
+  if (selected !== "Soil moisture A1") throw new Error(`sensor select shows ${selected}`);
+});
+
+await step("History quick range and CSV download", async () => {
+  await button("24 hours").click();
+  await expectText("readings");
+  const [download] = await Promise.all([page.waitForEvent("download"), button("Download CSV").click()]);
+  const path = await download.path();
+  const text = (await import("node:fs")).readFileSync(path, "utf8");
+  if (!text.startsWith("time,value\n") || text.split("\n").length < 3) throw new Error(`bad CSV: ${text.slice(0, 60)}`);
+});
+
+await step("Khmer language switch", async () => {
+  await page.goto(`${BASE}/`);
+  await button("Language").click();
+  await expectText("ការជូនដំណឹងមិនទាន់ដោះស្រាយ");
+  await page.reload();
+  await expectText("ការជូនដំណឹងមិនទាន់ដោះស្រាយ"); // remembered
+  await page.screenshot({ path: `${SHOTS}/e2e-khmer.png`, fullPage: true });
+  await button("ភាសា").click(); // "Language" in Khmer
+  await expectText("Open alerts");
+});
+
+await step("A device fault shows the critical alert banner on every page", async () => {
+  await page.goto(`${BASE}/zones`);
+  const feeder = page.getByRole("row").filter({ hasText: "Feeder 1" });
+  await feeder.getByRole("button", { name: "Report fault" }).click();
+  await feeder.getByText("FAULT").waitFor();
+  await page.goto(`${BASE}/schedules`);
+  await page.getByRole("button", { name: "Report fault" }).count(); // stay on another page
+  await page.goto(`${BASE}/zones`);
+  await feeder.getByRole("button", { name: "Start repair" }).click();
+  await feeder.getByRole("button", { name: "Repair done (test passed)" }).click();
+  await feeder.getByText("IDLE").waitFor();
+  await feeder.getByRole("button", { name: "Report fault" }).click(); // second fault: same open alert, counted
+  await expectText("New critical alert", 15000);
+  await page.goto(`${BASE}/alerts`);
+  await page.getByRole("row").filter({ hasText: "Feeder 1 reported a fault" }).getByText("happened 2 times").waitFor();
+  const feeder2 = () => page.getByRole("row").filter({ hasText: "Feeder 1" });
+  await page.goto(`${BASE}/zones`);
+  await feeder2().getByRole("button", { name: "Start repair" }).click();
+  await feeder2().getByRole("button", { name: "Repair done (test passed)" }).click();
+  await feeder2().getByText("IDLE").waitFor();
+});
+
 await step("Dark mode and mobile layout render", async () => {
   await page.goto(`${BASE}/`);
   await button("Dark mode").click();
@@ -281,6 +371,31 @@ await step("Dark mode and mobile layout render", async () => {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
   if (overflow) throw new Error("horizontal scroll on mobile");
   await page.screenshot({ path: `${SHOTS}/e2e-mobile.png` });
+});
+
+await step("Phone: bottom tab bar and More menu", async () => {
+  const tabBar = page.locator("nav[aria-label=Menu]");
+  await tabBar.getByRole("link", { name: "Alerts" }).click();
+  await page.waitForURL(`${BASE}/alerts`);
+  await tabBar.getByRole("button", { name: "More" }).click();
+  await dialog().getByRole("link", { name: "Automation rules" }).click();
+  await page.waitForURL(`${BASE}/rules`);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  if (overflow) throw new Error("horizontal scroll on phone rules page");
+  await page.setViewportSize({ width: 1366, height: 860 });
+});
+
+await step("Five wrong passwords lock the account; the message says what to do", async () => {
+  await logout();
+  for (let i = 0; i < 5; i++) {
+    await page.fill("#username", "technician");
+    await page.fill("#password", `guess-${i}`);
+    await button("Sign in").click();
+    await expectText("Wrong username or password");
+  }
+  await page.fill("#password", PASSWORD);
+  await button("Sign in").click();
+  await expectText("Too many wrong passwords");
 });
 
 console.log(results.join("\n"));

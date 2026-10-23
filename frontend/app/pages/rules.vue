@@ -145,7 +145,7 @@ async function remove(rule: Rule) {
         <form class="grid grid-cols-2 gap-4" @submit.prevent="save">
           <div class="col-span-2 flex flex-col gap-1.5">
             <Label for="rname">Name</Label>
-            <Input id="rname" v-model="form.name" required />
+            <Input id="rname" v-model="form.name" required maxlength="80" />
           </div>
           <div class="col-span-2 flex flex-col gap-1.5">
             <Label for="rsensor">Sensor</Label>

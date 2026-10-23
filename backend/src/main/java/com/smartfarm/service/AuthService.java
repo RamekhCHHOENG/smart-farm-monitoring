@@ -38,10 +38,12 @@ public class AuthService {
     private final Duration ttl;
     private final SecureRandom random = new SecureRandom();
     private final Map<String, Session> sessions = new ConcurrentHashMap<>();
+    private final LoginGuard guard;
 
-    public AuthService(AppUserRepository users, PasswordEncoder encoder, Clock clock,
+    public AuthService(AppUserRepository users, PasswordEncoder encoder, Clock clock, LoginGuard guard,
                        @Value("${farm.session-ttl:PT12H}") Duration ttl) {
         this.users = users;
+        this.guard = guard;
         this.encoder = encoder;
         this.clock = clock;
         this.ttl = ttl;
@@ -49,10 +51,16 @@ public class AuthService {
 
     public LoginResult login(String username, String password) {
         String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
-        AppUser user = users.findByUsername(normalized)
-                .filter(u -> encoder.matches(password, u.getPasswordHash()))
-                // Same message for unknown user and wrong password, so usernames cannot be discovered.
-                .orElseThrow(() -> new UnauthorizedException("Wrong username or password"));
+        guard.check(normalized);
+        Optional<AppUser> found = users.findByUsername(normalized)
+                .filter(u -> encoder.matches(password, u.getPasswordHash()));
+        if (found.isEmpty()) {
+            guard.failed(normalized);
+            // Same message for unknown user and wrong password, so usernames cannot be discovered.
+            throw new UnauthorizedException("Wrong username or password");
+        }
+        guard.succeeded(normalized);
+        AppUser user = found.get();
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -68,10 +76,19 @@ public class AuthService {
         if (!encoder.matches(currentPassword, user.getPasswordHash())) {
             throw new IllegalArgumentException("Current password is wrong");
         }
-        if (newPassword == null || newPassword.length() < MIN_PASSWORD_LENGTH) {
+        checkNewPassword(newPassword);
+        user.changePasswordHash(encoder.encode(newPassword));
+    }
+
+    static void checkNewPassword(String password) {
+        if (password == null || password.length() < MIN_PASSWORD_LENGTH) {
             throw new IllegalArgumentException("New password must have at least " + MIN_PASSWORD_LENGTH + " characters");
         }
-        user.changePasswordHash(encoder.encode(newPassword));
+    }
+
+    /** After a password reset or removal, every open session of that user ends. */
+    public void logoutEverywhere(Long userId) {
+        sessions.values().removeIf(s -> s.userId().equals(userId));
     }
 
     public Optional<Long> resolve(String token) {

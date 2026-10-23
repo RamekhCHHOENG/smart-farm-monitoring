@@ -88,6 +88,21 @@ public class FarmController {
         return farmService.applyDefaultRules(userId, id).stream().map(RuleDto::of).toList();
     }
 
+    @PutMapping("/sensors/{id}")
+    @Transactional
+    public SensorDto renameSensor(@RequestAttribute(AuthInterceptor.USER_ID) Long userId, @PathVariable Long id,
+                                  @Valid @RequestBody RenameRequest req) {
+        Sensor sensor = farmService.renameSensor(userId, id, req.name());
+        return SensorDto.of(sensor, queries.latest(sensor).orElse(null));
+    }
+
+    @PutMapping("/actuators/{id}")
+    @Transactional
+    public ActuatorDto updateActuator(@RequestAttribute(AuthInterceptor.USER_ID) Long userId, @PathVariable Long id,
+                                      @Valid @RequestBody ActuatorUpdateRequest req) {
+        return ActuatorDto.of(farmService.updateActuator(userId, id, req.name(), req.maxRunMinutes()));
+    }
+
     @DeleteMapping("/sensors/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeSensor(@RequestAttribute(AuthInterceptor.USER_ID) Long userId, @PathVariable Long id) {

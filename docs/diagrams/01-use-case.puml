@@ -19,6 +19,7 @@ rectangle "Smart Farm Monitoring System" {
   usecase "UC-8 View History & Reports" as UC8
   usecase "UC-9 Acknowledge Alert" as UC9
   usecase "UC-10 Maintain Device" as UC10
+  usecase "UC-11 Manage Staff Accounts" as UC11
   usecase "Evaluate Rules" as Eval
   usecase "Log Device Action" as Log
   usecase "Send Alert" as Alert
@@ -29,6 +30,7 @@ Owner --> UC4
 Owner --> UC5
 Owner --> UC7
 Owner --> UC8
+Owner --> UC11
 Worker --> UC6
 Worker --> UC7
 Worker --> UC9

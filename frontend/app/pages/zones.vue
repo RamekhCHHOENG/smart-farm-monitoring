@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Actuator, ActuatorType, Farm, LifecycleAction, SensorType, Zone } from "~/utils/types";
+import type { Actuator, ActuatorType, Farm, LifecycleAction, Sensor, SensorType, Zone } from "~/utils/types";
 import { actuatorLabels, sensorLabels } from "~/utils/types";
 
 const api = useApi();
@@ -105,6 +105,24 @@ async function saveDevice() {
   if (ok) deviceDialog.value = false;
 }
 
+// ----- rename a sensor, or rename / change the safety limit of an actuator -----
+const editDialog = ref(false);
+const editForm = reactive({ kind: "sensor" as "sensor" | "actuator", id: 0, name: "", maxRunMinutes: 10 });
+
+function openEdit(kind: "sensor" | "actuator", device: Sensor | Actuator) {
+  Object.assign(editForm, { kind, id: device.id, name: device.name, maxRunMinutes: "maxRunMinutes" in device ? device.maxRunMinutes : 10 });
+  error.value = "";
+  editDialog.value = true;
+}
+
+async function saveEdit() {
+  const ok = await act(() => editForm.kind === "sensor"
+    ? api(`/api/sensors/${editForm.id}`, { method: "PUT", body: { name: editForm.name } })
+    : api(`/api/actuators/${editForm.id}`, { method: "PUT", body: { name: editForm.name, maxRunMinutes: editForm.maxRunMinutes } }),
+  "Device updated");
+  if (ok) editDialog.value = false;
+}
+
 // ----- technician lifecycle (Deliverable 9) -----
 const lifecycleOptions: Record<string, { action: LifecycleAction; label: string; body?: { testPassed?: boolean } }[]> = {
   IDLE: [{ action: "FAULT", label: "Report fault" }, { action: "OFFLINE", label: "Mark offline" }],
@@ -150,7 +168,7 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: b
       </CardHeader>
     </Card>
 
-    <Alert v-if="error && !(farmDialog || zoneDialog || deviceDialog)" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
+    <Alert v-if="error && !(farmDialog || zoneDialog || deviceDialog || editDialog)" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
     <Alert v-if="notice" class="mb-4"><AlertDescription>{{ notice }}</AlertDescription></Alert>
 
     <div class="flex flex-col gap-4">
@@ -179,8 +197,11 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: b
                 <span class="ml-auto"><StatusBadge :status="s.online ? (s.suspect ? 'WARNING' : 'ONLINE') : 'OFFLINE'" /></span>
               </div>
               <p class="text-sm text-muted-foreground">{{ sensorLabels[s.type] }} sensor · {{ s.simulated ? "simulated" : "real device" }}</p>
-              <Button v-if="can('TECHNICIAN')" size="sm" variant="outline" class="self-start"
-                @click="ask(`Remove ${s.name}?`) && act(() => api(`/api/sensors/${s.id}`, { method: 'DELETE' }), 'Sensor removed')">Remove</Button>
+              <div v-if="can('TECHNICIAN')" class="flex gap-1">
+                <Button size="sm" variant="outline" @click="openEdit('sensor', s)">Edit</Button>
+                <Button size="sm" variant="outline"
+                  @click="ask(`Remove ${s.name}?`) && act(() => api(`/api/sensors/${s.id}`, { method: 'DELETE' }), 'Sensor removed')">Remove</Button>
+              </div>
             </div>
             <div v-for="a in zone.actuators" :key="`ma${a.id}`" class="flex flex-col gap-2 rounded-lg border p-3">
               <div class="flex items-center gap-2">
@@ -193,7 +214,8 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: b
                 <Button v-for="o in lifecycleOptions[a.status] ?? []" :key="o.label" size="sm" variant="outline"
                   @click="lifecycle(a, o.action, o.body)">{{ o.label }}</Button>
                 <Button v-if="a.status === 'DECOMMISSIONED'" size="sm" variant="ghost"
-                  @click="act(() => api(`/api/actuators/${a.id}`, { method: 'DELETE' }), 'Actuator removed')">Remove</Button>
+                  @click="ask(`Remove ${a.name}?`) && act(() => api(`/api/actuators/${a.id}`, { method: 'DELETE' }), 'Actuator removed')">Remove</Button>
+                <Button v-if="a.status !== 'DECOMMISSIONED'" size="sm" variant="ghost" @click="openEdit('actuator', a)">Edit</Button>
               </div>
             </div>
           </div>
@@ -212,8 +234,11 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: b
                 <TableCell>{{ sensorLabels[s.type] }} sensor · {{ s.simulated ? "simulated" : "real device" }}</TableCell>
                 <TableCell><StatusBadge :status="s.online ? (s.suspect ? 'WARNING' : 'ONLINE') : 'OFFLINE'" /></TableCell>
                 <TableCell class="text-right">
-                  <Button v-if="can('TECHNICIAN')" size="sm" variant="ghost"
-                    @click="ask(`Remove ${s.name}?`) && act(() => api(`/api/sensors/${s.id}`, { method: 'DELETE' }), 'Sensor removed')">Remove</Button>
+                  <template v-if="can('TECHNICIAN')">
+                    <Button size="sm" variant="ghost" @click="openEdit('sensor', s)">Edit</Button>
+                    <Button size="sm" variant="ghost"
+                      @click="ask(`Remove ${s.name}?`) && act(() => api(`/api/sensors/${s.id}`, { method: 'DELETE' }), 'Sensor removed')">Remove</Button>
+                  </template>
                 </TableCell>
               </TableRow>
               <TableRow v-for="a in zone.actuators" :key="`a${a.id}`">
@@ -225,7 +250,8 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: b
                     <Button v-for="o in lifecycleOptions[a.status] ?? []" :key="o.label" size="sm" variant="outline"
                       @click="lifecycle(a, o.action, o.body)">{{ o.label }}</Button>
                     <Button v-if="a.status === 'DECOMMISSIONED'" size="sm" variant="ghost"
-                      @click="act(() => api(`/api/actuators/${a.id}`, { method: 'DELETE' }), 'Actuator removed')">Remove</Button>
+                      @click="ask(`Remove ${a.name}?`) && act(() => api(`/api/actuators/${a.id}`, { method: 'DELETE' }), 'Actuator removed')">Remove</Button>
+                    <Button v-if="a.status !== 'DECOMMISSIONED'" size="sm" variant="ghost" @click="openEdit('actuator', a)">Edit</Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -237,6 +263,29 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: b
         </CardContent>
       </Card>
     </div>
+
+    <Dialog v-model:open="editDialog">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{{ editForm.kind === "sensor" ? "Edit sensor" : "Edit actuator" }}</DialogTitle>
+          <DialogDescription>
+            {{ editForm.kind === "sensor" ? "Renaming keeps the #id, so the ESP32 does not need changes." : "The safety limit is the longest one run may last." }}
+          </DialogDescription>
+        </DialogHeader>
+        <form class="flex flex-col gap-4" @submit.prevent="saveEdit">
+          <div class="flex flex-col gap-1.5">
+            <Label for="ename">Name</Label>
+            <Input id="ename" v-model="editForm.name" required maxlength="80" />
+          </div>
+          <div v-if="editForm.kind === 'actuator'" class="flex flex-col gap-1.5">
+            <Label for="emax">Safety limit (minutes)</Label>
+            <Input id="emax" v-model.number="editForm.maxRunMinutes" type="number" min="1" max="240" required />
+          </div>
+          <FormError :message="error" />
+          <DialogFooter><Button type="submit">Save</Button></DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
 
     <Dialog v-model:open="farmDialog">
       <DialogContent>
@@ -316,7 +365,7 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: b
           </div>
           <div class="flex flex-col gap-1.5">
             <Label for="dname">Name</Label>
-            <Input id="dname" v-model="deviceForm.name" required placeholder="e.g. Soil moisture B2" />
+            <Input id="dname" v-model="deviceForm.name" required maxlength="80" placeholder="e.g. Soil moisture B2" />
           </div>
           <div v-if="deviceForm.kind === 'sensor'" class="flex flex-col gap-1.5">
             <label class="flex items-center gap-2 text-sm">

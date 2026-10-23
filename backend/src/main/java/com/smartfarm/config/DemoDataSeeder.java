@@ -99,8 +99,8 @@ public class DemoDataSeeder implements ApplicationRunner {
             log.warn("FARM_DEMO_PASSWORD is not set. Demo users owner / worker / technician use the generated password: {}", password);
         }
         String hash = encoder.encode(password);
-        users.save(new AppUser(farm, "owner", "Sokha (Farm Owner)", hash, Role.OWNER));
-        users.save(new AppUser(farm, "worker", "Dara (Farm Worker)", hash, Role.WORKER));
-        users.save(new AppUser(farm, "technician", "Vibol (Technician)", hash, Role.TECHNICIAN));
+        users.save(new AppUser(farm, "owner", "Sokha", hash, Role.OWNER));
+        users.save(new AppUser(farm, "worker", "Dara", hash, Role.WORKER));
+        users.save(new AppUser(farm, "technician", "Vibol", hash, Role.TECHNICIAN));
     }
 }

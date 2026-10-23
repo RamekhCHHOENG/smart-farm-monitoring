@@ -33,15 +33,17 @@ public class QueryService {
 
     /** Readings in a range, thinned to at most MAX_POINTS so charts stay fast. */
     public List<SensorReading> history(Long sensorId, Instant from, Instant to) {
-        List<SensorReading> all = readings.findBySensor_IdAndRecordedAtBetweenOrderByRecordedAtAsc(sensorId, from, to);
-        if (all.size() <= MAX_POINTS) {
-            return all;
+        long count = readings.countBySensor_IdAndRecordedAtBetween(sensorId, from, to);
+        if (count <= MAX_POINTS) {
+            return readings.findBySensor_IdAndRecordedAtBetweenOrderByRecordedAtAsc(sensorId, from, to);
         }
-        int step = (int) Math.ceil(all.size() / (double) MAX_POINTS);
-        return java.util.stream.IntStream.range(0, all.size())
-                .filter(i -> i % step == 0 || i == all.size() - 1)
-                .mapToObj(all::get)
-                .toList();
+        long step = (count + MAX_POINTS - 1) / MAX_POINTS;
+        return readings.sampled(sensorId, from, to, step);
+    }
+
+    /** Every reading in the range, for export; the range is limited by the retention period. */
+    public List<SensorReading> allReadings(Long sensorId, Instant from, Instant to) {
+        return readings.findBySensor_IdAndRecordedAtBetweenOrderByRecordedAtAsc(sensorId, from, to);
     }
 
     public List<DeviceLog> zoneLogs(Long zoneId, Instant from, Instant to) {

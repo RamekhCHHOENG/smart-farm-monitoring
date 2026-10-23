@@ -39,6 +39,10 @@ public abstract class Sensor {
         this.simulated = simulated;
     }
 
+    public void rename(String name) {
+        this.name = name;
+    }
+
     static Sensor create(SensorType type, Zone zone, String name, boolean simulated) {
         return switch (type) {
             case SOIL_MOISTURE -> new SoilMoistureSensor(zone, name, simulated);

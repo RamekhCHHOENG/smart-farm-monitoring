@@ -19,9 +19,9 @@ public final class Dtos {
 
     // ---------- responses ----------
 
-    public record UserDto(Long id, String name, Role role) {
+    public record UserDto(Long id, String username, String name, Role role) {
         static UserDto of(AppUser u) {
-            return new UserDto(u.getId(), u.getName(), u.getRole());
+            return new UserDto(u.getId(), u.getUsername(), u.getName(), u.getRole());
         }
     }
 
@@ -81,9 +81,11 @@ public final class Dtos {
     }
 
     public record AlertDto(Long id, String message, Severity severity, AlertStatus status, Instant raisedAt,
+                           int repeatCount, Instant lastRaisedAt,
                            Long zoneId, Long ruleId, boolean delivered, String acknowledgedBy, Instant acknowledgedAt) {
         static AlertDto of(Alert a) {
             return new AlertDto(a.getId(), a.getMessage(), a.getSeverity(), a.getStatus(), a.getRaisedAt(),
+                    a.getRepeatCount(), a.getLastRaisedAt(),
                     a.getZoneId(), a.getRuleId(), a.isDelivered(), a.getAcknowledgedBy(), a.getAcknowledgedAt());
         }
     }
@@ -115,19 +117,35 @@ public final class Dtos {
                               String cropName, @PositiveOrZero Integer birdCount) {
     }
 
-    public record SensorRequest(@NotNull SensorType type, @NotBlank String name, Boolean simulated) {
+    public record SensorRequest(@NotNull SensorType type, @NotBlank @Size(max = 80) String name, Boolean simulated) {
     }
 
-    public record ActuatorRequest(@NotNull ActuatorType type, @NotBlank String name,
+    public record ActuatorRequest(@NotNull ActuatorType type, @NotBlank @Size(max = 80) String name,
                                   @Positive @Max(240) Integer maxRunMinutes) {
     }
 
-    public record RuleRequest(@NotBlank String name, @NotNull Long sensorId, @NotNull Condition condition,
+    public record RenameRequest(@NotBlank @Size(max = 80) String name) {
+    }
+
+    public record ActuatorUpdateRequest(@NotBlank @Size(max = 80) String name, @Positive @Max(240) int maxRunMinutes) {
+    }
+
+    public record UserRequest(@NotBlank @Size(max = 30) String username, @NotBlank @Size(max = 80) String name,
+                              @NotNull Role role, @NotBlank String password) {
+    }
+
+    public record UserUpdateRequest(@NotBlank @Size(max = 80) String name, @NotNull Role role) {
+    }
+
+    public record ResetPasswordRequest(@NotBlank String newPassword) {
+    }
+
+    public record RuleRequest(@NotBlank @Size(max = 80) String name, @NotNull Long sensorId, @NotNull Condition condition,
                               @NotNull Double threshold, Long actuatorId, @PositiveOrZero int durationMin,
                               @NotNull Severity severity, @Positive Integer cooldownMinutes) {
     }
 
-    public record TaskRequest(@NotBlank String name, @NotNull Long actuatorId, @NotNull LocalTime runTime,
+    public record TaskRequest(@NotBlank @Size(max = 80) String name, @NotNull Long actuatorId, @NotNull LocalTime runTime,
                               @NotEmpty Set<DayOfWeek> repeatDays, @Positive int durationMin) {
     }
 

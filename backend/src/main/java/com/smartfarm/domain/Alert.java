@@ -29,6 +29,10 @@ public class Alert {
     private Long ruleId;
     private boolean delivered;
 
+    /** How many times the same problem was reported while this alert was still open. */
+    private Integer repeatCount = 1;
+    private Instant lastRaisedAt;
+
     private String acknowledgedBy;
     private Instant acknowledgedAt;
 
@@ -52,6 +56,12 @@ public class Alert {
         acknowledgedAt = now;
     }
 
+    /** The same problem happened again before anyone acknowledged it. */
+    public void repeat(Instant now) {
+        repeatCount = getRepeatCount() + 1;
+        lastRaisedAt = now;
+    }
+
     public void markDelivered(boolean delivered) {
         this.delivered = delivered;
     }
@@ -61,6 +71,8 @@ public class Alert {
     public Severity getSeverity() { return severity; }
     public AlertStatus getStatus() { return status; }
     public Instant getRaisedAt() { return raisedAt; }
+    public int getRepeatCount() { return repeatCount == null ? 1 : repeatCount; }
+    public Instant getLastRaisedAt() { return lastRaisedAt != null ? lastRaisedAt : raisedAt; }
     public Long getZoneId() { return zoneId; }
     public Long getRuleId() { return ruleId; }
     public boolean isDelivered() { return delivered; }

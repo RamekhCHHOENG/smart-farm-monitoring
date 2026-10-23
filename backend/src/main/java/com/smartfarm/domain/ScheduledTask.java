@@ -78,6 +78,18 @@ public class ScheduledTask {
         return null;
     }
 
+    /** Keeps lastRunDate, so moving a task that already ran today does not run it twice. */
+    public void update(String name, Actuator actuator, LocalTime runTime, Set<DayOfWeek> repeatDays, int durationMin) {
+        if (repeatDays.isEmpty()) {
+            throw new IllegalArgumentException("Choose at least one day");
+        }
+        this.name = name;
+        this.actuator = actuator;
+        this.runTime = runTime;
+        this.repeatDays = EnumSet.copyOf(repeatDays);
+        this.durationMin = durationMin;
+    }
+
     public void markRun(LocalDate date) {
         lastRunDate = date;
     }

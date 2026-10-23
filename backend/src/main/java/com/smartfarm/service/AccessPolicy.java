@@ -28,6 +28,10 @@ public class AccessPolicy {
         if (user.getRole() == Role.OWNER || Arrays.asList(allowed).contains(user.getRole())) {
             return user;
         }
-        throw new ForbiddenException(user.getRole() + " is not allowed to do this");
+        throw new ForbiddenException(switch (user.getRole()) {
+            case WORKER -> "A Farm Worker account cannot do this. Ask the Farm Owner.";
+            case TECHNICIAN -> "A Technician account cannot do this. Ask the Farm Owner.";
+            case OWNER -> "Not allowed";
+        });
     }
 }

@@ -30,5 +30,5 @@ const tone = computed(() => {
 </script>
 
 <template>
-  <Badge :class="tone">{{ status.replace("_", " ") }}</Badge>
+  <Badge :class="tone">{{ t(status) }}</Badge>
 </template>

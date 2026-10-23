@@ -2,10 +2,12 @@ package com.smartfarm.web;
 
 import com.smartfarm.service.ForbiddenException;
 import com.smartfarm.service.NotFoundException;
+import com.smartfarm.service.TooManyAttemptsException;
 import com.smartfarm.service.UnauthorizedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -26,6 +28,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     ProblemDetail unauthorized(UnauthorizedException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
+    }
+
+    @ExceptionHandler(TooManyAttemptsException.class)
+    ProblemDetail tooMany(TooManyAttemptsException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, e.getMessage());
     }
 
     @ExceptionHandler(ForbiddenException.class)
@@ -66,26 +73,32 @@ public class ApiExceptionHandler {
             Map.entry("maxRunMinutes", "Safety limit (minutes)"), Map.entry("runTime", "Time"),
             Map.entry("repeatDays", "Days"), Map.entry("value", "Value"),
             Map.entry("username", "Username"), Map.entry("password", "Password"),
-            Map.entry("currentPassword", "Current password"), Map.entry("newPassword", "New password"));
+            Map.entry("currentPassword", "Current password"), Map.entry("newPassword", "New password"),
+            Map.entry("role", "Role"));
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ProblemDetail invalid(MethodArgumentNotValidException e) {
         String detail = e.getBindingResult().getFieldErrors().stream()
-                .map(f -> LABELS.getOrDefault(f.getField(), f.getField()) + ": " + friendly(f.getCode(), f.getDefaultMessage()))
+                .map(f -> LABELS.getOrDefault(f.getField(), f.getField()) + ": " + friendly(f))
                 .distinct()
                 .collect(Collectors.joining("; "));
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
     }
 
-    private static String friendly(String code, String fallback) {
+    private static String friendly(FieldError f) {
+        String code = f.getCode();
         if (code == null) {
-            return fallback;
+            return f.getDefaultMessage();
         }
+        // Constraint attributes arrive sorted by name after the field itself: @Size → [field, max, min].
+        Object[] args = f.getArguments();
         return switch (code) {
             case "NotBlank", "NotNull", "NotEmpty" -> "please fill this in";
             case "PositiveOrZero" -> "cannot be negative";
             case "Positive" -> "must be more than 0";
-            default -> fallback;
+            case "Size" -> args != null && args.length > 1 ? "use at most " + args[1] + " characters" : f.getDefaultMessage();
+            case "Max" -> args != null && args.length > 1 ? "must be at most " + args[1] : f.getDefaultMessage();
+            default -> f.getDefaultMessage();
         };
     }
 }

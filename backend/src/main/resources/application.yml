@@ -28,6 +28,12 @@ farm:
   # Time zone of the farm for schedules, e.g. Asia/Phnom_Penh (empty = the server's own zone)
   time-zone: ${FARM_TIME_ZONE:}
   session-ttl: PT12H
+  # Wrong passwords allowed per username before it is locked for lock-time
+  login:
+    max-failures: 5
+    lock-time: PT15M
+  # Raw sensor readings older than this are deleted (alerts and device logs are kept)
+  reading-retention-days: ${FARM_READING_RETENTION_DAYS:90}
   sensor-offline-after: PT2M
   cors:
     allowed-origins: ${FARM_CORS_ORIGINS:http://localhost:3000}

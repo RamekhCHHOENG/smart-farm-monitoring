@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -25,8 +26,17 @@ public class AlertService {
         this.clock = clock;
     }
 
-    /** Creates the alert, stores it, and delivers it through the configured channel (FR-09). */
+    /**
+     * Creates the alert, stores it, and delivers it through the configured channel (FR-09).
+     * If the same problem is already open, it is counted on that alert instead, so staff
+     * are not flooded with copies and the phone is not notified again.
+     */
     public Alert raise(String message, Severity severity, Long zoneId, Long ruleId) {
+        Optional<Alert> open = alerts.findFirstByStatusAndMessage(AlertStatus.OPEN, message);
+        if (open.isPresent()) {
+            open.get().repeat(clock.instant());
+            return open.get();
+        }
         Alert alert = alerts.save(new Alert(message, severity, zoneId, ruleId, clock.instant()));
         alert.markDelivered(notifier.send(alert));
         return alert;
