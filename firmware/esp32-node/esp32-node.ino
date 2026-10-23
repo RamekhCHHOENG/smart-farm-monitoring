@@ -17,8 +17,11 @@
  *
  * Libraries (Arduino Library Manager): "DHT sensor library" by Adafruit, "Adafruit Unified Sensor".
  * Board: "ESP32 Dev Module" (Boards Manager package "esp32" by Espressif).
+ *
+ * No board yet? The same sketch runs in the Wokwi simulator: see WOKWI.md.
  */
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <DHT.h>
 #include "secrets.h"
@@ -27,11 +30,18 @@ const int SOIL_PIN = 34;
 const int DHT_PIN = 4;
 const int RELAY_PIN = 26;
 const int LED_PIN = 2;               // built-in LED on most ESP32 DevKit boards
-const bool RELAY_ACTIVE_LOW = true;  // most cheap relay modules switch on with LOW
+#ifndef RELAY_ACTIVE_LOW
+#define RELAY_ACTIVE_LOW true  // most cheap relay modules switch on with LOW (the Wokwi relay: HIGH)
+#endif
 
 // Calibrate: open the Serial Monitor, note "raw" with the sensor in dry air and in a glass of water.
-const int SOIL_RAW_DRY = 3000;
-const int SOIL_RAW_WET = 1250;
+// secrets.h may override these (the Wokwi slider uses the full 0-4095 range).
+#ifndef SOIL_RAW_DRY
+#define SOIL_RAW_DRY 3000
+#endif
+#ifndef SOIL_RAW_WET
+#define SOIL_RAW_WET 1250
+#endif
 
 const unsigned long READING_INTERVAL_MS = 10000;
 const unsigned long COMMAND_INTERVAL_MS = 3000;
@@ -51,7 +61,11 @@ void setPump(bool on) {
 void connectWifi() {
   if (WiFi.status() == WL_CONNECTED) return;
   Serial.printf("Connecting to %s", WIFI_SSID);
+#ifdef WIFI_CHANNEL
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD, WIFI_CHANNEL);  // a fixed channel connects faster (Wokwi uses 6)
+#else
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+#endif
   for (int i = 0; i < 40 && WiFi.status() != WL_CONNECTED; i++) {
     delay(500);
     Serial.print('.');
@@ -61,6 +75,21 @@ void connectWifi() {
   } else {
     Serial.println(" failed (check name/password; ESP32 only supports 2.4 GHz Wi-Fi)");
   }
+}
+
+// Opens a request. An https:// server address (for example an internet tunnel used with Wokwi)
+// is reached over TLS; the tls object must live until the request has finished.
+bool beginRequest(HTTPClient& http, WiFiClientSecure& tls, const String& url) {
+  http.setTimeout(HTTP_TIMEOUT_MS);
+  if (url.startsWith("https://")) {
+#ifdef SERVER_ROOT_CA
+    tls.setCACert(SERVER_ROOT_CA);  // checks the server's certificate
+#else
+    tls.setInsecure();  // encrypted, but the certificate is not checked: fine for testing only
+#endif
+    return http.begin(tls, url);
+  }
+  return http.begin(url);
 }
 
 float readSoilPercent() {
@@ -81,9 +110,9 @@ void sendReading(int sensorId, float value) {
     Serial.printf("Sensor %d: no value (check wiring), skipped\n", sensorId);
     return;
   }
+  WiFiClientSecure tls;
   HTTPClient http;
-  http.setTimeout(HTTP_TIMEOUT_MS);
-  http.begin(String(SERVER_URL) + "/api/devices/readings");
+  beginRequest(http, tls, String(SERVER_URL) + "/api/devices/readings");
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Device-Key", DEVICE_KEY);
   String body = "{\"sensorId\":" + String(sensorId) + ",\"value\":" + String(value, 1) + "}";
@@ -95,9 +124,9 @@ void sendReading(int sensorId, float value) {
 
 void pollPump() {
   if (PUMP_ACTUATOR_ID <= 0) return;
+  WiFiClientSecure tls;
   HTTPClient http;
-  http.setTimeout(HTTP_TIMEOUT_MS);
-  http.begin(String(SERVER_URL) + "/api/devices/actuators/" + String(PUMP_ACTUATOR_ID) + "/state");
+  beginRequest(http, tls, String(SERVER_URL) + "/api/devices/actuators/" + String(PUMP_ACTUATOR_ID) + "/state");
   http.addHeader("X-Device-Key", DEVICE_KEY);
   int status = http.GET();
   if (status == 200) {

@@ -5,7 +5,8 @@ use case. When you want to prove the system works with a real sensor, start smal
 
 | Level | You buy | About | What it proves |
 |---|---|---|---|
-| 0 - laptop only | nothing | $0 | The real-device API path: a script acts as the ESP32 |
+| 0 - laptop only | nothing | $0 | The real-device API path: the **Virtual ESP32** page or a script acts as the board |
+| 0.5 - simulated ESP32 | nothing ([Wokwi](../firmware/esp32-node/WOKWI.md), free) | $0 | **Our real firmware** runs on a simulated ESP32 with a slider as the soil sensor |
 | **1 - minimal real kit** (recommended) | ESP32 + capacitive soil sensor + USB cable + 3 jumper wires | **$6-12** | A real sensor in real soil drives the rule; the ESP32's built-in LED shows the "pump" |
 | 2 - full kit | Level 1 + DHT22 + relay + 5 V mini pump + tube + breadboard | $15-30 total | Real watering: dry soil, the pump starts by itself |
 
@@ -82,12 +83,25 @@ for example `192.168.1.20`. On Windows, allow Java through the firewall when ask
 
 ### C. Level 0: test without hardware
 
+**In the browser:** sign in as the Technician and open **Virtual ESP32** in the menu. Enter the
+device key, choose the sensor and pump from step B, set the soil value to about 35 % and click
+**Power on**. With "Dries by itself" ticked the value drops 1.5 % every reading (every 10 s, like
+the firmware); below 30 % the server starts the pump and the virtual LED lights up. The page shows
+a serial monitor with every request and answer.
+
+**From a terminal:**
+
 ```bash
 FARM_DEVICE_KEY=<same key> node scripts/fake-device.mjs --sensor 1 --pump 1 --from 40
 ```
 
 The script lowers the value by 2 % every 3 s. Below 30 % the dashboard shows the pump **RUNNING**,
 an alert appears, and the script prints `pump 1: ON`.
+
+### C2. Level 0.5: run our firmware in the Wokwi simulator
+
+Same sketch, simulated board: see **[firmware/esp32-node/WOKWI.md](../firmware/esp32-node/WOKWI.md)**.
+The simulated board needs a public address for the server (a free tunnel) or Wokwi for VS Code.
 
 ### D. Level 1/2: test with the ESP32
 

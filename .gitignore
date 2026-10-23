@@ -34,3 +34,6 @@ Thumbs.db
 # Root-level tools (e2e walkthrough)
 /node_modules/
 /package-lock.json
+
+# --- Firmware build output (arduino-cli / Wokwi for VS Code) ---
+firmware/esp32-node/build/

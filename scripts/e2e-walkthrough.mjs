@@ -1,4 +1,4 @@
-// Browser walkthrough of every use case as Owner, Technician and Worker (32 steps).
+// Browser walkthrough of every use case as Owner, Technician and Worker (34 steps).
 // Run from the repository root against the demo farm on a FRESH database, while both servers run:
 //   npm i --no-save playwright && npx playwright install chromium     (once)
 //   PW=<demo password> KEY=<device key> node scripts/e2e-walkthrough.mjs
@@ -324,6 +324,50 @@ await step("History quick range and CSV download", async () => {
   const path = await download.path();
   const text = (await import("node:fs")).readFileSync(path, "utf8");
   if (!text.startsWith("time,value\n") || text.split("\n").length < 3) throw new Error(`bad CSV: ${text.slice(0, 60)}`);
+});
+
+await step("History ignores a slow, outdated answer after switching zone", async () => {
+  // The first zone's sensor answers 3 s late; meanwhile the person switches to the chicken house
+  let delayed = false;
+  await page.route("**/api/sensors/*/readings?**", async (route) => {
+    if (delayed) return route.continue();
+    delayed = true; // the first answer comes 3 s late and carries a marker value
+    await new Promise((r) => setTimeout(r, 3000));
+    await route.fulfill({ json: [{ id: 1, sensorId: 1, value: 99.9, recordedAt: new Date().toISOString() }] });
+  });
+  await page.goto(`${BASE}/history`);
+  const chicken = await page.locator("#hzone option").filter({ hasText: "Chicken House 1" }).getAttribute("value");
+  await page.selectOption("#hzone", chicken);
+  await page.waitForTimeout(4500); // the late answer for the first zone has arrived by now
+  const summary = await page.getByText(/readings · min/).first().innerText();
+  await page.unroute("**/api/sensors/*/readings?**");
+  if (summary.includes("99.9")) throw new Error(`chart shows the outdated answer: ${summary}`);
+});
+
+await step("Virtual ESP32: drying soil makes the server start the pump", async () => {
+  // A real (non-simulated) sensor and pump with a dry-soil rule, created through the API as the owner
+  const created = await page.evaluate(async () => {
+    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("smartfarm.token")}` };
+    const post = async (url, body) => (await fetch(url, { method: "POST", headers, body: JSON.stringify(body) })).json();
+    const zone = await post("/api/zones", { type: "CROP", name: "VD Bed", cropName: "Basil" });
+    const sensor = await post(`/api/zones/${zone.id}/sensors`, { type: "SOIL_MOISTURE", name: "VD soil", simulated: false });
+    const pump = await post(`/api/zones/${zone.id}/actuators`, { type: "WATER_PUMP", name: "VD pump", maxRunMinutes: 2 });
+    await post("/api/rules", { name: "VD dry soil", sensorId: sensor.id, condition: "BELOW", threshold: 30, actuatorId: pump.id,
+      durationMin: 1, severity: "WARNING", cooldownMinutes: 1 });
+    return { zone: zone.id, sensor: sensor.id, pump: pump.id };
+  });
+  await page.goto(`${BASE}/virtual-device`);
+  await page.locator("#vsoil option").filter({ hasText: "VD soil" }).waitFor({ state: "attached" });
+  await page.selectOption("#vsoil", String(created.sensor));
+  await page.selectOption("#vpump", String(created.pump));
+  await page.fill("#vkey", DEVICE_KEY);
+  await page.locator("#vsoilv").fill("31");
+  await button("Power on").click();
+  await page.getByText("Pump relay ON").waitFor({ timeout: 30000 });
+  await expectText("Watering: VD pump started");
+  await button("Power off").click();
+  await page.evaluate(async (zoneId) => fetch(`/api/zones/${zoneId}`, { method: "DELETE",
+    headers: { Authorization: `Bearer ${localStorage.getItem("smartfarm.token")}` } }), created.zone);
 });
 
 await step("Khmer language switch", async () => {

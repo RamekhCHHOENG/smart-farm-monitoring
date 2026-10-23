@@ -10,7 +10,7 @@ This manual explains how to use the Smart Farm Monitoring System day to day. It 
 |---|---|---|
 | Farm Owner | Sets up the farm and zones, decides the automation rules and schedules, manages staff accounts, reads reports. Can also do everything the others can. | All |
 | Farm Worker | Watches the dashboard, starts and stops pumps, fans and feeders, and acknowledges alerts after checking the zone. | 2, 3, 7, 8, 9 |
-| Technician | Registers sensors and actuators, reports faults and repairs devices. | 2, 4, 7, 9 |
+| Technician | Registers sensors and actuators, reports faults and repairs devices, tests devices with the Virtual ESP32. | 2, 4, 7, 9 |
 
 Words such as **zone**, **sensor**, **actuator** and **threshold** are explained in the Glossary at the end.
 
@@ -180,12 +180,27 @@ Click **Edit** next to the device. You can rename a sensor, and rename an actuat
 
 **Remove** deletes a device after you confirm. A decommissioned actuator can only be removed.
 
+### 4.6 Test without hardware: Virtual ESP32 (Technician)
+
+No ESP32 yet? **Virtual ESP32** in the menu is a device inside the browser. It talks to the server exactly like the real board, with the same device key, so rules, alerts and the pump react as they would in the field.
+
+1. Register a sensor with **Simulated unticked** and a pump (section 4.3), and make a rule for them (chapter 5).
+2. Open **Virtual ESP32** and type the **device key** (the server's FARM_DEVICE_KEY; ask the person who installed the server). It is kept only in this browser tab.
+3. Choose the sensor and the pump. Move the slider to set the soil moisture.
+4. Click **Power on**. Every 10 seconds it sends the value; every 3 seconds it asks whether the pump should run, and the **blue light** shows the answer.
+5. With **Dries by itself** ticked, the soil slowly dries; below the rule's threshold the server starts the pump and the light turns on. The **serial monitor** shows every message.
+
+![Virtual ESP32: the server has started the pump after the soil dried below 30 %](screens/35-virtual-device.png)
+*Figure 19. Virtual ESP32: the server has started the pump after the soil dried below 30 %*
+
+> **Note:** To run our real ESP32 program on a simulated board, see firmware/esp32-node/WOKWI.md in the project.
+
 ## 5. Automation rules (Owner)
 
 A rule says: **IF** a sensor reading goes above or below a value **THEN** start an actuator for some minutes and send an alert. Rules work day and night, also when nobody is looking.
 
 ![Automation rules](screens/09-automation-rules.png)
-*Figure 19. Automation rules*
+*Figure 20. Automation rules*
 
 ### 5.1 Create a rule
 
@@ -197,19 +212,19 @@ A rule says: **IF** a sensor reading goes above or below a value **THEN** start 
 6. Click **Save rule**.
 
 ![New rule](screens/10-new-rule-dialog.png)
-*Figure 20. New rule*
+*Figure 21. New rule*
 
 Use the switch in the **Active** column to pause a rule without deleting it. The pencil edits a rule; the bin deletes it. Workers and technicians see the rules but cannot change them.
 
 ![Rules as seen by a Farm Worker (read only)](screens/19-rules-worker-read-only.png)
-*Figure 21. Rules as seen by a Farm Worker (read only)*
+*Figure 22. Rules as seen by a Farm Worker (read only)*
 
 ## 6. Schedules (Owner)
 
 A schedule starts an actuator at a fixed time on chosen days, for example feeding at 07:00 every day. Times are **farm time** (the time zone is shown at the top of the page).
 
 ![Schedules with their next run](screens/11-schedules.png)
-*Figure 22. Schedules with their next run*
+*Figure 23. Schedules with their next run*
 
 1. Click **New schedule** and type a name.
 2. Choose the actuator, the time and how many minutes it runs.
@@ -217,12 +232,12 @@ A schedule starts an actuator at a fixed time on chosen days, for example feedin
 4. Click **Save schedule**. The **Next run** column tells you when it will start.
 
 ![New schedule](screens/12-new-schedule-dialog.png)
-*Figure 23. New schedule*
+*Figure 24. New schedule*
 
 To change a schedule, click the **pencil** in its row, change the time, days, actuator or minutes, and click **Save schedule**. A task that already ran today does not run twice if you move it later. The **bin** deletes a schedule after you confirm.
 
 ![Edit a schedule](screens/30-edit-schedule-dialog.png)
-*Figure 24. Edit a schedule*
+*Figure 25. Edit a schedule*
 
 > **Note:** If the server was off at the scheduled time, the task still runs if the server is back within 15 minutes. Otherwise it waits for the next selected day.
 
@@ -237,7 +252,7 @@ An alert is created when a rule fires, when a device reports a fault or goes off
 | CRITICAL | Act now: a device is broken, or a rule wanted to start a device that could not start. |
 
 ![Alerts as seen by a Farm Worker](screens/20-alerts-worker-acknowledge.png)
-*Figure 25. Alerts as seen by a Farm Worker*
+*Figure 26. Alerts as seen by a Farm Worker*
 
 1. Read the alert and **go and check the zone**.
 2. Click **Acknowledge**. Your name is saved with the alert.
@@ -246,7 +261,7 @@ An alert is created when a rule fires, when a device reports a fault or goes off
 The **Open** tab shows alerts still waiting; **All** also shows acknowledged ones and who acknowledged them. If the same problem happens again before anyone acknowledges it, it is counted on the same alert ("happened 2 times") instead of filling the list with copies.
 
 ![All alerts, including acknowledged ones](screens/14-alerts-owner.png)
-*Figure 26. All alerts, including acknowledged ones*
+*Figure 27. All alerts, including acknowledged ones*
 
 ## 8. History and reports
 
@@ -259,7 +274,7 @@ The quickest way in: click a sensor tile on the dashboard. History opens with th
 5. Click **Download CSV** to save every reading in the range as a file that opens in Excel or Google Sheets, for reports or a teacher.
 
 ![History & reports](screens/13-history-and-reports.png)
-*Figure 27. History & reports*
+*Figure 28. History & reports*
 
 > **Note:** Readings are kept for 90 days, then deleted to keep the server fast. Download a CSV if you need them longer. Alerts and device activity are kept.
 
@@ -268,25 +283,25 @@ The quickest way in: click a sensor tile on the dashboard. History opens with th
 The app works in the phone's browser. The menu sits at the **bottom of the screen**, within reach of your thumb: **Home**, **Alerts** (with the number still open), **History**, **Zones** and **More**. Lists turn into cards so that messages and statuses stay readable.
 
 ![Dashboard on a phone](screens/24-phone-dashboard.png)
-*Figure 28. Dashboard on a phone*
+*Figure 29. Dashboard on a phone*
 
 ![Alerts on a phone](screens/25-phone-alerts.png)
-*Figure 29. Alerts on a phone*
+*Figure 30. Alerts on a phone*
 
 **More** opens the other pages (Automation rules, Schedules, and Users for the owner) and the settings: language, alert sound, dark mode, change password and log out.
 
 ![The More menu on a phone, in Khmer](screens/31-phone-more-menu.png)
-*Figure 30. The More menu on a phone, in Khmer*
+*Figure 31. The More menu on a phone, in Khmer*
 
 ![Zones & devices on a phone](screens/26-phone-zones.png)
-*Figure 31. Zones & devices on a phone*
+*Figure 32. Zones & devices on a phone*
 
 ## 10. Staff accounts (Owner)
 
 Open **Users** in the menu. Every person should have their own account, so the history shows who did what.
 
 ![Staff accounts](screens/32-users.png)
-*Figure 32. Staff accounts*
+*Figure 33. Staff accounts*
 
 ### 10.1 Add a person
 
@@ -297,7 +312,7 @@ Open **Users** in the menu. Every person should have their own account, so the h
 5. Tell the person their username and password in person. They should change the password with the key icon.
 
 ![Add a user](screens/33-add-user-dialog.png)
-*Figure 33. Add a user*
+*Figure 34. Add a user*
 
 ### 10.2 Change a role, reset a password, remove a person
 
@@ -306,7 +321,7 @@ Open **Users** in the menu. Every person should have their own account, so the h
 - The **bin** removes a person who left the farm. Their name stays in old alerts and device activity. You cannot remove yourself.
 
 ![Reset a password](screens/34-reset-password-dialog.png)
-*Figure 34. Reset a password*
+*Figure 35. Reset a password*
 
 ## 11. Troubleshooting
 

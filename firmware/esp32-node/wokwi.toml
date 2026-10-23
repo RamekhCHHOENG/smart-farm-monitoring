@@ -1,0 +1,7 @@
+# Wokwi for VS Code: runs the compiled sketch in the simulator with diagram.json.
+# Build first (from this folder):
+#   arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir build .
+[wokwi]
+version = 1
+firmware = "build/esp32-node.ino.bin"
+elf = "build/esp32-node.ino.elf"

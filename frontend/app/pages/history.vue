@@ -88,17 +88,25 @@ async function downloadCsv() {
 }
 watch([sensorId, zoneId], load);
 
+// Answers can arrive out of order when someone switches zone or sensor quickly;
+// only the answer to the latest request may fill the chart.
+let latestRequest = 0;
+
 async function load() {
   if (!zoneId.value) return;
+  const request = ++latestRequest;
   error.value = "";
   const query = { from: localInputToIso(from.value), to: localInputToIso(to.value) };
   try {
-    [readings.value, logs.value] = await Promise.all([
+    const [r, l] = await Promise.all([
       sensorId.value ? api<Reading[]>(`/api/sensors/${sensorId.value}/readings`, { query }) : Promise.resolve([]),
       api<DeviceLog[]>(`/api/zones/${zoneId.value}/logs`, { query }),
     ]);
+    if (request !== latestRequest) return;
+    readings.value = r;
+    logs.value = l;
   } catch (e) {
-    error.value = errorMessage(e);
+    if (request === latestRequest) error.value = errorMessage(e);
   }
 }
 </script>

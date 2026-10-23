@@ -9,7 +9,7 @@ from the midterm report (use cases, class diagram, sequence, activity and state 
 |---|---|
 | Backend | Java 21, Spring Boot 4, Spring Data JPA, H2 (dev) / PostgreSQL |
 | Frontend | Nuxt 4 (Vue 3), Tailwind CSS 4, [designkit](https://github.com/RamekhCHHOENG/designkit) shadcn-vue components |
-| Devices | Built-in simulator, or an ESP32 node ([firmware](firmware/esp32-node)) |
+| Devices | Built-in simulator, Virtual ESP32 page, Wokwi simulator, or a real ESP32 node ([firmware](firmware/esp32-node)) |
 
 ## What staff can do
 
@@ -85,10 +85,10 @@ and test it with `scripts/fake-device.mjs` (no hardware) or an ESP32 (about USD 
 ### Tests
 
 ```bash
-cd backend && mvn test          # 30 tests: domain rules, state machine, API flows, permissions, real-device setup,
-                                #           accounts, lockout, editing, CSV export, alert grouping
+cd backend && mvn test          # 31 tests: domain rules, state machine, API flows, permissions, real-device setup,
+                                #           accounts, lockout, editing, CSV export, alert grouping, pool reconnect
 cd frontend && npm run typecheck
-# Browser walkthrough of every use case as owner, technician and worker (32 steps), see the header of:
+# Browser walkthrough of every use case as owner, technician and worker (34 steps), see the header of:
 scripts/e2e-walkthrough.mjs
 ```
 
@@ -133,7 +133,8 @@ Step-by-step guide for owners, workers and technicians, with screenshots of ever
 
 ## Hardware
 
-Not required for the demo. To test with a real sensor, the minimal kit is an ESP32 DevKit,
+Not required for the demo. Without a board you can use the **Virtual ESP32** page (Technician menu)
+or run our real firmware in the [Wokwi simulator](firmware/esp32-node/WOKWI.md). To test with a real sensor, the minimal kit is an ESP32 DevKit,
 a capacitive soil moisture sensor and a USB data cable (about USD 6-12); the ESP32's built-in LED
 stands in for the pump. See [docs/HARDWARE.md](docs/HARDWARE.md) for the full kit, wiring,
 safety rules, and a step-by-step acceptance test.

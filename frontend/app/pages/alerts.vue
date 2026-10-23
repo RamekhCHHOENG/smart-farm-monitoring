@@ -14,10 +14,17 @@ const filter = ref<"OPEN" | "ALL">("OPEN");
 const error = ref("");
 const openAlerts = useState<number>("openAlerts", () => 0);
 
+// The list refreshes every 5 s; when the tab changes meanwhile, an older answer must not replace the newer one.
+let latestRequest = 0;
+
 async function load() {
+  const request = ++latestRequest;
+  const shown = filter.value;
   try {
-    alerts.value = await api<FarmAlert[]>("/api/alerts", { query: filter.value === "OPEN" ? { status: "OPEN" } : {} });
-    if (filter.value === "OPEN") openAlerts.value = alerts.value.length;
+    const result = await api<FarmAlert[]>("/api/alerts", { query: shown === "OPEN" ? { status: "OPEN" } : {} });
+    if (request !== latestRequest) return;
+    alerts.value = result;
+    if (shown === "OPEN") openAlerts.value = alerts.value.length;
   } catch (e) {
     error.value = errorMessage(e);
   }

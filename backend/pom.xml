@@ -18,6 +18,8 @@
 
     <properties>
         <java.version>21</java.version>
+        <!-- 2.5 fixes "Check constraint invalid" after the pool replaces connections (ConnectionRetirementTest) -->
+        <h2.version>2.5.252</h2.version>
     </properties>
 
     <dependencies>

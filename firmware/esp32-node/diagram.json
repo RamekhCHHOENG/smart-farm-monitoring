@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "author": "Group 1 - Smart Farm Monitoring System",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-slide-potentiometer", "id": "soil", "top": -120, "left": -260, "attrs": { "travelLength": "30" } },
+    { "type": "wokwi-dht22", "id": "dht1", "top": -110, "left": 200, "attrs": { "temperature": "30", "humidity": "60" } },
+    { "type": "wokwi-relay-module", "id": "relay1", "top": 120, "left": 220, "attrs": {} },
+    { "type": "wokwi-resistor", "id": "r1", "top": 260, "left": 200, "attrs": { "value": "220" } },
+    { "type": "wokwi-led", "id": "led1", "top": 220, "left": 320, "attrs": { "color": "blue" } }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "soil:VCC", "esp:3V3", "red", [] ],
+    [ "soil:GND", "esp:GND.1", "black", [] ],
+    [ "soil:SIG", "esp:34", "green", [] ],
+    [ "dht1:VCC", "esp:3V3", "red", [] ],
+    [ "dht1:GND", "esp:GND.2", "black", [] ],
+    [ "dht1:SDA", "esp:4", "green", [] ],
+    [ "relay1:VCC", "esp:5V", "red", [] ],
+    [ "relay1:GND", "esp:GND.2", "black", [] ],
+    [ "relay1:IN", "esp:26", "orange", [] ],
+    [ "esp:2", "r1:1", "blue", [] ],
+    [ "r1:2", "led1:A", "blue", [] ],
+    [ "led1:C", "esp:GND.3", "black", [] ]
+  ],
+  "dependencies": {}
+}

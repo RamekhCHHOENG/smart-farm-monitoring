@@ -1,0 +1,3 @@
+# Libraries for the Wokwi web simulator (the Arduino IDE installs them with the Library Manager)
+DHT sensor library
+Adafruit Unified Sensor
