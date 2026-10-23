@@ -344,30 +344,18 @@ await step("History ignores a slow, outdated answer after switching zone", async
   if (summary.includes("99.9")) throw new Error(`chart shows the outdated answer: ${summary}`);
 });
 
-await step("Virtual ESP32: drying soil makes the server start the pump", async () => {
-  // A real (non-simulated) sensor and pump with a dry-soil rule, created through the API as the owner
-  const created = await page.evaluate(async () => {
-    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("smartfarm.token")}` };
-    const post = async (url, body) => (await fetch(url, { method: "POST", headers, body: JSON.stringify(body) })).json();
-    const zone = await post("/api/zones", { type: "CROP", name: "VD Bed", cropName: "Basil" });
-    const sensor = await post(`/api/zones/${zone.id}/sensors`, { type: "SOIL_MOISTURE", name: "VD soil", simulated: false });
-    const pump = await post(`/api/zones/${zone.id}/actuators`, { type: "WATER_PUMP", name: "VD pump", maxRunMinutes: 2 });
-    await post("/api/rules", { name: "VD dry soil", sensorId: sensor.id, condition: "BELOW", threshold: 30, actuatorId: pump.id,
-      durationMin: 1, severity: "WARNING", cooldownMinutes: 1 });
-    return { zone: zone.id, sensor: sensor.id, pump: pump.id };
-  });
-  await page.goto(`${BASE}/virtual-device`);
-  await page.locator("#vsoil option").filter({ hasText: "VD soil" }).waitFor({ state: "attached" });
-  await page.selectOption("#vsoil", String(created.sensor));
-  await page.selectOption("#vpump", String(created.pump));
-  await page.fill("#vkey", DEVICE_KEY);
-  await page.locator("#vsoilv").fill("31");
+await step("Farm Lab: create lab farm, faulty reading and dry spell scenarios pass", async () => {
+  await page.goto(`${BASE}/farm-lab`);
+  await button("Create lab farm").click();
+  await expectText("Lab farm ready", 15000);
+  await page.fill("#lkey", DEVICE_KEY);
   await button("Power on").click();
-  await page.getByText("Pump relay ON").waitFor({ timeout: 30000 });
-  await expectText("Watering: VD pump started");
+  await page.getByRole("button", { name: "Run Faulty sensor reading" }).click();
+  await page.locator("div", { hasText: /^Faulty sensor reading\s*PASS/ }).first().waitFor({ timeout: 30000 });
+  await page.getByRole("button", { name: "Run Dry spell" }).click();
+  await page.locator("[role=img][aria-label='Lab pump relay on']").waitFor({ timeout: 90000 });
+  await page.locator("div", { hasText: /^Dry spell\s*PASS/ }).first().waitFor({ timeout: 30000 });
   await button("Power off").click();
-  await page.evaluate(async (zoneId) => fetch(`/api/zones/${zoneId}`, { method: "DELETE",
-    headers: { Authorization: `Bearer ${localStorage.getItem("smartfarm.token")}` } }), created.zone);
 });
 
 await step("Khmer language switch", async () => {

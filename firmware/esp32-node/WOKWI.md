@@ -95,5 +95,5 @@ Check the current Wokwi documentation if the address or the licence terms have c
 | `HTTP 422` | The value is outside the sensor's range (for example a temperature sensor id in `SOIL_SENSOR_ID`) |
 | Values jump around on the dashboard | The sensor is still "Simulated"; register one with Simulated unticked |
 
-No Wokwi either? The app has a **Virtual ESP32** page (Technician and Owner menu): a slider and a
-pump LED in the browser that use the same device API and device key.
+No Wokwi either? The app has a **Farm Lab** page (Technician and Owner menu): any number of virtual
+sensors and actuators in the browser that use the same device API and device key, plus farm scenarios.

@@ -5,7 +5,7 @@ use case. When you want to prove the system works with a real sensor, start smal
 
 | Level | You buy | About | What it proves |
 |---|---|---|---|
-| 0 - laptop only | nothing | $0 | The real-device API path: the **Virtual ESP32** page or a script acts as the board |
+| 0 - laptop only | nothing | $0 | The real-device API path: the **Farm Lab** (any number of virtual devices and 11 scenarios) or a script acts as the boards |
 | 0.5 - simulated ESP32 | nothing ([Wokwi](../firmware/esp32-node/WOKWI.md), free) | $0 | **Our real firmware** runs on a simulated ESP32 with a slider as the soil sensor |
 | **1 - minimal real kit** (recommended) | ESP32 + capacitive soil sensor + USB cable + 3 jumper wires | **$6-12** | A real sensor in real soil drives the rule; the ESP32's built-in LED shows the "pump" |
 | 2 - full kit | Level 1 + DHT22 + relay + 5 V mini pump + tube + breadboard | $15-30 total | Real watering: dry soil, the pump starts by itself |
@@ -83,11 +83,13 @@ for example `192.168.1.20`. On Windows, allow Java through the firewall when ask
 
 ### C. Level 0: test without hardware
 
-**In the browser:** sign in as the Technician and open **Virtual ESP32** in the menu. Enter the
-device key, choose the sensor and pump from step B, set the soil value to about 35 % and click
-**Power on**. With "Dries by itself" ticked the value drops 1.5 % every reading (every 10 s, like
-the firmware); below 30 % the server starts the pump and the virtual LED lights up. The page shows
-a serial monitor with every request and answer.
+**In the browser:** open **Farm Lab** in the menu. Enter the device key, then either click
+**Create lab farm** (Owner: two lab zones with real-device sensors, a pump, a fan, a feeder and
+rules) or add the devices you registered in step B. Click **Power on**: every 5 s each virtual sensor
+sends its value and each virtual relay asks the server whether to switch on. Change the weather,
+unplug a sensor, send an impossible value, or click **Run** on a scenario (dry spell, heat wave,
+broken pump, power cut...) and see PASS or FAIL. The same scenarios run from a terminal with
+`node scripts/farm-scenarios.mjs` (see the README).
 
 **From a terminal:**
 

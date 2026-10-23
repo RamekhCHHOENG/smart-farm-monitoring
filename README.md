@@ -9,7 +9,7 @@ from the midterm report (use cases, class diagram, sequence, activity and state 
 |---|---|
 | Backend | Java 21, Spring Boot 4, Spring Data JPA, H2 (dev) / PostgreSQL |
 | Frontend | Nuxt 4 (Vue 3), Tailwind CSS 4, [designkit](https://github.com/RamekhCHHOENG/designkit) shadcn-vue components |
-| Devices | Built-in simulator, Virtual ESP32 page, Wokwi simulator, or a real ESP32 node ([firmware](firmware/esp32-node)) |
+| Devices | Built-in simulator, Farm Lab (virtual devices + scenarios), Wokwi simulator, or a real ESP32 node ([firmware](firmware/esp32-node)) |
 
 ## What staff can do
 
@@ -126,6 +126,41 @@ scripts/e2e-walkthrough.mjs
   in memory (restart = log in again), and the ESP32 talks plain HTTP on the local network.
   Put the server behind HTTPS before exposing it to the internet.
 
+## Farm Lab: test every farm scenario without hardware
+
+The **Farm Lab** page creates as many virtual sensors (soil moisture, temperature, feed level) and
+actuators (pump, fan, feeder) as you like. They talk to the server through the device API with the
+device key, exactly like real ESP32 boards, and behave like a small farm: soil dries and the pump
+wets it, heat rises and the fan cools it, chickens eat and the feeder refills.
+
+Eleven scenarios check how the whole system reacts, each with an automatic PASS / FAIL:
+
+| Scenario | Expected reaction |
+|---|---|
+| Normal day | Nothing starts, no alert |
+| Dry spell | Pump starts below 30 % |
+| Heavy rain | Pump stays off |
+| Heat wave | Fan starts above 32 °C |
+| Cool night | Fan stays off |
+| Feed running out | Feeder refills below 20 % |
+| Broken pump | CRITICAL alert: the pump could NOT start |
+| Clogged pipe | **Known gap**: the pump runs, no water arrives, and nothing says so (needs a flow sensor) |
+| Sensor cable cut | "is offline" alert after about 2 minutes |
+| Faulty sensor reading | 150 % rejected with HTTP 422 |
+| Power cut | "is offline" alert for every sensor; relays fail safe |
+
+Run them in the browser (**Farm Lab → Create lab farm → Power on → Run**) or from a terminal:
+
+```bash
+FARM_DEVICE_KEY=<key> FARM_PASSWORD=<owner password> node scripts/farm-scenarios.mjs        # all, about 20 min
+FARM_DEVICE_KEY=<key> FARM_PASSWORD=<owner password> node scripts/farm-scenarios.mjs --only drought,heatwave
+```
+
+## Demo video
+
+`scripts/record-demo.mjs` records a start-to-finish demo with captions (Playwright), and
+`scripts/make-demo-video.sh` joins the scenes into an MP4.
+
 ## User manual
 
 Step-by-step guide for owners, workers and technicians, with screenshots of every screen:
@@ -133,7 +168,7 @@ Step-by-step guide for owners, workers and technicians, with screenshots of ever
 
 ## Hardware
 
-Not required for the demo. Without a board you can use the **Virtual ESP32** page (Technician menu)
+Not required for the demo. Without a board you can use the **Farm Lab** (Technician and Owner menu)
 or run our real firmware in the [Wokwi simulator](firmware/esp32-node/WOKWI.md). To test with a real sensor, the minimal kit is an ESP32 DevKit,
 a capacitive soil moisture sensor and a USB data cable (about USD 6-12); the ESP32's built-in LED
 stands in for the pump. See [docs/HARDWARE.md](docs/HARDWARE.md) for the full kit, wiring,

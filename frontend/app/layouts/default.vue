@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {
-  Bell, BellOff, BellRing, CalendarClock, ChartLine, Cpu, Ellipsis, KeyRound, Languages, LayoutDashboard, LogOut, Moon,
+  Bell, BellOff, BellRing, CalendarClock, ChartLine, Ellipsis, FlaskConical, KeyRound, Languages, LayoutDashboard, LogOut, Moon,
   Sprout, Sun, Users, Workflow, X,
 } from "lucide-vue-next";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ const nav = computed(() => [
   { to: "/schedules", label: "Schedules", icon: CalendarClock },
   { to: "/alerts", label: "Alerts", icon: Bell },
   { to: "/history", label: "History", icon: ChartLine },
-  ...(can("TECHNICIAN") ? [{ to: "/virtual-device", label: "Virtual ESP32", icon: Cpu }] : []),
+  ...(can("TECHNICIAN") ? [{ to: "/farm-lab", label: "Farm Lab", icon: FlaskConical }] : []),
   ...(can() ? [{ to: "/users", label: "Users", icon: Users }] : []),
 ]);
 
