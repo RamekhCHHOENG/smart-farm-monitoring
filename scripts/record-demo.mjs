@@ -1,15 +1,60 @@
-// Records a start-to-finish demo video of the app with on-screen captions.
+// Records a start-to-finish demo video of the app with on-screen captions and an optional voice-over.
 // Run against the demo farm on a FRESH database, while both servers run:
 //   PW=<demo password> KEY=<device key> OUT=<folder> node scripts/record-demo.mjs
-// Produces one .webm per scene in OUT; scripts/make-demo-video.sh joins them into an .mp4.
+// Produces one .webm per scene in OUT; scripts/make-demo-video.mjs joins them into an .mp4.
+//
+// Voice-over (optional): each caption is also spoken, and stays on screen as long as the sentence
+// takes; the timings go to OUT/cues.json. Two voices are supported:
+//   KOKORO="<python> <tts_server.py> <model.onnx> <voices.npz> af_heart"   natural neural voice (Kokoro-82M)
+//   VOICE=mb-us1                                                           espeak-ng, robotic but needs no model
 import { chromium } from "playwright";
+import { execFileSync, spawn } from "node:child_process";
+import readline from "node:readline";
 import fs from "node:fs";
 
 const BASE = "http://localhost:3000";
 const PW = process.env.PW;
 const KEY = process.env.KEY;
 const OUT = process.env.OUT ?? "demo-video";
-fs.mkdirSync(OUT, { recursive: true });
+const VOICE = process.env.VOICE;
+fs.mkdirSync(`${OUT}/audio`, { recursive: true });
+const cues = [];
+let sceneStart = 0;
+let cueCount = 0;
+
+// Kokoro runs in a long-lived Python process, so the model loads only once
+let kokoro = null;
+if (process.env.KOKORO) {
+  const [cmd, ...args] = process.env.KOKORO.split(" ");
+  const proc = spawn(cmd, args, { stdio: ["pipe", "pipe", "inherit"] });
+  const lines = readline.createInterface({ input: proc.stdout })[Symbol.asyncIterator]();
+  await lines.next(); // {"ready": true}
+  kokoro = {
+    async say(text, out) {
+      proc.stdin.write(JSON.stringify({ text, out }) + "\n");
+      return JSON.parse((await lines.next()).value).ms;
+    },
+    close: () => proc.stdin.end(),
+  };
+}
+
+/** Speaks a sentence into a WAV file placed at the moment the caption appeared; returns its length in ms. */
+async function speak(text, shownAt) {
+  if ((!kokoro && !VOICE) || !text) return 0;
+  cueCount += 1;
+  const file = `${OUT}/audio/cue-${String(cueCount).padStart(3, "0")}.wav`;
+  const plain = text.replace(/<[^>]+>/g, "").replace(/°C/g, " degrees").replace(/ %/g, " percent").replace(/#/g, "number ");
+  let ms;
+  if (kokoro) {
+    ms = await kokoro.say(plain, file);
+  } else {
+    execFileSync("espeak-ng", ["-v", VOICE, "-s", "150", "-w", file, plain]);
+    const header = fs.readFileSync(file);
+    ms = Math.round((header.readUInt32LE(40) / header.readUInt32LE(28)) * 1000); // data bytes / bytes per second
+  }
+  cues.push({ scene, offsetMs: shownAt - sceneStart, file, ms });
+  return ms;
+}
 const browser = await chromium.launch();
 const SIZE = { width: 1280, height: 720 };
 
@@ -39,12 +84,23 @@ async function newScene(name, viewport = SIZE) {
   });
   await ctx.addInitScript(CAPTION_JS);
   const page = await ctx.newPage();
+  sceneStart = Date.now(); // the video starts with the first page
   page.on("dialog", (d) => d.accept());
   return { ctx, page };
 }
 async function say(page, title, text, holdMs = 3500) {
   await page.evaluate(([t, x]) => window.__caption?.(t, x), [title, text]);
-  await page.waitForTimeout(holdMs);
+  const shownAt = Date.now();
+  const spoken = await speak(text, shownAt);
+  const hold = Math.max(holdMs, spoken ? spoken + 700 : 0);
+  await page.waitForTimeout(Math.max(0, hold - (Date.now() - shownAt)));
+}
+/** Voice only, for the title and closing cards. */
+async function narrate(page, text, holdMs) {
+  const shownAt = Date.now();
+  const spoken = await speak(text, shownAt);
+  const hold = Math.max(holdMs, spoken ? spoken + 900 : 0);
+  await page.waitForTimeout(Math.max(0, hold - (Date.now() - shownAt)));
 }
 async function login(page, user, password = PW) {
   await page.goto(`${BASE}/login`);
@@ -73,7 +129,7 @@ await card(page, "OOAD Final Project · Group 1", "Smart Farm Monitoring System"
   "Rules start pumps, fans and feeders by themselves, and alert farm staff.",
   "Java Spring Boot · Nuxt · ESP32",
 ]);
-await page.waitForTimeout(6000);
+await narrate(page, "Smart Farm Monitoring System. Sensors watch crop beds and chicken houses. Rules start pumps, fans and feeders by themselves, and alert the farm staff.", 6000);
 await ctx.close();
 
 // ---------- 2. Owner: sign in and dashboard ----------
@@ -167,7 +223,9 @@ await card(page, "Verified", "Designed with OOAD, proven by tests", [
   "Runs with the built-in simulator, the Farm Lab, the Wokwi simulator or a real ESP32",
   "github.com/RamekhCHHOENG/smart-farm-monitoring",
 ]);
-await page.waitForTimeout(6000);
+await narrate(page, "Designed with object oriented analysis and design, and proven by thirty one automated tests, a thirty four step browser walkthrough, and eleven farm scenarios. Thank you for watching.", 6000);
 await ctx.close();
 await browser.close();
-console.log(`Recorded ${scene} scenes into ${OUT}`);
+kokoro?.close();
+fs.writeFileSync(`${OUT}/cues.json`, JSON.stringify(cues, null, 1));
+console.log(`Recorded ${scene} scenes${cues.length ? ` and ${cues.length} spoken cues` : ""} into ${OUT}`);

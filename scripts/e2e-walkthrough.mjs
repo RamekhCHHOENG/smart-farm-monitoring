@@ -15,7 +15,7 @@ const problems = [];
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1366, height: 860 } });
 page.on("pageerror", (e) => problems.push(`pageerror: ${e}`));
-page.on("console", (m) => m.type() === "error" && !m.text().includes("401") && !m.text().includes("403") && !m.text().includes("409") && !m.text().includes("429") && problems.push(`console: ${m.text()}`));
+page.on("console", (m) => m.type() === "error" && !m.text().includes("401") && !m.text().includes("403") && !m.text().includes("409") && !m.text().includes("429") && !m.text().includes("422") && problems.push(`console: ${m.text()}`));
 page.on("response", (r) => r.status() >= 500 && problems.push(`HTTP ${r.status()} ${r.url()}`));
 page.on("dialog", (d) => d.accept());
 

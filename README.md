@@ -159,7 +159,10 @@ FARM_DEVICE_KEY=<key> FARM_PASSWORD=<owner password> node scripts/farm-scenarios
 ## Demo video
 
 `scripts/record-demo.mjs` records a start-to-finish demo with captions (Playwright), and
-`scripts/make-demo-video.sh` joins the scenes into an MP4.
+`scripts/make-demo-video.mjs` joins the scenes into an MP4 with the voice-over mixed in.
+The voice is [Kokoro-82M](https://github.com/hexgrad/kokoro) (Apache 2.0), an open neural voice
+run locally by `scripts/tts_server.py` (`pip install kokoro-onnx soundfile`, `apt install espeak-ng`);
+without it, set `VOICE=mb-us1` for the espeak-ng voice or leave both unset for captions only.
 
 ## User manual
 

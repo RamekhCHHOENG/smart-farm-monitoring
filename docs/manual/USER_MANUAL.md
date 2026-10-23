@@ -10,7 +10,7 @@ This manual explains how to use the Smart Farm Monitoring System day to day. It 
 |---|---|---|
 | Farm Owner | Sets up the farm and zones, decides the automation rules and schedules, manages staff accounts, reads reports. Can also do everything the others can. | All |
 | Farm Worker | Watches the dashboard, starts and stops pumps, fans and feeders, and acknowledges alerts after checking the zone. | 2, 3, 7, 8, 9 |
-| Technician | Registers sensors and actuators, reports faults and repairs devices, tests devices with the Virtual ESP32. | 2, 4, 7, 9 |
+| Technician | Registers sensors and actuators, reports faults and repairs devices, tests devices and farm scenarios in the Farm Lab. | 2, 4, 7, 9 |
 
 Words such as **zone**, **sensor**, **actuator** and **threshold** are explained in the Glossary at the end.
 
@@ -180,18 +180,32 @@ Click **Edit** next to the device. You can rename a sensor, and rename an actuat
 
 **Remove** deletes a device after you confirm. A decommissioned actuator can only be removed.
 
-### 4.6 Test without hardware: Virtual ESP32 (Technician)
+### 4.6 Test without hardware: Farm Lab (Technician, Owner)
 
-No ESP32 yet? **Virtual ESP32** in the menu is a device inside the browser. It talks to the server exactly like the real board, with the same device key, so rules, alerts and the pump react as they would in the field.
+No ESP32 yet? **Farm Lab** in the menu creates as many virtual sensors and actuators as you like. They talk to the server exactly like real boards, with the same device key, and behave like a small farm: soil dries and the pump wets it, heat rises and the fan cools it, chickens eat and the feeder refills.
 
-1. Register a sensor with **Simulated unticked** and a pump (section 4.3), and make a rule for them (chapter 5).
-2. Open **Virtual ESP32** and type the **device key** (the server's FARM_DEVICE_KEY; ask the person who installed the server). It is kept only in this browser tab.
-3. Choose the sensor and the pump. Move the slider to set the soil moisture.
-4. Click **Power on**. Every 10 seconds it sends the value; every 3 seconds it asks whether the pump should run, and the **blue light** shows the answer.
-5. With **Dries by itself** ticked, the soil slowly dries; below the rule's threshold the server starts the pump and the light turns on. The **serial monitor** shows every message.
+1. Type the **device key** (the server's FARM_DEVICE_KEY; ask the person who installed the server). It is kept only in this browser tab.
+2. Owner: click **Create lab farm** for a ready set (a lab vegetable bed and chicken house with a soil, temperature and feed sensor, a pump, a fan, a feeder and rules). Or add devices you registered yourself with **Add**.
+3. Click **Power on**. Every 5 seconds each sensor sends its value and each relay asks the server whether to switch on; the coloured lights show the answers.
+4. Play with the farm: choose the **weather**, drag a sensor's slider, **Unplug** a sensor, **Send impossible value**, or tick “Runs but does nothing” on a pump.
+5. Or click **Run** next to a scenario, or **Run all scenarios** (about 20 minutes). Each one reports **PASS**, **FAIL** or **KNOWN GAP**.
 
-![Virtual ESP32: the server has started the pump after the soil dried below 30 %](screens/35-virtual-device.png)
-*Figure 19. Virtual ESP32: the server has started the pump after the soil dried below 30 %*
+![Farm Lab during the Dry spell scenario: the server has started the pump](screens/35-virtual-device.png)
+*Figure 19. Farm Lab during the Dry spell scenario: the server has started the pump*
+
+| Scenario | What happens | Expected |
+|---|---|---|
+| Normal day | Mild weather | Nothing starts, no alert |
+| Dry spell | Soil dries quickly | Pump starts below 30 % |
+| Heavy rain | Soil gets wet | Pump stays off |
+| Heat wave | House heats towards 39 °C | Fan starts above 32 °C |
+| Cool night | 21 °C | Fan stays off |
+| Feed running out | Chickens eat fast | Feeder refills below 20 % |
+| Broken pump | Pump reported faulty, soil dries | CRITICAL alert: pump could NOT start |
+| Clogged pipe | Pump runs, no water | Known gap: nothing says so yet (needs a flow sensor) |
+| Sensor cable cut | Soil sensor silent | “is offline” alert after about 2 min |
+| Faulty sensor reading | Sensor reports 150 % | Rejected (HTTP 422) |
+| Power cut | Every device silent | “is offline” for every sensor; relays off |
 
 > **Note:** To run our real ESP32 program on a simulated board, see firmware/esp32-node/WOKWI.md in the project.
 
