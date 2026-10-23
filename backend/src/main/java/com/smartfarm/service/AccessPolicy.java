@@ -22,7 +22,7 @@ public class AccessPolicy {
 
     public AppUser require(Long userId, Role... allowed) {
         if (userId == null) {
-            throw new ForbiddenException("Missing X-User-Id header");
+            throw new UnauthorizedException("Please log in");
         }
         AppUser user = users.findById(userId).orElseThrow(() -> new ForbiddenException("Unknown user " + userId));
         if (user.getRole() == Role.OWNER || Arrays.asList(allowed).contains(user.getRole())) {

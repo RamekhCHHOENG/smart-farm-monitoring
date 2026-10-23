@@ -164,6 +164,14 @@ The voice is [Kokoro-82M](https://github.com/hexgrad/kokoro) (Apache 2.0), an op
 run locally by `scripts/tts_server.py` (`pip install kokoro-onnx soundfile`, `apt install espeak-ng`);
 without it, set `VOICE=mb-us1` for the espeak-ng voice or leave both unset for captions only.
 
+### OOP walkthrough video
+
+`scripts/record-oop-video.mjs` records a second video for the course: one chapter per deliverable
+(D1-D11), each showing the concept, the diagram, the real Java code that implements it (read from
+the source files at recording time, with real line numbers) and the running app. It covers the four
+OOP pillars, GRASP and SOLID. Render the diagrams first (see the script's header), then join the
+scenes with `scripts/make-demo-video.mjs`.
+
 ## User manual
 
 Step-by-step guide for owners, workers and technicians, with screenshots of every screen:
