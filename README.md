@@ -223,6 +223,14 @@ the source files at recording time, with real line numbers) and the running app.
 OOP pillars, GRASP and SOLID. Render the diagrams first (see the script's header), then join the
 scenes with `scripts/make-demo-video.mjs`.
 
+## Slides
+
+The presentation that goes with the OOP walkthrough video: each deliverable as concept, diagram, real
+code (file and line numbers) and running app, plus the new device kinds, sensor repair and thermostat rules.
+[docs/slides/Smart-Farm-OOAD.pdf](docs/slides/Smart-Farm-OOAD.pdf) (40 pages), or open
+[docs/slides/index.html](docs/slides/index.html) in a browser and use the arrow keys.
+Speaker notes: [docs/slides/speaker-notes.md](docs/slides/speaker-notes.md).
+
 ## User manual
 
 Step-by-step guide for owners, workers and technicians, with screenshots of every screen:

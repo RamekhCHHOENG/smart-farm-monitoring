@@ -1,0 +1,904 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Farm OOAD - Smart Farm Monitoring</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  html, body { margin: 0; background: #0B140F; height: 100%; }
+  * { box-sizing: border-box; font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
+  #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  section { width: 1920px; height: 1080px; position: absolute; left: 0; top: 0; overflow: hidden; transform-origin: 0 0; }
+  section:not([style*="display"]) { display: flex; flex-direction: column; }
+  section div:not([style*="display"]) { display: flex; flex-direction: column; }
+  h1, h2, h3, p, ul, ol, table { margin: 0; }
+  h1 { font-size: 96px; } h2 { font-size: 64px; } h3 { font-size: 44px; } p { font-size: 32px; line-height: 1.4; }
+  aside { display: none; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 0.35em 0.6em; border-bottom: 1px solid #C9D8CC; vertical-align: top; }
+  th { font-weight: 700; border-bottom: 2px solid #8FAE97; }
+  b { font-weight: 700; }
+  #hud { position: fixed; right: 16px; bottom: 12px; font: 14px/1 'DM Sans', sans-serif; color: #7DCB94; opacity: .7; }
+  @media print {
+    @page { size: 1920px 1080px; margin: 0; }
+    html, body { background: none; }
+    #stage { position: static; display: block; }
+    section { position: relative !important; transform: none !important; display: flex; break-after: page; page-break-after: always; }
+    section:last-child { break-after: auto; }
+    #hud { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+<section id="cover" data-transition="fade" style="background:#14231B;color:#F1F5EF;font-family:'DM Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:center;gap:40px">
+<p style="font-size:28px;letter-spacing:4px;text-transform:uppercase;font-weight:700;color:#7DCB94">OOAD Final Project · Group 1</p>
+<h1 style="font-size:104px;font-weight:700;line-height:1.05;color:#F1F5EF">From OOAD design<br>to a working farm</h1>
+<p style="font-size:40px;line-height:1.35;color:#BFD3C4">Smart Farm Monitoring System</p>
+<p style="font-size:30px;line-height:1.45;color:#BFD3C4">Eleven deliverables, each shown as concept, diagram, real Java code and the running app,<br>plus this week’s new devices, sensor repair and thermostat rules.</p>
+<p style="position:absolute;left:128px;bottom:72px;width:1200px;font-size:24px;color:#7DCB94">github.com/RamekhCHHOENG/smart-farm-monitoring</p>
+<aside>In this presentation we walk through our eleven object oriented analysis and design deliverables. For each one we show the concept, the diagram, the real Java code that implements it, and the running application. The goal is to prove two things: that we understand the object oriented concepts, and that we used them to build a real, working farm system.</aside>
+</section>
+<section id="method" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:48px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">How every chapter works</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Each deliverable is shown four ways</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:24px">
+<div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:36px;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:64px;font-weight:700;color:#2F7D47">1</p>
+<h3 style="font-size:36px;font-weight:700">Concept</h3>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">What the deliverable means, in plain words.</p>
+</div>
+<div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:36px;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:64px;font-weight:700;color:#2F7D47">2</p>
+<h3 style="font-size:36px;font-weight:700">Diagram</h3>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">The UML from our design, rendered from the PlantUML sources in the repo.</p>
+</div>
+<div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:36px;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:64px;font-weight:700;color:#2F7D47">3</p>
+<h3 style="font-size:36px;font-weight:700">Real code</h3>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">The Java that implements it, with its file and line numbers.</p>
+</div>
+<div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:36px;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:64px;font-weight:700;color:#2F7D47">4</p>
+<h3 style="font-size:36px;font-weight:700">Running app</h3>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">The screen where you can see it work.</p>
+</div>
+</div>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">New this week:</b> 3 sensor kinds and 4 actuator kinds, a repair flow for sensors, thermostat rules with a fan-heater interlock, and a Devices page.</p>
+<aside>Every chapter follows the same pattern: the concept, the diagram from our design, the real Java code that implements it with file and line numbers, and the running application. At the end we added the features built this week: new device kinds, sensor repair, thermostat rules and the Devices page.</aside>
+</section>
+<section id="d1-problem" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:40px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 1 · Problem statement</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Farms are checked by hand, so problems are found too late</h2>
+<div style="display:flex;flex-direction:column;gap:0">
+<div style="display:flex;gap:40px;padding:32px 0;border-top:2px solid #C9D8CC">
+<p style="width:260px;font-size:32px;font-weight:700;color:#2F7D47">Problem</p>
+<p style="flex:1;font-size:30px;line-height:1.45;color:#2B3A31">Small farms in Cambodia are checked by hand. Dry soil, heat stress in a chicken house or an empty feeder are found too late: crop loss, sick animals, wasted water and feed, long hours.</p>
+</div>
+<div style="display:flex;gap:40px;padding:32px 0;border-top:2px solid #C9D8CC">
+<p style="width:260px;font-size:32px;font-weight:700;color:#2F7D47">Solution</p>
+<p style="flex:1;font-size:30px;line-height:1.45;color:#2B3A31">Sensors in crop beds, greenhouses and chicken houses; rules that start pumps, fans, heaters, misters and feeders by themselves; alerts to farm staff; schedules; reports.</p>
+</div>
+<div style="display:flex;gap:40px;padding:32px 0;border-top:2px solid #C9D8CC;border-bottom:2px solid #C9D8CC">
+<p style="width:260px;font-size:32px;font-weight:700;color:#2F7D47">Core value</p>
+<p style="flex:1;font-size:30px;line-height:1.45;color:#2B3A31">Response in seconds, not hours · fewer losses · lower workload · decisions based on data</p>
+</div>
+</div>
+<aside>Small farms are still checked by hand, so problems like dry soil, heat stress or an empty feeder are found too late. Our solution: sensors watch each zone, rules react automatically, and staff are alerted within seconds.</aside>
+</section>
+<section id="d1-app" data-transition="fade" style="background:#E4ECE5;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:420px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">The running system</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">The live dashboard</h2>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">A vegetable bed, a chicken house and a greenhouse, refreshing every 4 seconds.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Each tile shows the value, how close it is to its rule, and how fresh it is.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 40px rgba(20,35,27,0.12)">
+<img src="images/dashboard.png" alt="Dashboard of the demo farm with sensor tiles and actuator controls" style="width:1150px;height:650px;object-fit:contain">
+</div>
+<aside>Here is the result: the live dashboard of a crop bed, a chicken house and a greenhouse, refreshing every four seconds. Each tile shows the latest value, a bar with the rule's threshold marks, and how fresh the value is.</aside>
+</section>
+<section id="d2-actors" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:40px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 2 · Actors and permissions</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Three people and two external systems</h2>
+<table style="font-size:28px;color:#2B3A31;font-family:'DM Sans', Arial, sans-serif">
+<tr><th style="width:22%">Actor</th><th style="width:20%">Type</th><th style="width:58%">Can do</th></tr>
+<tr><td>Farm Owner</td><td>Primary</td><td>Everything: zones, rules, schedules, staff accounts</td></tr>
+<tr><td>Farm Worker</td><td>Primary</td><td>Watch the dashboard, start and stop devices, acknowledge alerts</td></tr>
+<tr><td>Technician</td><td>Supporting</td><td>Register devices, report faults, repair actuators and sensors</td></tr>
+<tr><td>Sensor Device</td><td>External system</td><td>Send readings and read its relay state, with a device key</td></tr>
+<tr><td>Notification Service</td><td>External system</td><td>Deliver alerts (console or Telegram)</td></tr>
+</table>
+<aside>We identified five actors: three people, the farm owner, worker and technician, and two external systems, the sensor device and the notification service. The technician now also repairs sensors, not only actuators.</aside>
+</section>
+<section id="d2-code" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 2 · In the code</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Permissions are checked on the server</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Every write operation calls <b style="color:#14231B">AccessPolicy.require</b> with the roles allowed to do it.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">The owner always passes; other roles only get what the permissions table gives them.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Hiding a button is never the only protection.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">service/AccessPolicy.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">23 </span>public AppUser require(Long userId, Role... allowed) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">24 </span>&#160;&#160;if (userId == null) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">25 </span>&#160;&#160;&#160;&#160;throw new UnauthorizedException("Please log in");</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">26 </span>&#160;&#160;}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">27 </span>&#160;&#160;AppUser user = users.findById(userId)</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;&#160;&#160;.orElseThrow(() -&gt; new ForbiddenException(...));</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">28 </span>&#160;&#160;if (user.getRole() == Role.OWNER</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160; </span>&#160;&#160;&#160;&#160;|| Arrays.asList(allowed).contains(user.getRole())) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">29 </span>&#160;&#160;&#160;&#160;return user;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">30 </span>&#160;&#160;}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">31 </span>&#160;&#160;throw new ForbiddenException(switch (user.getRole()) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">32 </span>&#160;&#160;&#160;&#160;case WORKER -&gt; "A Farm Worker account cannot do this...";</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">33 </span>&#160;&#160;&#160;&#160;case TECHNICIAN -&gt; "A Technician account cannot...";</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">34 </span>&#160;&#160;&#160;&#160;case OWNER -&gt; "Not allowed";</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">35 </span>&#160;&#160;});</p>
+</div>
+</div>
+<aside>The permissions table becomes this method. Every service calls require with the allowed roles, so the server enforces the rules even if someone bypasses the user interface. In the app, a farm worker sees the rules read only: there is no button to create, edit or delete a rule.</aside>
+</section>
+<section id="d3-req" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 3 · Functional requirements</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Each requirement is a screen and a service</h2>
+<table style="font-size:24px;color:#2B3A31;font-family:'DM Sans', Arial, sans-serif">
+<tr><th style="width:14%">ID</th><th style="width:44%">Requirement</th><th style="width:42%">Where in the app</th></tr>
+<tr><td>FR-01</td><td>Farm and zones (crop, poultry)</td><td>Zones &amp; devices · FarmService</td></tr>
+<tr><td>FR-02</td><td>Register, rename, repair, remove devices</td><td>Devices · FarmService, SensorService</td></tr>
+<tr><td>FR-03</td><td>Receive and validate readings</td><td>ReadingController · MonitoringService</td></tr>
+<tr><td>FR-04</td><td>Live dashboard</td><td>Dashboard · QueryService</td></tr>
+<tr><td>FR-05 / 06</td><td>Rules, evaluated on every reading</td><td>Automation rules · AutomationRule</td></tr>
+<tr><td>FR-07</td><td>Scheduled tasks</td><td>Schedules · TaskService</td></tr>
+<tr><td>FR-08</td><td>Manual control with a log</td><td>Dashboard · ActuatorService</td></tr>
+<tr><td>FR-09</td><td>Alerts: breach, fault, offline</td><td>Alerts · AlertService</td></tr>
+<tr><td>FR-10</td><td>History, device log, CSV</td><td>History · QueryService</td></tr>
+<tr><td>FR-11</td><td>Staff accounts</td><td>Users · UserService</td></tr>
+</table>
+<aside>Each functional requirement maps to a screen and to the service that implements it. Zones and devices cover requirements one and two, the automation rules page five and six, schedules seven, history ten.</aside>
+</section>
+<section id="d4-usecase" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:440px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 4</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Use case diagram</h2>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Eleven use cases for five actors.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">«include»</b>: every reading is evaluated against the rules; every manual action is logged.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">«extend»</b>: an alert is sent only when a threshold is breached.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:24px;display:flex;align-items:center;justify-content:center">
+<img src="images/use-case.png" alt="Use case diagram: five actors and eleven use cases with include and extend" style="width:1120px;height:780px;object-fit:contain">
+</div>
+<aside>The use case diagram shows eleven use cases. Submit sensor reading always includes evaluate rules, and send alert extends it only when a threshold is breached.</aside>
+</section>
+<section id="d4-code" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 4 · In the code</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Use case 3: Submit Sensor Reading</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">The device’s request arrives at <b style="color:#14231B">ReadingController</b>, the use case’s entry point.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">«include» Evaluate Rules</b>: the loop over every active rule always runs.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">«extend» Send Alert</b>: only inside <b style="color:#14231B">if (rule.isTriggered(…))</b>.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">service/MonitoringService.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">49 </span>public ReadingResult processReading(Long sensorId,</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;double value) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">51 </span>&#160;&#160;Sensor sensor = sensors.findById(sensorId)...;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">.. </span>&#160;&#160;// faulty sensor ignored, [valid?] checked (D8)</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">66 </span>&#160;&#160;SensorReading reading =</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;&#160;&#160;readings.save(sensor.record(value, now));</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">73 </span>&#160;&#160;List&lt;String&gt; actions = new ArrayList&lt;&gt;();</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">74 </span>&#160;&#160;for (AutomationRule rule :</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160; </span>&#160;&#160;&#160;&#160;&#160;rules.findBySensor_IdAndActiveTrue(sensorId)) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">75 </span>&#160;&#160;&#160;&#160;if (rule.isTargetReached(reading)) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">77 </span>&#160;&#160;&#160;&#160;&#160;&#160;actuatorService.stopAtTarget(rule, reading, now);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">80 </span>&#160;&#160;&#160;&#160;} else if (rule.isTriggered(reading, now)) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">81 </span>&#160;&#160;&#160;&#160;&#160;&#160;actions.add(respond(rule, reading, now));</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">82 </span>&#160;&#160;&#160;&#160;}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">83 </span>&#160;&#160;}</p>
+</div>
+</div>
+<aside>In the code, the include is this loop that always checks every active rule, and the extend is the response that only happens when a rule is triggered. Lines 75 to 77 are new: a thermostat rule that reached its target stops its own run.</aside>
+</section>
+<section id="d5-domain" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 5 · Conceptual domain model</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">A farm contains zones; a zone owns its devices</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:40px;align-items:stretch">
+<div style="flex:1;background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center">
+<img src="images/domain-model.png" alt="Domain model: Farm, Zone, Sensor, Actuator, SensorReading, rules, alerts and users with multiplicities" style="width:660px;height:620px;object-fit:contain">
+</div>
+<div style="width:920px;display:flex;flex-direction:column;gap:24px">
+<div style="background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">domain/Zone.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">29 </span>// Composition: Zone ◆── Sensor, Zone ◆── Actuator</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">30 </span>@OneToMany(mappedBy = "zone",</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160; </span>&#160;&#160;cascade = CascadeType.ALL, orphanRemoval = true)</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">32 </span>private List&lt;Sensor&gt; sensors = new ArrayList&lt;&gt;();</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span></p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">34 </span>@OneToMany(mappedBy = "zone",</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160; </span>&#160;&#160;cascade = CascadeType.ALL, orphanRemoval = true)</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">36 </span>private List&lt;Actuator&gt; actuators = new ArrayList&lt;&gt;();</p>
+</div>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">cascade = ALL</b> and <b style="color:#14231B">orphanRemoval</b>: deleting a zone deletes its devices, readings, rules and schedules.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Multiplicity 0..* is a List that may be empty: a zone can exist before its devices are installed.</p>
+</div>
+</div>
+<aside>The domain model has ten classes. A farm contains zones, a zone has sensors and actuators, and a sensor produces readings. The composition from the domain model is real in the code: a zone owns its sensors and actuators, so deleting a zone removes them too.</aside>
+</section>
+<section id="d6-class" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:72px 96px 96px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:row;align-items:end;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 6</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Design class diagram</h2>
+</div>
+<p style="flex:1;font-size:26px;line-height:1.4;color:#4A5A50">Association, composition, inheritance, interface realization and dependency. Now with 6 sensor and 7 actuator subclasses, SensorStatus, and the thermostat members.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:16px;display:flex;align-items:center;justify-content:center">
+<img src="images/class-diagram.png" alt="Design class diagram of the domain and service packages" style="width:1690px;height:780px;object-fit:contain">
+</div>
+<aside>The design class diagram adds attributes, methods, and five kinds of relationship. It now shows the six sensor subclasses and seven actuator subclasses, the sensor status, and the new thermostat members: stopAt, holdUntil, isTargetReached and opposes. Next, the four pillars of object oriented programming in the real code.</aside>
+</section>
+<section id="oop-encap" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">OOP pillar 1 · Encapsulation</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">The actuator protects its own state</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">status</b> is private. Nobody can set it directly.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">The only way to change it is through methods like <b style="color:#14231B">activate</b>, which check the rules first.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">A pump can never be started twice, or run longer than its safety limit.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">domain/Actuator.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">27 </span>@Enumerated(EnumType.STRING)</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">28 </span>private ActuatorStatus status = ActuatorStatus.IDLE;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">.. </span></p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">70 </span>public boolean activate(int durationMin, Instant now) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">71 </span>&#160;&#160;if (status != ActuatorStatus.IDLE</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160; </span>&#160;&#160;&#160;&#160;&#160;&#160;|| !checkSafetyLimit(durationMin)) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">72 </span>&#160;&#160;&#160;&#160;return false;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">73 </span>&#160;&#160;}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">74 </span>&#160;&#160;status = ActuatorStatus.RUNNING;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">75 </span>&#160;&#160;runningUntil = now.plus(Duration.ofMinutes(durationMin));</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">76 </span>&#160;&#160;return true;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">77 </span>}</p>
+</div>
+</div>
+<aside>Encapsulation: the actuator's status is private. It only changes through methods like activate, which first check that the actuator is idle and the duration is within its safety limit.</aside>
+</section>
+<section id="oop-abstract" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">OOP pillar 2 · Abstraction</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Sensor says what every sensor must do, not how</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">Sensor</b> is an <b style="color:#14231B">abstract class</b>.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Services only know these methods: type, unit, valid range, how it reacts to running actuators.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Each of the 6 concrete sensors fills in the details.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">domain/Sensor.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">16 </span>public <span style="color:#B9F6CA">abstract</span> class Sensor {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">.. </span></p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">143 </span>public abstract SensorType getType();</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">145 </span>public abstract String getUnit();</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">147 </span>public abstract double getMinValid();</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">149 </span>public abstract double getMaxValid();</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">151 </span>public abstract double initialSimulatedValue();</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">153 </span>/** {@code running}: actuators running in the zone */</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">154 </span>public abstract double simulateNext(double previous,</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160;&#160; </span>&#160;&#160;&#160;&#160;Set&lt;ActuatorType&gt; running, Random random);</p>
+</div>
+</div>
+<aside>Abstraction: Sensor is an abstract class. It declares what every sensor must provide, like its unit and valid range, without saying how. This week simulateNext changed: it now receives every kind of actuator running in the zone, so a temperature sensor can react to both a fan and a heater.</aside>
+</section>
+<section id="oop-inherit" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">OOP pillar 3 · Inheritance</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">A humidity sensor IS-A sensor</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">HumiditySensor extends Sensor</b> and inherits recording, validation, offline detection and the repair flow.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">It only adds what is specific: %, 0 to 100, rises with the mister, falls with the fan.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Added this week in one small class, like the light and tank sensors.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">domain/HumiditySensor.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">12 </span>public class HumiditySensor extends Sensor {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">23 </span>&#160;&#160;@Override public SensorType getType() {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;&#160;&#160;return SensorType.HUMIDITY; }</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">24 </span>&#160;&#160;@Override public String getUnit() { return "%"; }</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">26 </span>&#160;&#160;@Override public double getMaxValid() { return 100; }</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">.. </span></p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">30 </span>&#160;&#160;@Override</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">31 </span>&#160;&#160;public double simulateNext(double previous,</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;&#160;&#160;&#160;&#160;Set&lt;ActuatorType&gt; running, Random random) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">32 </span>&#160;&#160;&#160;&#160;double delta = (TYPICAL - previous) * 0.03 + ...;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">33 </span>&#160;&#160;&#160;&#160;if (running.contains(ActuatorType.MISTER)) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">34 </span>&#160;&#160;&#160;&#160;&#160;&#160;delta += 1 + random.nextDouble() * 0.8;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">36 </span>&#160;&#160;&#160;&#160;} if (running.contains(ActuatorType.FAN)) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">37 </span>&#160;&#160;&#160;&#160;&#160;&#160;delta -= 0.4 + random.nextDouble() * 0.3;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">39 </span>&#160;&#160;&#160;&#160;} return clamp(previous + delta);</p>
+</div>
+</div>
+<aside>Inheritance: the humidity sensor extends Sensor. It inherits recording, validation, offline detection and the new repair flow, and only adds what is special about humidity: percent, zero to one hundred, and how it reacts to the mister and the fan. It was added this week as one small class, like the light level and water tank sensors.</aside>
+</section>
+<section id="oop-poly" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">OOP pillar 4 · Polymorphism</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">One call, different behaviour per zone</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">zone.createDefaultRules()</b> is one call.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">A <b style="color:#14231B">CropZone</b> answers with water, mist and tank rules; a <b style="color:#14231B">PoultryZone</b> with fan, heater and feed rules.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">The service never asks which kind of zone it has.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">domain/PoultryZone.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">27 </span>@Override</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">28 </span>public List&lt;AutomationRule&gt; createDefaultRules() {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">29 </span>&#160;&#160;List&lt;AutomationRule&gt; rules = new ArrayList&lt;&gt;();</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">32 </span>&#160;&#160;addRule(rules, "Hot house - cool " + getName(),</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;&#160;&#160;TEMPERATURE, ABOVE, 32, FAN, 30, WARNING, 29.0);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">34 </span>&#160;&#160;addRule(rules, "Low feed - refill " + getName(),</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;&#160;&#160;FEED_LEVEL, BELOW, 20, FEEDER, 5, WARNING, 80.0);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">36 </span>&#160;&#160;addActuatorRule(rules, "Cold house - heat " + ...,</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160; </span>&#160;&#160;&#160;&#160;TEMPERATURE, BELOW, 18, HEATER, 30, WARNING, 21.0);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">38 </span>&#160;&#160;addActuatorRule(rules, "Damp house - ventilate " ...,</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;&#160;&#160;HUMIDITY, ABOVE, 85, FAN, 30, WARNING, 75.0);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">.. </span>&#160;&#160;// dim house: light; low tank: valve</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">44 </span>&#160;&#160;return rules;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">45 </span>}</p>
+</div>
+</div>
+<aside>Polymorphism: the service calls create default rules on any zone. A crop zone answers with dry soil, dry air and low tank rules; a poultry zone with hot house, cold house and feed rules. The last number is the new stop value: the fan cools to 29 degrees, the heater warms to 21, so they never take turns. Enum names are shortened on the slide to fit.</aside>
+</section>
+<section id="kinds" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">New this week · Device kinds</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">6 sensors and 7 actuators, each one small class</h2>
+<div style="display:flex;flex-direction:row;gap:48px">
+<table style="flex:1;font-size:26px;color:#2B3A31;font-family:'DM Sans', Arial, sans-serif">
+<tr><th style="width:40%">Sensor</th><th style="width:22%">Unit</th><th style="width:38%">Usually drives</th></tr>
+<tr><td>Soil moisture</td><td>%</td><td>Water pump</td></tr>
+<tr><td>Temperature</td><td>°C</td><td>Fan or heater</td></tr>
+<tr><td>Feed level</td><td>%</td><td>Feeder</td></tr>
+<tr><td>Air humidity · new</td><td>%</td><td>Mister or fan</td></tr>
+<tr><td>Light level · new</td><td>lux</td><td>Light</td></tr>
+<tr><td>Water tank · new</td><td>%</td><td>Tank valve</td></tr>
+</table>
+<table style="flex:1;font-size:26px;color:#2B3A31;font-family:'DM Sans', Arial, sans-serif">
+<tr><th style="width:44%">Actuator</th><th style="width:26%">Limit</th><th style="width:30%">Action</th></tr>
+<tr><td>Water pump</td><td>10 min</td><td>Watering</td></tr>
+<tr><td>Fan</td><td>30 min</td><td>Cooling</td></tr>
+<tr><td>Feeder</td><td>5 min</td><td>Feeding</td></tr>
+<tr><td>Heater · new</td><td>30 min</td><td>Heating</td></tr>
+<tr><td>Mister · new</td><td>5 min</td><td>Misting</td></tr>
+<tr><td>Light · new</td><td>120 min</td><td>Lighting</td></tr>
+<tr><td>Tank valve · new</td><td>15 min</td><td>Refilling</td></tr>
+</table>
+</div>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Services, screens and the Farm Lab handle a new kind with no special cases. A startup upgrade lets an older database accept them.</p>
+<aside>This week we added three sensor kinds and four actuator kinds. Each is one small subclass, so the services, the screens and the Farm Lab work with them without special cases. Hibernate had put a check constraint on the type column of older databases; a small startup upgrade removes it so existing farms accept the new kinds without losing data.</aside>
+</section>
+<section id="d7-seq" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:440px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 7</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Sequence: Submit Sensor Reading</h2>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Device → ReadingController → MonitoringService → Sensor → rules → Actuator → AlertService → NotificationService.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">loop</b> over the rules, <b style="color:#14231B">alt</b> when the actuator refuses.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:24px;display:flex;align-items:center;justify-content:center">
+<img src="images/sequence.png" alt="Sequence diagram of one sensor reading through the system" style="width:1120px;height:780px;object-fit:contain">
+</div>
+<aside>The sequence diagram follows one reading: from the device, through the controller and the monitoring service, to the sensor, the rules, the actuator and the alert.</aside>
+</section>
+<section id="d7-code" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 7 · In the code</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Each message is a method call</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">rule.getActuator()</b>, <b style="color:#14231B">activateForRule(…)</b> and <b style="color:#14231B">alertService.raise(…)</b> are the arrows of the diagram.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">alt</b>: if the actuator refuses, the alert becomes <b style="color:#14231B">CRITICAL</b>.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">New: the interlock runs first, and a thermostat rule says where it will stop.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">service/MonitoringService.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">90 </span>private String respond(AutomationRule rule, ...) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">92 </span>&#160;&#160;Actuator actuator = rule.getActuator();</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">96 </span>&#160;&#160;List&lt;String&gt; interlocked = ... IDLE</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">97 </span>&#160;&#160;&#160;&#160;? actuatorService.stopOpposites(actuator, now) : ...;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">98 </span>&#160;&#160;if (actuator == null) { outcome = "alert only"; }</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">100 </span>&#160;else if (actuator.activateForRule(</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160;&#160; </span>&#160;&#160;&#160;&#160;rule.getDurationMin(), now, rule.getId())) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">102 </span>&#160;&#160;&#160;outcome = "... started until 29°C (max 30 min)";</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">110 </span>&#160;} else if (actuator.getStatus() == RUNNING) { ... }</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">112 </span>&#160;else {&#160;&#160;// refused: fault, offline, safety limit</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">116 </span>&#160;&#160;&#160;severity = Severity.CRITICAL;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">117 </span>&#160;}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">119 </span>&#160;alertService.raise(rule.describeBreach(reading)</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160;&#160; </span>&#160;&#160;&#160;&#160;+ " - " + outcome, severity, ...);</p>
+</div>
+</div>
+<aside>Every arrow in the diagram is a method call here. And the alternative fragment is this branch: when the actuator refuses, the alert becomes critical. Two things are new: before starting, the interlock stops any opposing actuator in the zone, and a keep-in-range rule tells staff where it will stop. Long lines are shortened on the slide; the line numbers are the real ones.</aside>
+</section>
+<section id="d8-activity" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 8 · Activity diagram</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">The [valid?] decision protects the farm</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:40px;align-items:stretch">
+<div style="width:600px;background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center">
+<img src="images/activity.png" alt="Activity diagram: validate, decide, then fork into actuator action and alert" style="width:560px;height:620px;object-fit:contain">
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<div style="background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">service/MonitoringService.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">54 </span>if (sensor.getStatus() == SensorStatus.FAULT) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">55 </span>&#160;&#160;return ReadingResult.ignored(...);&#160;// 202</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">56 </span>}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">59 </span>if (!sensor.isValid(value)) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">60 </span>&#160;&#160;sensor.markSuspect(now);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">62 </span>&#160;&#160;return ReadingResult.invalid(...);&#160;// 422</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">64 </span>}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">66 </span>readings.save(sensor.record(value, now));</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">69 </span>if (sensor.isOutOfService()) return ok;&#160;// no rule</p>
+</div>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">No</b>: mark the sensor suspect, answer HTTP 422, nothing else happens. <b style="color:#14231B">Yes</b>: record it, then the fork: the actuator acts while the alert is sent.</p>
+</div>
+</div>
+<aside>The activity diagram shows the whole workflow. First a decision: is the reading valid? Then a fork: the actuator acts while the alert is sent. The decision node is this if statement. An invalid value marks the sensor as suspect and is rejected, so a broken sensor can never start a pump. Two new guards come before and after it: a sensor reported faulty is ignored, and a sensor under repair is stored but starts nothing.</aside>
+</section>
+<section id="d9-state" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:440px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 9</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">State machine: the actuator</h2>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Six states: IDLE, RUNNING, FAULT, OFFLINE, MAINTENANCE, DECOMMISSIONED.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Each transition is a method that first checks the current state. A wrong transition is refused with HTTP 409.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:24px;display:flex;align-items:center;justify-content:center">
+<img src="images/state-machine.png" alt="Actuator state machine with six states and guarded transitions" style="width:1120px;height:780px;object-fit:contain">
+</div>
+<aside>The state machine gives the actuator six states. Every transition in the diagram is a method in the code.</aside>
+</section>
+<section id="d9-code" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 9 · In the code</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Guarded transitions</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Each method lists the states it may start from, like the arrows of the diagram.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">require(…)</b> throws when the transition is not allowed; the API answers 409 Conflict.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">A broken pump can never jump back to IDLE.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">domain/Actuator.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">117 </span>/** IDLE/RUNNING → FAULT */</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">118 </span>public void reportFault() {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">119 </span>&#160;&#160;require(Set.of(IDLE, RUNNING), "report a fault");</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">120 </span>&#160;&#160;status = ActuatorStatus.FAULT;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">121 </span>&#160;&#160;runningUntil = null;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">123 </span>}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">125 </span>/** IDLE/RUNNING → OFFLINE */</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">126 </span>public void heartbeatLost() {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">127 </span>&#160;&#160;require(Set.of(IDLE, RUNNING), "mark offline");</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">128 </span>&#160;&#160;status = ActuatorStatus.OFFLINE;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">131 </span>}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">133 </span>/** OFFLINE → IDLE */</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">134 </span>public void heartbeatRestored() {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">135 </span>&#160;&#160;require(Set.of(OFFLINE), "restore heartbeat");</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">136 </span>&#160;&#160;status = ActuatorStatus.IDLE;</p>
+</div>
+</div>
+<aside>Each transition first checks the current state. A pump in fault can only go to maintenance, and only a passed test brings it back to idle. In the app, as the technician, the buttons change with the state, so only valid transitions are offered. The enum prefix ActuatorStatus is shortened on the slide.</aside>
+</section>
+<section id="sensor-sm" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:500px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">New · Sensor state machine</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">A broken sensor can be repaired</h2>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">ONLINE ⇄ OFFLINE</b> follows the signal: a sensor that stops sending comes back by itself.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">FAULT</b>: readings ignored, rules paused, so a stuck probe cannot run a pump all night.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">MAINTENANCE → ONLINE</b> only after a valid reading since the repair began.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:24px;display:flex;align-items:center;justify-content:center">
+<img src="images/sensor-state-machine.png" alt="Sensor state machine: online, offline, fault and maintenance with guarded repair" style="width:1060px;height:780px;object-fit:contain">
+</div>
+<aside>New this week: sensors got their own state machine, the counterpart of the actuator's. Online and offline follow the signal, so a sensor whose cable was fixed comes back by itself. A technician can report a sensor faulty: its readings are then ignored and its rules paused. In maintenance readings are stored again for testing, and completing the repair only works if a valid reading arrived after the repair began.</aside>
+</section>
+<section id="sensor-code" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">New · In the code</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">The repair test is the sensor’s own data</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Status is <b style="color:#14231B">worked out</b> from two timestamps, never stored twice.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Same guard pattern as the actuator: <b style="color:#14231B">require(…)</b>, else 409.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">completeRepair</b> passes only if a valid reading arrived after the repair began, not because someone clicked.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">domain/Sensor.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">96 </span>public SensorStatus getStatus() {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">97 </span>&#160;&#160;if (repairStartedAt != null) return MAINTENANCE;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">100 </span>&#160;if (faultReportedAt != null) return FAULT;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">103 </span>&#160;return online ? ONLINE : OFFLINE;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">104 </span>}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">118 </span>public void startRepair(Instant at) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">119 </span>&#160;require(Set.of(FAULT, OFFLINE), "start repair");</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">120 </span>&#160;repairStartedAt = at;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">127 </span>public boolean completeRepair() {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">128 </span>&#160;require(Set.of(MAINTENANCE), "complete repair");</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">129 </span>&#160;boolean testPassed = online &amp;&amp; !suspect</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160;&#160; </span>&#160;&#160;&#160;&amp;&amp; !lastSeenAt.isBefore(repairStartedAt);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">130 </span>&#160;if (testPassed) { faultReportedAt = null;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160;&#160; </span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;repairStartedAt = null; }</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">134 </span>&#160;return testPassed;</p>
+</div>
+</div>
+<aside>The sensor's status is worked out from two timestamps a technician sets, so it is never stored twice. The transitions use the same guard pattern as the actuator. And the repair test is real: completeRepair only passes if the sensor itself sent a valid reading after the repair began. On the slide the null check on lastSeenAt and the SensorStatus prefix are shortened.</aside>
+</section>
+<section id="sensor-app" data-transition="fade" style="background:#E4ECE5;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:420px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Live · Technician</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Only valid actions are offered</h2>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">The humidity sensor is in <b style="color:#14231B">FAULT</b>: only “Start repair” is shown, with a note saying its rules are paused.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">During the repair the page refreshes itself until the test reading arrives.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 40px rgba(20,35,27,0.12)">
+<img src="images/sensor-fault.png" alt="Zones page: greenhouse humidity sensor in FAULT with a Start repair button" style="width:1150px;height:650px;object-fit:contain">
+</div>
+<aside>Live, as the technician. The greenhouse humidity sensor was reported faulty: its badge says FAULT, the note explains that its readings are ignored and its rules paused, and the only action offered is start repair. During the repair the page refreshes every four seconds, so the technician sees when a valid reading has arrived and the repair can be completed.</aside>
+</section>
+<section id="thermo" data-transition="fade" style="background:#14231B;color:#F1F5EF;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:40px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#7DCB94">New · Keeping a temperature</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#F1F5EF">A fixed 5-minute run is not enough</h2>
+<div style="display:flex;flex-direction:row;gap:64px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:30px;line-height:1.45;color:#BFD3C4"><b style="color:#F1F5EF">Before:</b> above 34 °C the fan blows 5 minutes and stops, even if the house is still hot. Below 20 °C the heater does the same. Runs too short or too long, and fan and heater can take turns.</p>
+<p style="font-size:30px;line-height:1.45;color:#BFD3C4"><b style="color:#F1F5EF">Now, like a thermostat:</b> each rule has a <b style="color:#7DCB94">stop at</b> value. The fan runs until the house is back to 29 °C; the minutes are only a safety limit.</p>
+<p style="font-size:30px;line-height:1.45;color:#BFD3C4"><b style="color:#F1F5EF">Interlock:</b> fan and heater never run together. <b style="color:#F1F5EF">Conflict check:</b> rules that would fight are refused.</p>
+</div>
+<div style="width:520px;display:flex;flex-direction:column;gap:0;border-radius:20px;overflow:hidden">
+<div style="background:#B84A3A;padding:22px 28px;display:flex;flex-direction:row;justify-content:space-between"><p style="font-size:28px;font-weight:700;color:#FFF4F0">above 32 °C</p><p style="font-size:28px;color:#FFF4F0">fan starts</p></div>
+<div style="background:#7A3A30;padding:22px 28px;display:flex;flex-direction:row;justify-content:space-between"><p style="font-size:28px;font-weight:700;color:#FBE6E0">29 °C</p><p style="font-size:28px;color:#FBE6E0">fan stops</p></div>
+<div style="background:#2F7D47;padding:48px 28px;display:flex;flex-direction:row;justify-content:space-between"><p style="font-size:28px;font-weight:700;color:#F1F5EF">21 – 29 °C</p><p style="font-size:28px;color:#F1F5EF">quiet band</p></div>
+<div style="background:#2B4A78;padding:22px 28px;display:flex;flex-direction:row;justify-content:space-between"><p style="font-size:28px;font-weight:700;color:#E6EEFA">21 °C</p><p style="font-size:28px;color:#E6EEFA">heater stops</p></div>
+<div style="background:#3D64A0;padding:22px 28px;display:flex;flex-direction:row;justify-content:space-between"><p style="font-size:28px;font-weight:700;color:#F2F6FC">below 18 °C</p><p style="font-size:28px;color:#F2F6FC">heater starts</p></div>
+</div>
+</div>
+<aside>The problem the user raised: if the fan rule above 34 degrees and the heater rule below 20 each just run for five minutes, the run is the wrong length and the two can conflict. Best practice for holding a temperature is hysteresis, like a thermostat: start at one value, stop at another inside the comfortable band. The chicken house default is fan from 32 down to 29, heater from 18 up to 21, leaving a quiet band of 21 to 29 degrees. On top of that an interlock guarantees fan and heater never run together, and the server refuses rules whose bands overlap.</aside>
+</section>
+<section id="thermo-code" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">New · Hysteresis in the code</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">The rule knows when its job is done</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">holdUntil</b> refuses a stop value on the wrong side of the threshold.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">isTargetReached</b>: the reading is back in range (Information Expert again).</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">The actuator remembers which rule started it, so a person’s run is never cut short.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">domain/AutomationRule.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">96 </span>public void holdUntil(Double stopAt) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">101 </span>&#160;if (condition == ABOVE &amp;&amp; stopAt &gt;= threshold)</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">102 </span>&#160;&#160;&#160;throw new IllegalArgumentException(</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160;&#160; </span>&#160;&#160;&#160;&#160;&#160;"'Stop at' must be below " + threshold ...);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">.. </span>&#160;// and the mirror case for BELOW</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">110 </span>&#160;this.stopAt = stopAt;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">111 </span>}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">.. </span></p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">118 </span>public boolean isTargetReached(SensorReading r) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">119 </span>&#160;if (!keepsRange()) return false;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">122 </span>&#160;return condition == Condition.ABOVE</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160;&#160; </span>&#160;&#160;&#160;&#160;? r.getValue() &lt;= stopAt</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160;&#160; </span>&#160;&#160;&#160;&#160;: r.getValue() &gt;= stopAt;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">123 </span>}</p>
+</div>
+</div>
+<aside>The rule itself knows when its job is done. holdUntil refuses a stop value on the wrong side of the threshold, so a fan can never be told to stop above where it starts. isTargetReached says whether the reading is back in range; the monitoring service then stops the run, but only if this rule started it: a run a worker started by hand is never cut short.</aside>
+</section>
+<section id="interlock" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">New · Interlock</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Fan and heater never run together</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:40px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<div style="background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">domain/Heater.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">9 </span>public class Heater extends Actuator {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">21 </span>&#160;&#160;@Override public String getActionVerb() {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;&#160;&#160;return "Heating"; }</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">22 </span>&#160;&#160;@Override</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160; </span>&#160;&#160;public boolean opposes(ActuatorType o) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160; </span>&#160;&#160;&#160;&#160;return o == ActuatorType.FAN; }</p>
+</div>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">The heater knows its opposite; the fan says the same about the heater. Other actuators oppose nothing.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<div style="background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">service/ActuatorService.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">88 </span>List&lt;String&gt; stopOpposites(Actuator a, ...) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">90 </span>&#160;for (Actuator other :</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160; </span>&#160;&#160;&#160;&#160;a.getZone().runningOpposites(a)) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">91 </span>&#160;&#160;if (other.deactivate()) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">92 </span>&#160;&#160;&#160;deviceLogs.save(new DeviceLog(other,</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">93 </span>&#160;&#160;&#160;&#160;&#160;"interlock: stopped so ... can run"));</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">96 </span>&#160;}</p>
+</div>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Called before a rule, a schedule or a worker starts an actuator. The zone’s log says why the other one stopped.</p>
+</div>
+</div>
+<aside>The interlock follows Information Expert too: the heater knows the fan is its opposite, and the fan says the same about the heater. Before any actuator starts, whether a rule, a schedule or a worker starts it, the actuator service stops every running opposite in the same zone and writes the reason in the device log. So fan and heater can never run at the same time.</aside>
+</section>
+<section id="fight" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">New · Conflict check</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Rules that would fight are refused</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:40px;align-items:stretch">
+<div style="width:880px;display:flex;flex-direction:column;gap:24px">
+<div style="background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">service/RuleService.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">83 </span>private void checkNoFight(AutomationRule rule) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">87 </span>&#160;for (AutomationRule other : rules on this sensor) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">88 </span>&#160;&#160;// skip itself, alert-only rules, same direction</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">92 </span>&#160;&#160;upper = the ABOVE rule; lower = the BELOW rule;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">95 </span>&#160;&#160;if (lower.getStopValue() &gt;= upper.getThreshold())</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">96 </span>&#160;&#160;&#160;throw ... "they would fight";</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">101 </span>&#160;if (upper.getStopValue() &lt;= lower.getThreshold())</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">102 </span>&#160;&#160;throw ... "they would fight";</p>
+</div>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Each rule must stop before the other one starts, leaving a quiet band between them. The message names both rules and what to change.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:16px;display:flex;align-items:center;justify-content:center">
+<img src="images/rule-fight.png" alt="New rule dialog refusing a heater rule that would fight the fan rule" style="width:700px;height:620px;object-fit:contain">
+</div>
+</div>
+<aside>The last guard is in the rule service. For two rules on the same sensor that push in opposite directions, the heater must stop before the fan starts, and the fan must stop before the heater starts. If not, they would take turns forever, so the server refuses the rule with a message that names both rules and says what to change. On the right, the owner tried a heater that warms up to 34 degrees while the fan starts at 32. The code is condensed on the slide; line numbers are real.</aside>
+</section>
+<section id="rules-app" data-transition="fade" style="background:#E4ECE5;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:420px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Live · Automation rules</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Keep in range, in the form</h2>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Tick <b style="color:#14231B">Keep in range</b>, set <b style="color:#14231B">Stop at</b>; the minutes become the longest run.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">The rules list can be filtered by zone and searched.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 40px rgba(20,35,27,0.12)">
+<img src="images/rule-dialog.png" alt="Edit rule dialog with Keep in range ticked and Stop at 29 degrees" style="width:1150px;height:650px;object-fit:contain">
+</div>
+<aside>In the app, the owner edits the hot house rule: keep in range is ticked, stop at 29 degrees, and the minutes are now labelled longest run. The rules page can also be filtered by zone and searched, which was asked for this week.</aside>
+</section>
+<section id="grasp-expert" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 10 · GRASP</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Information Expert</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Give the job to the class that has the information.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">The <b style="color:#14231B">rule</b> owns condition, threshold and cooldown, so the rule decides whether a reading triggers it.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">The <b style="color:#14231B">sensor</b> knows its range (<b style="color:#14231B">isValid</b>); the <b style="color:#14231B">heater</b> knows its opposite.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">domain/AutomationRule.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">76 </span>public boolean isTriggered(SensorReading reading,</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160; </span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Instant now) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">77 </span>&#160;&#160;if (!active || !reading.getSensorId()</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;&#160;&#160;&#160;&#160;.equals(sensor.getId())) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">78 </span>&#160;&#160;&#160;&#160;return false;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">79 </span>&#160;&#160;}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">80 </span>&#160;&#160;boolean breached = switch (condition) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">81 </span>&#160;&#160;&#160;&#160;case ABOVE -&gt; reading.getValue() &gt; threshold;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">82 </span>&#160;&#160;&#160;&#160;case BELOW -&gt; reading.getValue() &lt; threshold;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">83 </span>&#160;&#160;};</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">84 </span>&#160;&#160;return breached &amp;&amp; !isCoolingDown(now);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">85 </span>}</p>
+</div>
+</div>
+<aside>Information expert: the class that has the information does the work. The rule owns its condition, threshold and cooldown, so the rule decides if a reading triggers it. The same idea is behind isValid on the sensor, isTargetReached on the rule, and opposes on the heater and the fan.</aside>
+</section>
+<section id="grasp-creator" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 10 · GRASP</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Creator</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">A class creates the objects it contains or records.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">Farm</b> creates its zones, <b style="color:#14231B">Zone</b> creates its sensors and actuators, and <b style="color:#14231B">Sensor.record</b> creates the <b style="color:#14231B">SensorReading</b>, after validating the value.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">domain/Sensor.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">68 </span>/** GRASP Creator: a sensor produces readings,</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;&#160;&#160;so it creates SensorReading. */</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">69 </span>public SensorReading record(double value, Instant at) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">70 </span>&#160;&#160;if (!isValid(value)) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">71 </span>&#160;&#160;&#160;&#160;throw new IllegalArgumentException(</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">72 </span>&#160;&#160;&#160;&#160;&#160;&#160;"Value " + value + " is outside the valid range");</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">73 </span>&#160;&#160;}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">74 </span>&#160;&#160;lastSeenAt = at;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">75 </span>&#160;&#160;online = true;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">76 </span>&#160;&#160;suspect = false;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">77 </span>&#160;&#160;return new SensorReading(this, value, at);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">78 </span>}</p>
+</div>
+</div>
+<aside>Creator: a sensor produces readings, so the sensor creates the sensor reading object, after validating the value. Recording a reading is also what brings an offline sensor back online by itself.</aside>
+</section>
+<section id="grasp-controller" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 10 · GRASP</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Controller, Low Coupling, High Cohesion</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">Controller</b>: ReadingController receives the device’s system event and delegates; it holds no farm logic.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">Low coupling</b>: the device knows one endpoint.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">High cohesion</b>: each service has one focused job.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">web/ReadingController.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;color:#7E9486"><span style="color:#5E7466">33 </span>/** UC-3: 201 stored, 202 faulty sensor, 422 invalid */</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">34 </span>@PostMapping("/readings")</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">35 </span>public ResponseEntity&lt;ReadingResult&gt; submitReading(</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;&#160;&#160;@RequestHeader("X-Device-Key") String key,</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">36 </span>&#160;&#160;&#160;&#160;@Valid @RequestBody ReadingRequest request) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">37 </span>&#160;&#160;checkKey(key);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">38 </span>&#160;&#160;ReadingResult result = monitoringService</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">&#160;&#160; </span>&#160;&#160;&#160;&#160;.processReading(request.sensorId(), request.value());</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">39 </span>&#160;&#160;HttpStatus status = result.hasInvalidValue()</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;&#160;&#160;? UNPROCESSABLE_CONTENT</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">40 </span>&#160;&#160;&#160;&#160;: result.isIgnored() ? ACCEPTED : CREATED;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">41 </span>&#160;&#160;return ResponseEntity.status(status).body(result);</p>
+</div>
+</div>
+<aside>Controller: the reading controller receives the device's request, checks the device key, and hands the work to the monitoring service. It now also answers 202 when the sensor was reported faulty. Each class stays small and focused.</aside>
+</section>
+<section id="srp" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 11 · SOLID</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Single Responsibility: one reason to change</h2>
+<table style="font-size:28px;color:#2B3A31;font-family:'DM Sans', Arial, sans-serif">
+<tr><th style="width:36%">Class</th><th style="width:64%">Its one job</th></tr>
+<tr><td>AutomationRule</td><td>Decide whether a reading breaks the rule, or is back in range</td></tr>
+<tr><td>Actuator</td><td>Act, and guard its own state</td></tr>
+<tr><td>Sensor</td><td>Validate, record, and guard its repair state</td></tr>
+<tr><td>MonitoringService</td><td>Run the workflow for one reading</td></tr>
+<tr><td>ActuatorService · SensorService</td><td>Manual control, interlock, technician actions</td></tr>
+<tr><td>RuleService</td><td>Save rules that are valid and do not fight</td></tr>
+<tr><td>AlertService · NotificationService</td><td>Create alerts · deliver a message</td></tr>
+<tr><td>SchemaUpgrade</td><td>Let an older database accept new device kinds</td></tr>
+</table>
+<aside>Single responsibility: every class has one reason to change. The rule decides, the actuator acts, the sensor guards its repair state, the alert service alerts, and repositories store. The new pieces follow the same idea: the sensor service only runs the technician's repair steps, and the schema upgrade only lets an older database accept the new device kinds.</aside>
+</section>
+<section id="ocp" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 11 · SOLID</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Open/Closed: we just did it</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">Open for extension</b>: this week the heater, mister, light, tank valve and three sensors were added as new subclasses.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">Closed for modification</b>: MonitoringService, RuleService and the screens did not need a special case.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Honest limit: the small <b style="color:#14231B">create</b> factory still needs one new line per kind.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">domain/Heater.java (new)</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">7 </span>@Entity</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">8 </span>@DiscriminatorValue("HEATER")</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">9 </span>public class Heater extends Actuator {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">11 </span>&#160;&#160;static final int DEFAULT_MAX_MINUTES = 30;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">16 </span>&#160;&#160;Heater(Zone zone, String name, int maxRunMinutes) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">17 </span>&#160;&#160;&#160;&#160;super(zone, name, maxRunMinutes);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">18 </span>&#160;&#160;}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">20 </span>&#160;&#160;@Override public ActuatorType getType() {...}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">21 </span>&#160;&#160;@Override public String getActionVerb() {...}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">22 </span>&#160;&#160;@Override public boolean opposes(...) {...}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">23 </span>}</p>
+</div>
+</div>
+<aside>Open closed: to add a heater we added a subclass of actuator, and to add a humidity sensor a subclass of sensor. The services that use actuator and sensor did not change. To be honest about the limit: the small create factory needs one new line per kind, and older databases needed a startup upgrade because of a check constraint Hibernate had created.</aside>
+</section>
+<section id="dip" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 11 · SOLID</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Dependency Inversion</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:520px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">AlertService</b> depends on the <b style="color:#14231B">NotificationService</b> interface, never on Telegram.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">ConsoleNotifier</b> and <b style="color:#14231B">TelegramNotifier</b> implement it.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Choosing one is configuration (AppConfig), not a code change.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">config/AppConfig.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">54 </span>@Bean</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">55 </span>public NotificationService notificationService(</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;&#160;&#160;RestClient.Builder builder,</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">56 </span>&#160;&#160;&#160;&#160;@Value("${farm.telegram.bot-token:}") String botToken,</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">57 </span>&#160;&#160;&#160;&#160;@Value("${farm.telegram.chat-id:}") String chatId) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">58 </span>&#160;&#160;if (!botToken.isBlank() &amp;&amp; !chatId.isBlank()) {</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">59 </span>&#160;&#160;&#160;&#160;return new TelegramNotifier(builder, botToken, chatId);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">60 </span>&#160;&#160;}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">61 </span>&#160;&#160;return new ConsoleNotifier();</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">62 </span>}</p>
+</div>
+</div>
+<aside>Dependency inversion: the alert service depends on the notification service interface. Whether alerts go to the console or to Telegram is decided by configuration, not by changing code. Set a Telegram token, and the same alerts go to staff phones instead.</aside>
+</section>
+<section id="devices-app" data-transition="fade" style="background:#E4ECE5;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:420px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">New · Devices page</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Every device on one page</h2>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Live status and latest reading for every sensor and actuator.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Filter by zone, kind, status or name; “Need attention” finds faulty and offline devices.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 40px rgba(20,35,27,0.12)">
+<img src="images/devices.png" alt="Devices page listing every sensor and actuator with filters and status" style="width:1150px;height:650px;object-fit:contain">
+</div>
+<aside>New this week: a full Devices page. It lists every sensor and actuator with live status and the latest reading. The summary cards at the top double as filters, and the list can be filtered by zone, kind, status or name. The repair actions are on each row.</aside>
+</section>
+<section id="add-device-app" data-transition="fade" style="background:#E4ECE5;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:420px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">New · Add device</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">A full page to register a device</h2>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Zone, sensor or actuator, then a type card that says what it is for.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">After saving: the #id, the ESP32 line, and a link to set up a rule.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 40px rgba(20,35,27,0.12)">
+<img src="images/add-device.png" alt="Add device page with zone, kind and type cards; Heater selected with a 30 minute limit" style="width:1150px;height:650px;object-fit:contain">
+</div>
+<aside>Registering a device is now a full page: pick the zone, sensor or actuator, then a type card that explains what each kind is for. Choosing the heater fills in its 30 minute safety limit. After saving, the page shows the device number, the line to paste into the ESP32's secrets file for a real sensor, and a link to set up a rule for it.</aside>
+</section>
+<section id="lab" data-transition="fade" style="background:#E4ECE5;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:440px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Live · Farm Lab</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">The thermostat, tested live</h2>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Virtual devices talk to the server like ESP32 boards. The house starts at 35 °C.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">The fan started, then stopped itself at 30 °C after about 10 seconds, long before its 2-minute limit. The heater never started. <b style="color:#14231B">PASS</b>.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 40px rgba(20,35,27,0.12)">
+<img src="images/lab-thermostat.png" alt="Farm Lab with the Thermostat scenario marked PASS" style="width:1130px;height:650px;object-fit:contain">
+</div>
+<aside>In the Farm Lab, virtual sensors and actuators talk to the server exactly like real ESP32 boards. The new Thermostat scenario sets the chicken house to 35 degrees on a normal day. The fan starts, and as soon as the house is back to 30 degrees the rule stops it, about ten seconds later and far before its two minute safety limit. The heater never starts. The scenario passes.</aside>
+</section>
+<section id="proof" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:48px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Proof</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Every rule of the design has a test</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px">
+<div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:40px;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:120px;font-weight:700;line-height:1;color:#2F7D47">58</p>
+<h3 style="font-size:36px;font-weight:700">automated tests</h3>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Both state machines, rules and thermostat, interlock, conflict check, API flows, permissions, database upgrade.</p>
+</div>
+<div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:40px;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:120px;font-weight:700;line-height:1;color:#2F7D47">34</p>
+<h3 style="font-size:36px;font-weight:700">browser steps</h3>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">A walkthrough of every use case as owner, technician and worker, all passing.</p>
+</div>
+<div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:40px;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:120px;font-weight:700;line-height:1;color:#2F7D47">17</p>
+<h3 style="font-size:36px;font-weight:700">farm scenarios</h3>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Drought, heat wave, cold snap, thermostat, sensor repair, power cut… One known gap is recorded: a clogged pipe.</p>
+</div>
+</div>
+<aside>Finally, every rule of the design has a test. Fifty eight automated tests, a thirty four step browser walkthrough, and seventeen farm scenarios check that the code really follows the diagrams. One scenario is a known gap on purpose: a clogged pipe cannot be detected without a flow sensor.</aside>
+</section>
+<section id="summary" data-transition="fade" style="background:#14231B;color:#F1F5EF;font-family:'DM Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:center;gap:40px">
+<p style="font-size:28px;letter-spacing:4px;text-transform:uppercase;font-weight:700;color:#7DCB94">Summary</p>
+<h2 style="font-size:88px;font-weight:700;line-height:1.08;color:#F1F5EF">Design first, then code that follows it</h2>
+<p style="font-size:36px;line-height:1.4;color:#BFD3C4">Concepts → diagrams → classes and methods → tests → a farm system that works</p>
+<p style="font-size:30px;line-height:1.45;color:#BFD3C4">The new features followed the same path: a state machine for sensors, hysteresis and an interlock for rules, new kinds as subclasses.</p>
+<p style="position:absolute;left:128px;bottom:72px;width:1200px;font-size:24px;color:#7DCB94">github.com/RamekhCHHOENG/smart-farm-monitoring · Thank you</p>
+<aside>We designed first, and then wrote code that follows the design: every diagram became classes and methods, and every rule became a test. The features added this week followed the same path. Thank you.</aside>
+</section>
+</div>
+<div id="hud"></div>
+<script>
+  // Shows one slide scaled to the window. Arrow keys, space, PageUp/PageDown, Home/End or a click move between slides.
+  const slides = [...document.querySelectorAll("#stage > section")];
+  let index = Math.max(0, Math.min(slides.length - 1, (parseInt(location.hash.slice(1)) || 1) - 1));
+  function show() {
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    const x = (innerWidth - 1920 * s) / 2, y = (innerHeight - 1080 * s) / 2;
+    slides.forEach((el, i) => {
+      el.style.display = i === index ? "" : "none";
+      el.style.transform = "translate(" + x + "px," + y + "px) scale(" + s + ")";
+    });
+    document.getElementById("hud").textContent = (index + 1) + " / " + slides.length;
+    history.replaceState(null, "", "#" + (index + 1));
+  }
+  function go(d) { index = Math.max(0, Math.min(slides.length - 1, index + d)); show(); }
+  addEventListener("keydown", (e) => {
+    if (["ArrowRight", "ArrowDown", "PageDown", " "].includes(e.key)) go(1);
+    else if (["ArrowLeft", "ArrowUp", "PageUp"].includes(e.key)) go(-1);
+    else if (e.key === "Home") { index = 0; show(); }
+    else if (e.key === "End") { index = slides.length - 1; show(); }
+  });
+  addEventListener("click", (e) => go(e.clientX < innerWidth / 3 ? -1 : 1));
+  addEventListener("resize", show);
+  addEventListener("beforeprint", () => slides.forEach((el) => { el.style.display = ""; }));
+  addEventListener("afterprint", show);
+  show();
+</script>
+</body>
+</html>

@@ -24,6 +24,7 @@ package "domain" {
     +addSensor(type, name, simulated): Sensor
     +addActuator(type, name, maxRunMinutes): Actuator
     +runningActuatorTypes(): Set<ActuatorType>
+    +runningOpposites(a: Actuator): List<Actuator>
     +{abstract} createDefaultRules(): List<AutomationRule>
   }
   class CropZone {
@@ -82,7 +83,10 @@ package "domain" {
     -status: ActuatorStatus
     -maxRunMinutes: int
     -runningUntil: Instant
+    -startedByRuleId: Long
     +activate(durationMin: int, now: Instant): boolean
+    +activateForRule(durationMin, now, ruleId): boolean
+    +opposes(type: ActuatorType): boolean
     +deactivate(): boolean
     +isRunExpired(now: Instant): boolean
     +reportFault(): void
@@ -120,7 +124,10 @@ package "domain" {
     -active: boolean
     -cooldownMinutes: int
     -lastTriggeredAt: Instant
+    -stopAt: Double
     +isTriggered(r: SensorReading, now: Instant): boolean
+    +holdUntil(stopAt: Double): void
+    +isTargetReached(r: SensorReading): boolean
     +markTriggered(now: Instant): void
     +getActuator(): Actuator
     +describeBreach(r: SensorReading): String
