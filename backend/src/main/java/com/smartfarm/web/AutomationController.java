@@ -95,6 +95,6 @@ public class AutomationController {
 
     private static RuleCommand command(RuleRequest req) {
         return new RuleCommand(req.name(), req.sensorId(), req.condition(), req.threshold(), req.actuatorId(),
-                req.durationMin(), req.severity(), req.cooldownMinutes());
+                req.durationMin(), req.severity(), req.cooldownMinutes(), req.stopAt());
     }
 }

@@ -23,7 +23,7 @@ package "domain" {
     -actuators: List<Actuator>
     +addSensor(type, name, simulated): Sensor
     +addActuator(type, name, maxRunMinutes): Actuator
-    +isCorrecting(sensor): boolean
+    +runningActuatorTypes(): Set<ActuatorType>
     +{abstract} createDefaultRules(): List<AutomationRule>
   }
   class CropZone {
@@ -41,16 +41,32 @@ package "domain" {
     -online: boolean
     -suspect: boolean
     -lastSeenAt: Instant
+    -faultReportedAt: Instant
+    -repairStartedAt: Instant
     +isValid(value: double): boolean
     +record(value: double, at: Instant): SensorReading
     +markSuspect(at: Instant): void
+    +getStatus(): SensorStatus
+    +isOutOfService(): boolean
+    +reportFault(at: Instant): void
+    +startRepair(at: Instant): void
+    +completeRepair(): boolean
     +{abstract} getUnit(): String
-    +{abstract} getCorrectiveActuatorType(): ActuatorType
-    +{abstract} simulateNext(prev, correcting, random): double
+    +{abstract} simulateNext(prev, running, random): double
   }
   class SoilMoistureSensor
   class TemperatureSensor
   class FeedLevelSensor
+  class HumiditySensor
+  class LightLevelSensor
+  class WaterLevelSensor
+
+  enum SensorStatus {
+    ONLINE
+    OFFLINE
+    FAULT
+    MAINTENANCE
+  }
 
   class SensorReading {
     -id: Long
@@ -81,6 +97,10 @@ package "domain" {
   class WaterPump
   class Fan
   class Feeder
+  class Heater
+  class Mister
+  class Light
+  class WaterValve
 
   enum ActuatorStatus {
     IDLE
@@ -154,6 +174,9 @@ package "service" {
     +lifecycle(userId, actuatorId, action, testPassed): Actuator
     +stopExpiredRuns(): int
   }
+  class SensorService {
+    +lifecycle(userId, sensorId, action): Sensor
+  }
   interface SensorReadingRepository <<interface>>
   interface AutomationRuleRepository <<interface>>
   interface NotificationService <<interface>> {
@@ -173,9 +196,17 @@ Zone "1" *-- "0..*" Actuator
 Sensor <|-- SoilMoistureSensor
 Sensor <|-- TemperatureSensor
 Sensor <|-- FeedLevelSensor
+Sensor <|-- HumiditySensor
+Sensor <|-- LightLevelSensor
+Sensor <|-- WaterLevelSensor
+Sensor --> SensorStatus
 Actuator <|-- WaterPump
 Actuator <|-- Fan
 Actuator <|-- Feeder
+Actuator <|-- Heater
+Actuator <|-- Mister
+Actuator <|-- Light
+Actuator <|-- WaterValve
 Actuator --> ActuatorStatus
 Sensor ..> SensorReading : <<create>>
 SensorReading "0..*" --> "1" Sensor
@@ -192,5 +223,6 @@ AlertService ..> Alert : <<create>>
 NotificationService <|.. ConsoleNotifier
 NotificationService <|.. TelegramNotifier
 ActuatorService ..> DeviceLog : <<create>>
+SensorService ..> DeviceLog : <<create>>
 Alert ..> AppUser
 @enduml

@@ -30,6 +30,9 @@ public abstract class Actuator {
     private int maxRunMinutes;
     private Instant runningUntil;
 
+    /** The rule that started the current run, so only that rule stops it at its target. Nullable column. */
+    private Long startedByRuleId;
+
     protected Actuator() {
     }
 
@@ -56,6 +59,10 @@ public abstract class Actuator {
             case WATER_PUMP -> new WaterPump(zone, name, maxRunMinutes != null ? maxRunMinutes : WaterPump.DEFAULT_MAX_MINUTES);
             case FAN -> new Fan(zone, name, maxRunMinutes != null ? maxRunMinutes : Fan.DEFAULT_MAX_MINUTES);
             case FEEDER -> new Feeder(zone, name, maxRunMinutes != null ? maxRunMinutes : Feeder.DEFAULT_MAX_MINUTES);
+            case HEATER -> new Heater(zone, name, maxRunMinutes != null ? maxRunMinutes : Heater.DEFAULT_MAX_MINUTES);
+            case MISTER -> new Mister(zone, name, maxRunMinutes != null ? maxRunMinutes : Mister.DEFAULT_MAX_MINUTES);
+            case LIGHT -> new Light(zone, name, maxRunMinutes != null ? maxRunMinutes : Light.DEFAULT_MAX_MINUTES);
+            case WATER_VALVE -> new WaterValve(zone, name, maxRunMinutes != null ? maxRunMinutes : WaterValve.DEFAULT_MAX_MINUTES);
         };
     }
 
@@ -69,6 +76,15 @@ public abstract class Actuator {
         return true;
     }
 
+    /** Like {@link #activate}, but remembers which rule started the run. */
+    public boolean activateForRule(int durationMin, Instant now, Long ruleId) {
+        if (!activate(durationMin, now)) {
+            return false;
+        }
+        startedByRuleId = ruleId;
+        return true;
+    }
+
     /** RUNNING → IDLE. Returns false when the actuator was not running. */
     public boolean deactivate() {
         if (status != ActuatorStatus.RUNNING) {
@@ -76,7 +92,21 @@ public abstract class Actuator {
         }
         status = ActuatorStatus.IDLE;
         runningUntil = null;
+        startedByRuleId = null;
         return true;
+    }
+
+    /** True while this run was started by the given rule (a person's or a schedule's run is never stopped by a rule). */
+    public boolean isRunningFor(Long ruleId) {
+        return status == ActuatorStatus.RUNNING && ruleId != null && ruleId.equals(startedByRuleId);
+    }
+
+    /**
+     * Actuators that work against each other in one zone (a heater and a fan) must never run together.
+     * Subclasses that have an opposite say so (Information Expert).
+     */
+    public boolean opposes(ActuatorType other) {
+        return false;
     }
 
     /** Safety shut-off: RUNNING → IDLE after the requested duration. */
@@ -89,6 +119,7 @@ public abstract class Actuator {
         require(Set.of(ActuatorStatus.IDLE, ActuatorStatus.RUNNING), "report a fault");
         status = ActuatorStatus.FAULT;
         runningUntil = null;
+        startedByRuleId = null;
     }
 
     /** IDLE/RUNNING → OFFLINE */
@@ -96,6 +127,7 @@ public abstract class Actuator {
         require(Set.of(ActuatorStatus.IDLE, ActuatorStatus.RUNNING), "mark offline");
         status = ActuatorStatus.OFFLINE;
         runningUntil = null;
+        startedByRuleId = null;
     }
 
     /** OFFLINE → IDLE */
@@ -146,4 +178,5 @@ public abstract class Actuator {
     public ActuatorStatus getStatus() { return status; }
     public int getMaxRunMinutes() { return maxRunMinutes; }
     public Instant getRunningUntil() { return runningUntil; }
+    public Long getStartedByRuleId() { return startedByRuleId; }
 }

@@ -31,22 +31,29 @@ public class MonitoringService {
     private final AutomationRuleRepository rules;
     private final DeviceLogRepository deviceLogs;
     private final AlertService alertService;
+    private final ActuatorService actuatorService;
     private final Clock clock;
 
     public MonitoringService(SensorRepository sensors, SensorReadingRepository readings,
                              AutomationRuleRepository rules, DeviceLogRepository deviceLogs,
-                             AlertService alertService, Clock clock) {
+                             AlertService alertService, ActuatorService actuatorService, Clock clock) {
         this.sensors = sensors;
         this.readings = readings;
         this.rules = rules;
         this.deviceLogs = deviceLogs;
         this.alertService = alertService;
+        this.actuatorService = actuatorService;
         this.clock = clock;
     }
 
     public ReadingResult processReading(Long sensorId, double value) {
         Instant now = clock.instant();
         Sensor sensor = sensors.findById(sensorId).orElseThrow(() -> new NotFoundException("Sensor", sensorId));
+
+        // A sensor a technician reported as broken is not trusted: nothing is stored and no rule runs.
+        if (sensor.getStatus() == SensorStatus.FAULT) {
+            return ReadingResult.ignored(sensorId, sensor.getName() + " is marked faulty, so its readings are ignored until it is repaired");
+        }
 
         // [valid?] no -> log sensor fault, mark sensor as suspect (Deliverable 8)
         if (!sensor.isValid(value)) {
@@ -58,9 +65,19 @@ public class MonitoringService {
 
         SensorReading reading = readings.save(sensor.record(value, now));
 
+        // Under repair: the reading is kept so the technician can test the sensor, but no pump or fan reacts to it.
+        if (sensor.isOutOfService()) {
+            return ReadingResult.ok(reading.getId(), sensorId);
+        }
+
         List<String> actions = new ArrayList<>();
         for (AutomationRule rule : rules.findBySensor_IdAndActiveTrue(sensorId)) {
-            if (rule.isTriggered(reading, now)) {
+            if (rule.isTargetReached(reading)) {
+                // "keep in range": the reading is back to the stop value, so the run this rule started ends now
+                if (actuatorService.stopAtTarget(rule, reading, now)) {
+                    actions.add(rule.getActuator().getName() + " stopped: target reached");
+                }
+            } else if (rule.isTriggered(reading, now)) {
                 actions.add(respond(rule, reading, now));
             }
         }
@@ -76,10 +93,19 @@ public class MonitoringService {
         Severity severity = rule.getSeverity();
         String outcome;
 
+        List<String> interlocked = actuator != null && actuator.getStatus() == ActuatorStatus.IDLE
+                ? actuatorService.stopOpposites(actuator, now) : List.of();
         if (actuator == null) {
             outcome = "alert only";
-        } else if (actuator.activate(rule.getDurationMin(), now)) {
-            outcome = actuator.getActionVerb() + ": " + actuator.getName() + " started for " + rule.getDurationMin() + " min";
+        } else if (actuator.activateForRule(rule.getDurationMin(), now, rule.getId())) {
+            Sensor sensor = rule.getSensor();
+            outcome = actuator.getActionVerb() + ": " + actuator.getName() + " started "
+                    + (rule.keepsRange()
+                        ? "until " + AutomationRule.format(rule.getStopAt()) + sensor.getUnit() + " (max " + rule.getDurationMin() + " min)"
+                        : "for " + rule.getDurationMin() + " min");
+            if (!interlocked.isEmpty()) {
+                outcome += "; " + String.join(", ", interlocked);
+            }
             deviceLogs.save(new DeviceLog(actuator, "ACTIVATED", LogSource.RULE, null, rule.getName(), now));
         } else if (actuator.getStatus() == ActuatorStatus.RUNNING) {
             outcome = actuator.getName() + " is already running";
@@ -107,6 +133,15 @@ public class MonitoringService {
 
         static ReadingResult invalid(Long sensorId, String error) {
             return new ReadingResult("INVALID", null, sensorId, List.of(), error);
+        }
+
+        /** Received, but deliberately not used; {@code error} says why. */
+        static ReadingResult ignored(Long sensorId, String reason) {
+            return new ReadingResult("IGNORED", null, sensorId, List.of(), reason);
+        }
+
+        public boolean isIgnored() {
+            return "IGNORED".equals(status);
         }
 
         public boolean hasInvalidValue() {

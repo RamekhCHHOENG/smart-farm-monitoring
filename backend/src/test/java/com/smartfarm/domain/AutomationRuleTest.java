@@ -35,6 +35,29 @@ class AutomationRuleTest {
     }
 
     @Test
+    void keepRangeRuleStopsOnlyWhenTheReadingIsBack() {
+        dryRule.holdUntil(45.0);
+        assertThat(dryRule.keepsRange()).isTrue();
+        assertThat(dryRule.isTargetReached(data.soil.record(44.9, now))).isFalse();
+        assertThat(dryRule.isTargetReached(data.soil.record(45, now))).isTrue();
+
+        dryRule.holdUntil(null); // back to a fixed run time
+        assertThat(dryRule.isTargetReached(data.soil.record(80, now))).isFalse();
+    }
+
+    @Test
+    void stopValueMustBeOnTheComfortableSide() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> dryRule.holdUntil(25.0))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("must be above 30");
+        AutomationRule wet = new AutomationRule("Wet", data.soil, Condition.ABOVE, 80, data.pump, 3, Severity.INFO);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> wet.holdUntil(85.0))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("must be below 80");
+        AutomationRule alertOnly = new AutomationRule("Alert", data.soil, Condition.ABOVE, 80, null, 0, Severity.INFO);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> alertOnly.holdUntil(70.0))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("needs an actuator");
+    }
+
+    @Test
     void cooldownPreventsRepeatedAlerts() {
         dryRule.markTriggered(now);
         Instant soon = now.plus(Duration.ofMinutes(AutomationRule.DEFAULT_COOLDOWN_MINUTES - 1));

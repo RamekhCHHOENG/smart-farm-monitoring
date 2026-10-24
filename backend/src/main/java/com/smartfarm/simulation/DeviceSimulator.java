@@ -37,7 +37,7 @@ public class DeviceSimulator {
     public void tick() {
         for (Sensor sensor : sensors.findBySimulatedTrue()) {
             double previous = queries.latest(sensor).map(r -> r.getValue()).orElse(sensor.initialSimulatedValue());
-            double next = sensor.simulateNext(previous, sensor.getZone().isCorrecting(sensor), random);
+            double next = sensor.simulateNext(previous, sensor.getZone().runningActuatorTypes(), random);
             monitoringService.processReading(sensor.getId(), next);
         }
     }

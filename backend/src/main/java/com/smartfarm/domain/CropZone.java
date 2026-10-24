@@ -20,16 +20,25 @@ public class CropZone extends Zone {
         this.cropName = cropName;
     }
 
-    /** Dry soil starts the pump; extreme heat only raises an alert (no actuator). */
+    /**
+     * Dry soil starts the pump; extreme heat only raises an alert (no actuator). Where the zone has
+     * the matching sensor and actuator, it also gets the mister, the light and the tank valve.
+     */
     @Override
     public List<AutomationRule> createDefaultRules() {
         List<AutomationRule> rules = new ArrayList<>();
-        findSensor(SensorType.SOIL_MOISTURE).ifPresent(soil ->
-                rules.add(new AutomationRule("Dry soil - water " + getName(), soil, Condition.BELOW, 30,
-                        findActuator(ActuatorType.WATER_PUMP).orElse(null), 3, Severity.WARNING)));
-        findSensor(SensorType.TEMPERATURE).ifPresent(temp ->
-                rules.add(new AutomationRule("Heat stress - " + getName(), temp, Condition.ABOVE, 38,
-                        null, 0, Severity.CRITICAL)));
+        // Most rules keep a range: water until 45 %, mist until 55 %, fill the tank to 90 %. The minutes are the
+        // longest run. The light stays timed: it brightens its own sensor, so "stop when bright" would flicker.
+        addRule(rules, "Dry soil - water " + getName(), SensorType.SOIL_MOISTURE, Condition.BELOW, 30,
+                ActuatorType.WATER_PUMP, 10, Severity.WARNING, 45.0);
+        addRule(rules, "Heat stress - " + getName(), SensorType.TEMPERATURE, Condition.ABOVE, 38,
+                null, 0, Severity.CRITICAL, null);
+        addActuatorRule(rules, "Dry air - mist " + getName(), SensorType.HUMIDITY, Condition.BELOW, 40,
+                ActuatorType.MISTER, 5, Severity.WARNING, 55.0);
+        addActuatorRule(rules, "Dark - light " + getName(), SensorType.LIGHT_LEVEL, Condition.BELOW, 2000,
+                ActuatorType.LIGHT, 60, Severity.INFO, null);
+        addActuatorRule(rules, "Low tank - refill " + getName(), SensorType.WATER_LEVEL, Condition.BELOW, 20,
+                ActuatorType.WATER_VALVE, 15, Severity.WARNING, 90.0);
         return rules;
     }
 

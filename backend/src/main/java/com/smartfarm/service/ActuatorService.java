@@ -36,6 +36,9 @@ public class ActuatorService {
         AppUser user = access.require(userId, Role.WORKER);
         Actuator actuator = get(actuatorId);
         Instant now = clock.instant();
+        if (actuator.getStatus() == ActuatorStatus.IDLE) {
+            stopOpposites(actuator, now);
+        }
         if (!actuator.activate(durationMin, now)) {
             throw new IllegalStateException("Cannot start " + actuator.getName() + ": it is " + actuator.getStatus()
                     + " and runs at most " + actuator.getMaxRunMinutes() + " min");
@@ -78,6 +81,35 @@ public class ActuatorService {
         return actuator;
     }
 
+    /**
+     * Interlock: before {@code actuator} starts, every running actuator in its zone that works against it
+     * (a fan when the heater starts) is stopped and logged. They never run together, whoever starts them.
+     */
+    public List<String> stopOpposites(Actuator actuator, Instant now) {
+        List<String> stopped = new java.util.ArrayList<>();
+        for (Actuator other : actuator.getZone().runningOpposites(actuator)) {
+            if (other.deactivate()) {
+                deviceLogs.save(new DeviceLog(other, "DEACTIVATED", LogSource.SAFETY, null,
+                        "interlock: stopped so " + actuator.getName() + " can run (never together)", now));
+                stopped.add(other.getName() + " stopped (interlock)");
+            }
+        }
+        return stopped;
+    }
+
+    /** A "keep in range" rule reached its target: stop the run it started. */
+    public boolean stopAtTarget(AutomationRule rule, SensorReading reading, Instant now) {
+        Actuator actuator = rule.getActuator();
+        if (actuator == null || !actuator.isRunningFor(rule.getId()) || !actuator.deactivate()) {
+            return false;
+        }
+        Sensor sensor = rule.getSensor();
+        deviceLogs.save(new DeviceLog(actuator, "DEACTIVATED", LogSource.RULE, null, "%s: target reached, %s reads %.1f%s (stop at %s%s)"
+                .formatted(rule.getName(), sensor.getName(), reading.getValue(), sensor.getUnit(),
+                        AutomationRule.format(rule.getStopValue()), sensor.getUnit()), now));
+        return true;
+    }
+
     /** Automatic safety shut-off: RUNNING → IDLE after the requested duration. */
     public int stopExpiredRuns() {
         Instant now = clock.instant();
@@ -95,6 +127,9 @@ public class ActuatorService {
     public void runScheduled(ScheduledTask task) {
         Actuator actuator = task.getActuator();
         Instant now = clock.instant();
+        if (actuator.getStatus() == ActuatorStatus.IDLE) {
+            stopOpposites(actuator, now);
+        }
         if (actuator.activate(task.getDurationMin(), now)) {
             deviceLogs.save(new DeviceLog(actuator, "ACTIVATED", LogSource.SCHEDULE, null, task.getName(), now));
         } else {

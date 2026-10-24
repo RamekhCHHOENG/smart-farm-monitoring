@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {
   Bell, BellOff, BellRing, CalendarClock, ChartLine, Ellipsis, FlaskConical, KeyRound, Languages, LayoutDashboard, LogOut, Moon,
-  Sprout, Sun, Users, Workflow, X,
+  Sprout, Sun, Users, Workflow, X, Cpu,
 } from "lucide-vue-next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ onBeforeUnmount(critical.stop);
 const nav = computed(() => [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/zones", label: "Zones & devices", icon: Sprout },
+  { to: "/devices", label: "Devices", icon: Cpu },
   { to: "/rules", label: "Automation rules", icon: Workflow },
   { to: "/schedules", label: "Schedules", icon: CalendarClock },
   { to: "/alerts", label: "Alerts", icon: Bell },

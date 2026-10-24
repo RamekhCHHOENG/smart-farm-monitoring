@@ -31,21 +31,23 @@ public final class Dtos {
         }
     }
 
+    /** {@code status} is what staff see; {@code repairStartedAt} is set while the sensor is in MAINTENANCE. */
     public record SensorDto(Long id, Long zoneId, String name, SensorType type, String unit, double minValid,
-                            double maxValid, boolean simulated, boolean online, boolean suspect,
-                            Instant lastSeenAt, ReadingDto latest) {
+                            double maxValid, boolean simulated, boolean online, boolean suspect, SensorStatus status,
+                            Instant repairStartedAt, Instant lastSeenAt, ReadingDto latest) {
         static SensorDto of(Sensor s, SensorReading latest) {
             return new SensorDto(s.getId(), s.getZone().getId(), s.getName(), s.getType(), s.getUnit(),
-                    s.getMinValid(), s.getMaxValid(), s.isSimulated(), s.isOnline(), s.isSuspect(),
-                    s.getLastSeenAt(), latest == null ? null : ReadingDto.of(latest));
+                    s.getMinValid(), s.getMaxValid(), s.isSimulated(), s.isOnline(), s.isSuspect(), s.getStatus(),
+                    s.getRepairStartedAt(), s.getLastSeenAt(), latest == null ? null : ReadingDto.of(latest));
         }
     }
 
+    /** {@code startedByRuleId} is set while a rule's run is going, so staff can see what started it. */
     public record ActuatorDto(Long id, Long zoneId, String name, ActuatorType type, ActuatorStatus status,
-                              int maxRunMinutes, Instant runningUntil) {
+                              int maxRunMinutes, Instant runningUntil, Long startedByRuleId) {
         static ActuatorDto of(Actuator a) {
             return new ActuatorDto(a.getId(), a.getZone().getId(), a.getName(), a.getType(), a.getStatus(),
-                    a.getMaxRunMinutes(), a.getRunningUntil());
+                    a.getMaxRunMinutes(), a.getRunningUntil(), a.getStartedByRuleId());
         }
     }
 
@@ -59,14 +61,14 @@ public final class Dtos {
     public record RuleDto(Long id, String name, Long sensorId, String sensorName, Long zoneId, String zoneName,
                           Condition condition, double threshold, String unit, Long actuatorId, String actuatorName,
                           int durationMin, Severity severity, boolean active, int cooldownMinutes,
-                          Instant lastTriggeredAt) {
+                          Instant lastTriggeredAt, Double stopAt) {
         static RuleDto of(AutomationRule r) {
             Sensor s = r.getSensor();
             Actuator a = r.getActuator();
             return new RuleDto(r.getId(), r.getName(), s.getId(), s.getName(), s.getZone().getId(), s.getZone().getName(),
                     r.getCondition(), r.getThreshold(), s.getUnit(), a == null ? null : a.getId(),
                     a == null ? null : a.getName(), r.getDurationMin(), r.getSeverity(), r.isActive(),
-                    r.getCooldownMinutes(), r.getLastTriggeredAt());
+                    r.getCooldownMinutes(), r.getLastTriggeredAt(), r.getStopAt());
         }
     }
 
@@ -142,7 +144,7 @@ public final class Dtos {
 
     public record RuleRequest(@NotBlank @Size(max = 80) String name, @NotNull Long sensorId, @NotNull Condition condition,
                               @NotNull Double threshold, Long actuatorId, @PositiveOrZero int durationMin,
-                              @NotNull Severity severity, @Positive Integer cooldownMinutes) {
+                              @NotNull Severity severity, @Positive Integer cooldownMinutes, Double stopAt) {
     }
 
     public record TaskRequest(@NotBlank @Size(max = 80) String name, @NotNull Long actuatorId, @NotNull LocalTime runTime,

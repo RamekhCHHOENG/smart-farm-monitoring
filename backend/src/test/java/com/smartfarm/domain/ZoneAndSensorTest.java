@@ -9,6 +9,7 @@ import java.time.LocalTime;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -51,8 +52,10 @@ class ZoneAndSensorTest {
     void simulatedSoilGetsWetterOnlyWhilePumpRuns() {
         Sensor soil = new DomainTestData().soil;
         Random random = new Random(1);
-        assertThat(soil.simulateNext(40, false, random)).isLessThan(40);
-        assertThat(soil.simulateNext(40, true, random)).isGreaterThan(40);
+        assertThat(soil.simulateNext(40, Set.of(), random)).isLessThan(40);
+        assertThat(soil.simulateNext(40, Set.of(ActuatorType.WATER_PUMP), random)).isGreaterThan(40);
+        // A fan running in the same zone does not water the soil
+        assertThat(soil.simulateNext(40, Set.of(ActuatorType.FAN), random)).isLessThan(40);
     }
 
     @Test

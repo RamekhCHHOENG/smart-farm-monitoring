@@ -16,7 +16,7 @@ from the midterm report (use cases, class diagram, sequence, activity and state 
 | Who | Main screens |
 |---|---|
 | Farm Worker | Live dashboard (tap a sensor for its history), start/stop pumps, fans and feeders, acknowledge alerts |
-| Technician | Everything a worker can, plus register, rename and repair devices (fault → repair state machine) |
+| Technician | Everything a worker can, plus register, rename and repair devices: actuators (fault → repair state machine) and sensors (fault → repair → test with a real reading) |
 | Farm Owner | Everything, plus zones, automation rules, schedules, staff accounts (add, change role, reset password) |
 
 For people working in the field:
@@ -26,6 +26,47 @@ For people working in the field:
 - **Critical alerts** show a red banner on every page; with *Alert sound* on, they also beep and show a
   system pop-up. The same problem happening again is counted on one alert ("×3") instead of flooding the list.
 - **History**: quick ranges (1 h, 24 h, 7 days, 30 days) and a **CSV download** of every reading for Excel.
+
+## Device kinds
+
+A zone can hold any mix of these. Each kind is one small class (Open/Closed Principle), so the services,
+screens and Farm Lab handle a new kind without special cases.
+
+| Sensors | Unit | Range | Usually drives |
+|---|---|---|---|
+| Soil moisture | % | 0-100 | Water pump |
+| Temperature | °C | -10-60 | Fan (hot) or Heater (cold) |
+| Feed level | % | 0-100 | Feeder |
+| Air humidity | % | 0-100 | Mister (dry) or Fan (damp) |
+| Light level | lux | 0-100000 | Light |
+| Water tank level | % | 0-100 | Tank fill valve |
+
+| Actuators | Safety limit (default) | Action |
+|---|---|---|
+| Water pump | 10 min | Watering |
+| Fan | 30 min | Cooling |
+| Feeder | 5 min | Feeding |
+| Heater | 30 min | Heating |
+| Mister | 5 min | Misting |
+| Light | 120 min | Lighting (also good on a schedule) |
+| Tank fill valve | 15 min | Refilling |
+
+**Default rules** add the matching rule whenever a zone has both the sensor and the actuator, for example
+*Cold house* (temperature below 18 °C starts the heater) or *Low tank* (below 20 % opens the valve).
+
+### A broken sensor can be repaired
+
+A technician can take a sensor out of service and bring it back, like an actuator:
+
+```
+ONLINE ──silent 2 min──► OFFLINE ──valid reading──► ONLINE
+ONLINE / OFFLINE ──Report fault──► FAULT ──Start repair──► MAINTENANCE ──Complete repair──► ONLINE
+```
+
+While a sensor is **FAULT** its readings are ignored (HTTP 202) and its rules are paused, so a stuck
+probe cannot run a pump all night. In **MAINTENANCE** readings are stored so the technician can watch
+them, but rules stay paused. **Complete repair** is a real test: it only succeeds if a valid reading
+arrived after the repair began.
 
 ## Architecture
 
@@ -37,13 +78,13 @@ ESP32 or simulator ──POST /api/devices/readings─────┘        └
 
 ```
 backend/src/main/java/com/smartfarm
-├── domain/        Entities: Farm, Zone (CropZone, PoultryZone), Sensor (3 types), Actuator (3 types),
+├── domain/        Entities: Farm, Zone (CropZone, PoultryZone), Sensor (6 kinds), Actuator (7 kinds),
 │                  SensorReading, AutomationRule, ScheduledTask, Alert, DeviceLog, AppUser
-├── service/       MonitoringService, ActuatorService, RuleService, TaskService, AlertService, ...
+├── service/       MonitoringService, ActuatorService, SensorService, RuleService, TaskService, AlertService, ...
 ├── notification/  NotificationService interface + ConsoleNotifier, TelegramNotifier
 ├── web/           REST controllers, DTOs, login interceptor, error handling
 ├── simulation/    DeviceSimulator (plays the Sensor Device actor)
-└── config/        Wiring, device key, demo data
+└── config/        Wiring, device key, demo data, SchemaUpgrade (lets an older database accept new device kinds)
 frontend/app       pages/ (dashboard, zones, rules, schedules, alerts, history, users), components/,
                    utils/i18n.ts (Khmer / English), composables/useCriticalAlerts.ts
 firmware/          ESP32 sensor node (works with soil sensor only; DHT22 and relay optional)
@@ -73,6 +114,7 @@ npm run dev
 ```
 
 Open http://localhost:3000 and sign in as `owner` with the demo password.
+An existing database from an older version is upgraded when the server starts (nothing is deleted): it only learns to accept the newer device kinds.
 The simulator starts sending readings right away. Each user can change their password with the key icon.
 
 ### Real installation (your own farm)
@@ -85,8 +127,9 @@ and test it with `scripts/fake-device.mjs` (no hardware) or an ESP32 (about USD 
 ### Tests
 
 ```bash
-cd backend && mvn test          # 31 tests: domain rules, state machine, API flows, permissions, real-device setup,
-                                #           accounts, lockout, editing, CSV export, alert grouping, pool reconnect
+cd backend && mvn test          # 51 tests: domain rules, actuator and sensor state machines, new device kinds, API flows,
+                                #           permissions, real-device setup, accounts, lockout, editing, CSV export,
+                                #           alert grouping, pool reconnect, upgrade of an older database
 cd frontend && npm run typecheck
 # Browser walkthrough of every use case as owner, technician and worker (34 steps), see the header of:
 scripts/e2e-walkthrough.mjs
@@ -99,6 +142,7 @@ scripts/e2e-walkthrough.mjs
 | UC-3 Submit Sensor Reading (sequence diagram) | `ReadingController.submitReading` → `MonitoringService.processReading` |
 | Evaluate Rules «include» / Send Alert «extend» | loop over `AutomationRule.isTriggered` → `AlertService.raise` |
 | Actuator state machine (D9) | `Actuator.activate / deactivate / reportFault / heartbeatLost / startRepair / completeRepair / decommission` |
+| Sensor state machine (docs/diagrams/08) | `Sensor.reportFault / startRepair / completeRepair`, status derived in `Sensor.getStatus`, driven by `SensorService.lifecycle` |
 | Automated monitoring workflow (D8) | valid? → `Sensor.isValid`; breached? → rule; fork → actuator + alert |
 | Inheritance + polymorphism | `Zone.createDefaultRules()`, `Sensor.simulateNext()`, `Actuator.getActionVerb()` |
 | Composition | `Farm ◆ Zone ◆ Sensor/Actuator` with cascade delete |
@@ -106,7 +150,7 @@ scripts/e2e-walkthrough.mjs
 | GRASP Creator | `Farm.addCropZone`, `Zone.addSensor`, `Sensor.record` creates `SensorReading` |
 | GRASP Controller | `ReadingController` (devices), REST controllers (users) |
 | SRP | one job per class: rule decides, actuator acts, repository stores, notifier delivers |
-| OCP | new zone/sensor types are new subclasses; services work with the abstract types |
+| OCP | new zone/sensor/actuator kinds are new subclasses (the heater, mister, light, tank valve and humidity, light, tank sensors were added this way); services work with the abstract types |
 | DIP | `MonitoringService` → `AlertService` → `NotificationService` interface; wiring in `AppConfig` |
 | Permissions table (D2) | `AccessPolicy.require(...)` in every write service method |
 
@@ -128,12 +172,14 @@ scripts/e2e-walkthrough.mjs
 
 ## Farm Lab: test every farm scenario without hardware
 
-The **Farm Lab** page creates as many virtual sensors (soil moisture, temperature, feed level) and
-actuators (pump, fan, feeder) as you like. They talk to the server through the device API with the
+The **Farm Lab** page creates as many virtual sensors (soil moisture, temperature, feed level, humidity, light
+level, tank level) and actuators (pump, fan, feeder, heater, mister, light, tank valve) as you like. They talk to the server through the device API with the
 device key, exactly like real ESP32 boards, and behave like a small farm: soil dries and the pump
-wets it, heat rises and the fan cools it, chickens eat and the feeder refills.
+wets it, heat rises and the fan cools it (the heater warms it), chickens eat and the feeder refills, the mister raises
+the humidity, the lamp brightens the greenhouse and the valve fills the tank. Each lab sensor also shows what the
+server thinks of it, with the same repair buttons as the Zones page.
 
-Eleven scenarios check how the whole system reacts, each with an automatic PASS / FAIL:
+Sixteen scenarios check how the whole system reacts, each with an automatic PASS / FAIL:
 
 | Scenario | Expected reaction |
 |---|---|
@@ -142,17 +188,22 @@ Eleven scenarios check how the whole system reacts, each with an automatic PASS 
 | Heavy rain | Pump stays off |
 | Heat wave | Fan starts above 32 °C |
 | Cool night | Fan stays off |
+| Cold snap | Heater starts below 18 °C |
+| Dry air | Mister starts below 40 % humidity |
+| Dark day | Light switches on below 5000 lux |
+| Tank running low | Tank valve opens below 20 % |
 | Feed running out | Feeder refills below 20 % |
 | Broken pump | CRITICAL alert: the pump could NOT start |
 | Clogged pipe | **Known gap**: the pump runs, no water arrives, and nothing says so (needs a flow sensor) |
 | Sensor cable cut | "is offline" alert after about 2 minutes |
 | Faulty sensor reading | 150 % rejected with HTTP 422 |
+| Sensor repaired | Pump stays off while the sensor is faulty or in repair, and starts once the repaired sensor is back |
 | Power cut | "is offline" alert for every sensor; relays fail safe |
 
 Run them in the browser (**Farm Lab → Create lab farm → Power on → Run**) or from a terminal:
 
 ```bash
-FARM_DEVICE_KEY=<key> FARM_PASSWORD=<owner password> node scripts/farm-scenarios.mjs        # all, about 20 min
+FARM_DEVICE_KEY=<key> FARM_PASSWORD=<owner password> node scripts/farm-scenarios.mjs        # all, about 30 min
 FARM_DEVICE_KEY=<key> FARM_PASSWORD=<owner password> node scripts/farm-scenarios.mjs --only drought,heatwave
 ```
 

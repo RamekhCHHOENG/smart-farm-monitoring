@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import type { Alert as FarmAlert, Farm } from "~/utils/types";
+import type { Alert as FarmAlert, Farm, Sensor, SensorAction } from "~/utils/types";
 import type { LabIO, LabSensorType, LabActuatorType, Scenario, Weather } from "~/utils/farmLab";
-import { FarmLab, NORMAL_WEATHER, SCENARIOS, ensureLabFarm } from "~/utils/farmLab";
+import { FarmLab, LAB_UI, NORMAL_WEATHER, SCENARIOS, ensureLabFarm } from "~/utils/farmLab";
+import { sensorBadge, sensorNote, sensorOptions } from "~/utils/sensorRepair";
 
 // Many virtual devices that behave like a small farm and talk to the server like real ESP32 boards.
 // Scenarios change the weather or break a device and check how the system reacts.
@@ -50,6 +51,10 @@ const io: LabIO = {
   async lifecycle(actuatorId, action, body) {
     await api(`/api/actuators/${actuatorId}/lifecycle/${action}`, { method: "POST", body: body ?? {} });
   },
+  async sensorLifecycle(sensorId, action) {
+    const sensor = await api<Sensor>(`/api/sensors/${sensorId}/lifecycle/${action}`, { method: "POST" });
+    return sensor.status;
+  },
   sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
   log(text, tone = "info") {
     log.value.unshift({ at: new Date().toLocaleTimeString(), text, tone });
@@ -66,6 +71,10 @@ const WEATHER: Weather[] = [
   { ...NORMAL_WEATHER, label: "Heat wave", ambient: 39 },
   { ...NORMAL_WEATHER, label: "Cool night", ambient: 21 },
   { ...NORMAL_WEATHER, label: "Hungry flock", feedUse: 2 },
+  { ...NORMAL_WEATHER, label: "Cold snap", ambient: 10 },
+  { ...NORMAL_WEATHER, label: "Dry air", humidity: 20 },
+  { ...NORMAL_WEATHER, label: "Dark day", light: 1500 },
+  { ...NORMAL_WEATHER, label: "Leaky tank", tankUse: 2 },
 ];
 
 const allSensors = computed(() => (farm.value?.zones ?? []).flatMap((z) => z.sensors.map((s) => ({ ...s, zoneName: z.name }))));
@@ -77,6 +86,21 @@ const addable = computed(() => [
   ...allSensors.value.filter((s) => !lab.sensors.some((x) => x.id === s.id)).map((s) => ({ key: `s${s.id}`, label: `Sensor: ${s.zoneName} — ${s.name} #${s.id}${s.simulated ? " (simulated)" : ""}` })),
   ...allActuators.value.filter((a) => !lab.actuators.some((x) => x.id === a.id)).map((a) => ({ key: `a${a.id}`, label: `Actuator: ${a.zoneName} — ${a.name} #${a.id}` })),
 ]);
+/** What the server says about a lab sensor (its status changes when a technician repairs it). */
+const serverSensor = (id: number) => allSensors.value.find((x) => x.id === id);
+
+async function repairStep(id: number, action: SensorAction) {
+  error.value = "";
+  try {
+    const status = await io.sensorLifecycle(id, action);
+    const failed = action === "COMPLETE_REPAIR" && status !== "ONLINE";
+    io.log(`Sensor #${id}: ${action.toLowerCase().replace("_", " ")} -> ${status}${failed ? " (test failed: no valid reading since the repair began)" : ""}`, failed ? "warn" : "ok");
+    await loadFarm();
+  } catch (e) {
+    error.value = errorMessage(e);
+  }
+}
+
 const simulatedInLab = computed(() => lab.sensors.some((s) => allSensors.value.find((x) => x.id === s.id)?.simulated));
 
 function remember() {
@@ -137,6 +161,13 @@ onMounted(async () => {
   }
 });
 onBeforeUnmount(() => lab.stop());
+usePolling(async () => {
+  try {
+    await loadFarm();
+  } catch {
+    // the actions on this page report connection problems
+  }
+}, 4000);
 
 watch(deviceKey, (k) => {
   try {
@@ -153,7 +184,7 @@ async function createLabFarm() {
     await ensureLabFarm(async (method, path, body) => api(path, { method: method as "GET", body: body as Record<string, unknown> }), lab);
     await loadFarm();
     remember();
-    io.log("Lab farm ready: 2 zones, 3 sensors, pump, fan and feeder, with rules (1-minute cooldown)", "ok");
+    io.log("Lab farm ready: 3 zones, 6 sensors, pump, fan, feeder, heater, mister, lamp and tank valve, with rules (1-minute cooldown)", "ok");
   } catch (e) {
     error.value = errorMessage(e);
   } finally {
@@ -214,12 +245,14 @@ async function runAll() {
 const verdictOf = (id: string) => lab.results.find((r) => r.id === id);
 const verdictStyle = { pass: "bg-primary/15 text-primary", fail: "bg-destructive/15 text-destructive", gap: "bg-warning/25 text-foreground" };
 const verdictLabel = { pass: "PASS", fail: "FAIL", gap: "KNOWN GAP" };
-const unitOf = (t: LabSensorType) => (t === "TEMPERATURE" ? "°C" : "%");
-const rangeOf = (t: LabSensorType) => (t === "TEMPERATURE" ? [0, 50] : [0, 100]);
 const lightColor: Record<LabActuatorType, string> = {
   WATER_PUMP: "bg-sky-500 shadow-[0_0_24px_6px_rgba(14,165,233,0.55)]",
   FAN: "bg-teal-400 shadow-[0_0_24px_6px_rgba(45,212,191,0.55)]",
   FEEDER: "bg-amber-400 shadow-[0_0_24px_6px_rgba(251,191,36,0.55)]",
+  HEATER: "bg-orange-500 shadow-[0_0_24px_6px_rgba(249,115,22,0.55)]",
+  MISTER: "bg-cyan-300 shadow-[0_0_24px_6px_rgba(103,232,249,0.55)]",
+  LIGHT: "bg-yellow-300 shadow-[0_0_24px_6px_rgba(253,224,71,0.6)]",
+  WATER_VALVE: "bg-indigo-400 shadow-[0_0_24px_6px_rgba(129,140,248,0.55)]",
 };
 </script>
 
@@ -307,17 +340,28 @@ const lightColor: Record<LabActuatorType, string> = {
             <Button size="icon-sm" variant="ghost" class="ml-auto" :aria-label="`Remove ${s.name} from the lab`" @click="removeDevice('sensor', s.id)"><Trash2 /></Button>
           </div>
           <div class="flex items-baseline gap-2">
-            <span class="text-2xl font-semibold tabular-nums" :class="{ 'text-muted-foreground line-through': !s.sending }">{{ s.value.toFixed(1) }}</span>
-            <span class="text-sm text-muted-foreground">{{ unitOf(s.type) }}</span>
-            <span v-if="s.lastStatus !== null" class="ml-auto text-xs" :class="s.lastStatus === 201 ? 'text-primary' : 'text-destructive'">HTTP {{ s.lastStatus }}</span>
+            <span class="text-2xl font-semibold tabular-nums" :class="{ 'text-muted-foreground line-through': !s.sending }">{{ s.value.toFixed(s.type === 'LIGHT_LEVEL' ? 0 : 1) }}</span>
+            <span class="text-sm text-muted-foreground">{{ LAB_UI[s.type].unit }}</span>
+            <span v-if="s.lastStatus !== null" class="ml-auto text-xs"
+              :class="s.lastStatus === 201 ? 'text-primary' : s.lastStatus === 202 ? 'text-amber-500' : 'text-destructive'">HTTP {{ s.lastStatus }}</span>
           </div>
-          <input v-model.number="s.value" type="range" :min="rangeOf(s.type)[0]" :max="rangeOf(s.type)[1]" step="0.5"
+          <input v-model.number="s.value" type="range" :min="LAB_UI[s.type].min" :max="LAB_UI[s.type].max" :step="LAB_UI[s.type].step"
             class="accent-[var(--primary)]" :aria-label="`${s.name} value`">
+          <div v-if="serverSensor(s.id)" class="flex flex-col gap-1.5">
+            <div class="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Server sees it as</span><StatusBadge :status="sensorBadge(serverSensor(s.id)!)" />
+            </div>
+            <p v-if="sensorNote(serverSensor(s.id)!)" class="text-xs text-muted-foreground">{{ sensorNote(serverSensor(s.id)!) }}</p>
+            <div v-if="can('TECHNICIAN')" class="flex flex-wrap gap-1.5">
+              <Button v-for="o in sensorOptions[serverSensor(s.id)!.status]" :key="o.label" size="xs" variant="outline"
+                @click="repairStep(s.id, o.action)">{{ o.label }}</Button>
+            </div>
+          </div>
           <div class="flex flex-wrap gap-1.5">
             <Button size="xs" :variant="s.sending ? 'outline' : 'destructive'" @click="s.sending = !s.sending">
               <Unplug /> {{ s.sending ? "Unplug" : "Plug back in" }}
             </Button>
-            <Button size="xs" variant="outline" @click="lab.sendRaw(s.id, s.type === 'TEMPERATURE' ? 99 : 150)">
+            <Button size="xs" variant="outline" @click="lab.sendRaw(s.id, LAB_UI[s.type].impossible)">
               <Zap /> Send impossible value
             </Button>
           </div>

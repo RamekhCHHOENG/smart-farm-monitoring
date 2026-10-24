@@ -30,13 +30,15 @@ public class ReadingController {
         this.deviceKey = deviceKey;
     }
 
-    /** UC-3 Submit Sensor Reading. 201 when stored, 422 when the value is invalid. */
+    /** UC-3 Submit Sensor Reading. 201 when stored, 202 when the sensor is marked faulty, 422 when the value is invalid. */
     @PostMapping("/readings")
     public ResponseEntity<ReadingResult> submitReading(@RequestHeader("X-Device-Key") String key,
                                                        @Valid @RequestBody ReadingRequest request) {
         checkKey(key);
         ReadingResult result = monitoringService.processReading(request.sensorId(), request.value());
-        return ResponseEntity.status(result.hasInvalidValue() ? HttpStatus.UNPROCESSABLE_CONTENT : HttpStatus.CREATED).body(result);
+        HttpStatus status = result.hasInvalidValue() ? HttpStatus.UNPROCESSABLE_CONTENT
+                : result.isIgnored() ? HttpStatus.ACCEPTED : HttpStatus.CREATED;
+        return ResponseEntity.status(status).body(result);
     }
 
     /** Polled by an ESP32 to know whether to switch its relay on. */

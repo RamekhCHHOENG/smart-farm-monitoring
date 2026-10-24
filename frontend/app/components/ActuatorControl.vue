@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Fan, Power, PowerOff, Utensils, Waves } from "lucide-vue-next";
+import { Power, PowerOff } from "lucide-vue-next";
+import { actuatorIcons } from "~/utils/deviceIcons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Actuator } from "~/utils/types";
@@ -14,7 +15,7 @@ const busy = ref(false);
 // Shown right under the controls, where the person just clicked
 const message = ref("");
 
-const icon = computed(() => ({ WATER_PUMP: Waves, FAN: Fan, FEEDER: Utensils })[props.actuator.type]);
+const icon = computed(() => actuatorIcons[props.actuator.type]);
 
 async function run(path: "on" | "off") {
   if (path === "on") {
@@ -47,12 +48,15 @@ async function run(path: "on" | "off") {
       <component
         :is="icon"
         class="size-4 shrink-0 text-muted-foreground"
-        :class="{ 'animate-spin text-primary': actuator.status === 'RUNNING' && actuator.type === 'FAN' }"
+        :class="{
+          'animate-spin text-primary': actuator.status === 'RUNNING' && actuator.type === 'FAN',
+          'animate-pulse text-primary': actuator.status === 'RUNNING' && actuator.type !== 'FAN',
+        }"
       />
       <div class="min-w-0 flex-1">
         <div class="text-sm font-medium">{{ actuator.name }}</div>
         <div class="text-xs text-muted-foreground">
-          <template v-if="actuator.status === 'RUNNING'">{{ minutesLeft(actuator.runningUntil) }}</template>
+          <template v-if="actuator.status === 'RUNNING'">{{ minutesLeft(actuator.runningUntil) }}<template v-if="actuator.startedByRuleId"> · {{ t("by a rule") }}</template></template>
           <template v-else>{{ t("max {n} min", { n: actuator.maxRunMinutes }) }}</template>
         </div>
       </div>

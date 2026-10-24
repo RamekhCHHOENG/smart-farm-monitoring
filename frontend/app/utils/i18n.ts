@@ -124,6 +124,7 @@ const km: Record<string, string> = {
   "By": "ដោយ",
   "No activity.": "គ្មានសកម្មភាព។",
   // Statuses
+  "ONLINE": "ដំណើរការ",
   "IDLE": "ទំនេរ",
   "RUNNING": "កំពុងដំណើរការ",
   "FAULT": "ខូច",

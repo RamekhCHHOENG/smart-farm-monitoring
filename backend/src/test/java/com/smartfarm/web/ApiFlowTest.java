@@ -91,7 +91,7 @@ class ApiFlowTest {
         String worker = login("worker");
         mvc.perform(get("/api/farm").header("Authorization", "Bearer " + worker))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.zones.length()").value(2));
+                .andExpect(jsonPath("$.zones.length()").value(3));
 
         // Farm Worker cannot change rules (Deliverable 2 permissions)
         mvc.perform(post("/api/rules").header("Authorization", "Bearer " + worker)

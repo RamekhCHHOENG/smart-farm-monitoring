@@ -3,8 +3,8 @@
 // Devices talk to the server through the same device API and device key as a real ESP32.
 // Shared by the Farm Lab page and scripts/farm-scenarios.mjs, so it has no imports.
 
-export type LabSensorType = "SOIL_MOISTURE" | "TEMPERATURE" | "FEED_LEVEL";
-export type LabActuatorType = "WATER_PUMP" | "FAN" | "FEEDER";
+export type LabSensorType = "SOIL_MOISTURE" | "TEMPERATURE" | "FEED_LEVEL" | "HUMIDITY" | "LIGHT_LEVEL" | "WATER_LEVEL";
+export type LabActuatorType = "WATER_PUMP" | "FAN" | "FEEDER" | "HEATER" | "MISTER" | "LIGHT" | "WATER_VALVE";
 
 export interface LabSensor {
   id: number;
@@ -34,17 +34,38 @@ export interface Weather {
   rain: number; // soil % gained per tick
   ambient: number; // °C the air drifts towards
   feedUse: number; // feed % eaten per tick
+  humidity: number; // air humidity % the air drifts towards
+  light: number; // lux the daylight drifts towards
+  tankUse: number; // tank % lost per tick (a leak, or animals drinking)
 }
 
-export const NORMAL_WEATHER: Weather = { label: "Normal day", evaporation: 0.3, rain: 0, ambient: 28, feedUse: 0.3 };
+export const NORMAL_WEATHER: Weather = {
+  label: "Normal day", evaporation: 0.3, rain: 0, ambient: 28, feedUse: 0.3, humidity: 65, light: 15_000, tankUse: 0.1,
+};
 
 /** Healthy starting values, between the default rule thresholds. */
-export const HEALTHY: Record<LabSensorType, number> = { SOIL_MOISTURE: 55, TEMPERATURE: 28, FEED_LEVEL: 60 };
+export const HEALTHY: Record<LabSensorType, number> = {
+  SOIL_MOISTURE: 55, TEMPERATURE: 28, FEED_LEVEL: 60, HUMIDITY: 65, LIGHT_LEVEL: 15_000, WATER_LEVEL: 70,
+};
 
+/** What the server accepts as a valid reading, per kind of sensor. */
 const RANGE: Record<LabSensorType, [number, number]> = {
   SOIL_MOISTURE: [0, 100],
   TEMPERATURE: [-10, 60],
   FEED_LEVEL: [0, 100],
+  HUMIDITY: [0, 100],
+  LIGHT_LEVEL: [0, 100_000],
+  WATER_LEVEL: [0, 100],
+};
+
+/** How the page draws a lab sensor: unit, slider and a value the server must reject. */
+export const LAB_UI: Record<LabSensorType, { unit: string; min: number; max: number; step: number; impossible: number }> = {
+  SOIL_MOISTURE: { unit: "%", min: 0, max: 100, step: 0.5, impossible: 150 },
+  TEMPERATURE: { unit: "°C", min: 0, max: 50, step: 0.5, impossible: 99 },
+  FEED_LEVEL: { unit: "%", min: 0, max: 100, step: 0.5, impossible: 150 },
+  HUMIDITY: { unit: "%", min: 0, max: 100, step: 0.5, impossible: 150 },
+  LIGHT_LEVEL: { unit: "lux", min: 0, max: 50_000, step: 100, impossible: 500_000 },
+  WATER_LEVEL: { unit: "%", min: 0, max: 100, step: 0.5, impossible: 150 },
 };
 
 export interface LabAlert {
@@ -61,8 +82,10 @@ export interface LabIO {
   relayState(actuatorId: number): Promise<boolean | null>;
   /** Open alerts, read with a signed-in user's token */
   openAlerts(): Promise<LabAlert[]>;
-  /** Technician lifecycle action, e.g. FAULT, START_REPAIR, COMPLETE_REPAIR */
+  /** Technician lifecycle action on an actuator, e.g. FAULT, START_REPAIR, COMPLETE_REPAIR */
   lifecycle(actuatorId: number, action: string, body?: Record<string, unknown>): Promise<void>;
+  /** Technician repair step on a sensor: FAULT, START_REPAIR or COMPLETE_REPAIR; resolves to the sensor's new status */
+  sensorLifecycle(sensorId: number, action: string): Promise<string>;
   sleep(ms: number): Promise<void>;
   log(text: string, tone?: "ok" | "warn" | "error" | "info"): void;
 }
@@ -90,7 +113,7 @@ export interface Scenario {
   /** A gap the system cannot detect yet; the scenario shows it on purpose */
   knownGap?: string;
   setup(lab: FarmLab): Promise<void> | void;
-  check(lab: FarmLab, o: Observed): Verdict;
+  check(lab: FarmLab, o: Observed): Verdict | Promise<Verdict>;
   cleanup?(lab: FarmLab): Promise<void> | void;
 }
 
@@ -164,7 +187,16 @@ export class FarmLab {
       if (s.type === "SOIL_MOISTURE") {
         s.value += -w.evaporation + w.rain + (working("WATER_PUMP", s.zoneId) ? 4 : 0) + noise;
       } else if (s.type === "TEMPERATURE") {
-        s.value += (w.ambient - s.value) * 0.15 - (working("FAN", s.zoneId) ? 1.2 : 0) + noise;
+        s.value += (w.ambient - s.value) * 0.15 - (working("FAN", s.zoneId) ? 1.2 : 0)
+          + (working("HEATER", s.zoneId) ? 1.5 : 0) + noise;
+      } else if (s.type === "HUMIDITY") {
+        s.value += (w.humidity - s.value) * 0.1 + (working("MISTER", s.zoneId) ? 4 : 0)
+          - (working("FAN", s.zoneId) ? 1 : 0) + noise;
+      } else if (s.type === "LIGHT_LEVEL") {
+        s.value += (w.light - s.value) * 0.2 + (working("LIGHT", s.zoneId) ? 3000 : 0) + noise * 1000;
+      } else if (s.type === "WATER_LEVEL") {
+        s.value += -w.tankUse + (working("WATER_VALVE", s.zoneId) ? 5 : 0)
+          - (working("WATER_PUMP", s.zoneId) ? 0.5 : 0) + noise / 2;
       } else {
         s.value += -w.feedUse + (working("FEEDER", s.zoneId) ? 5 : 0) + noise / 2;
       }
@@ -183,7 +215,8 @@ export class FarmLab {
       const status = await this.io.sendReading(s.id, v);
       s.lastStatus = status;
       if (status === 422 && this.current) this.current.observed.rejected++;
-      if (status !== 201) this.io.log(`${s.name} = ${v} -> HTTP ${status}`, status === 422 ? "warn" : "error");
+      if (status === 202) this.io.log(`${s.name} = ${v} -> ignored by the server (sensor is marked faulty)`, "warn");
+      else if (status !== 201) this.io.log(`${s.name} = ${v} -> HTTP ${status}`, status === 422 ? "warn" : "error");
     }
     for (const a of this.actuators) {
       const on = await this.io.relayState(a.id);
@@ -241,7 +274,7 @@ export class FarmLab {
         // Only alerts about the lab's own devices, raised or repeated since the start
         const names = [...this.sensors, ...this.actuators].map((d) => d.name);
         observed.alerts = alerts.filter((a) => Date.parse(a.lastRaisedAt) >= startedAt - 1000 && names.some((n) => a.message.includes(n)));
-        verdict = scenario.check(this, observed);
+        verdict = await scenario.check(this, observed);
         if (verdict === "waiting" && observed.elapsedSec >= scenario.timeoutSec) verdict = "fail";
         if (verdict === "waiting") await this.io.sleep(ownLoop ? this.tickMs : 1000);
       }
@@ -300,6 +333,9 @@ function needs(lab: FarmLab, sensor: LabSensorType, actuator?: LabActuatorType) 
   }
   return { s, a: a as LabActuator };
 }
+
+/** Progress of the "Sensor repaired" scenario: 0 faulty, 1 in repair, 2 back in service. */
+const repair = { step: 0 };
 
 export const SCENARIOS: Scenario[] = [
   {
@@ -364,6 +400,77 @@ export const SCENARIOS: Scenario[] = [
       lab.weather = { ...NORMAL_WEATHER, label: "Cool night", ambient: 21 };
     },
     check: (lab, o) => (o.turnedOn.has(lab.actuator("FAN")!.id) ? "fail" : o.elapsedSec >= 45 ? "pass" : "waiting"),
+  },
+  {
+    id: "cold-snap",
+    title: "Cold snap",
+    story: "A cold front drops the chicken house towards 10 °C at night.",
+    expect: "The heater starts below 18 °C",
+    timeoutSec: 150,
+    setup: (lab) => {
+      needs(lab, "TEMPERATURE", "HEATER");
+      lab.weather = { ...NORMAL_WEATHER, label: "Cold snap", ambient: 10 };
+    },
+    check: (lab, o) => (o.turnedOn.has(lab.actuator("HEATER")!.id) ? "pass" : "waiting"),
+  },
+  {
+    id: "thermostat",
+    title: "Thermostat",
+    story: "The chicken house is at 35 °C on a normal day. The fan cools it; then the weather does the rest.",
+    expect: "The fan stops by itself at 30 °C, long before its 2-minute limit, and the heater never starts",
+    timeoutSec: 120,
+    setup: (lab) => {
+      const { s } = needs(lab, "TEMPERATURE", "FAN");
+      needs(lab, "TEMPERATURE", "HEATER");
+      s.value = 35;
+      lab.weather = { ...NORMAL_WEATHER, label: "Normal day" };
+    },
+    check: (lab, o) => {
+      const fan = lab.actuator("FAN")!;
+      if (o.turnedOn.has(lab.actuator("HEATER")!.id)) return "fail"; // fan and heater took turns
+      if (!o.turnedOffAfterOn.has(fan.id)) return "waiting";
+      // Stopped well before the 2-minute safety limit: the rule's target stopped it, not the clock
+      return o.elapsedSec < 90 ? "pass" : "fail";
+    },
+  },
+  {
+    id: "dry-air",
+    title: "Dry air",
+    story: "A dry wind pulls the humidity of the greenhouse down to 20 %.",
+    expect: "The mister starts below 40 % humidity",
+    timeoutSec: 150,
+    setup: (lab) => {
+      const { s } = needs(lab, "HUMIDITY", "MISTER");
+      s.value = 44;
+      lab.weather = { ...NORMAL_WEATHER, label: "Dry air", humidity: 20 };
+    },
+    check: (lab, o) => (o.turnedOn.has(lab.actuator("MISTER")!.id) ? "pass" : "waiting"),
+  },
+  {
+    id: "dark-day",
+    title: "Dark day",
+    story: "Thick storm clouds darken the greenhouse.",
+    expect: "The light switches on below 5000 lux",
+    timeoutSec: 150,
+    setup: (lab) => {
+      const { s } = needs(lab, "LIGHT_LEVEL", "LIGHT");
+      s.value = 9000;
+      lab.weather = { ...NORMAL_WEATHER, label: "Dark day", light: 1500 };
+    },
+    check: (lab, o) => (o.turnedOn.has(lab.actuator("LIGHT")!.id) ? "pass" : "waiting"),
+  },
+  {
+    id: "tank-low",
+    title: "Tank running low",
+    story: "A leak drains the water tank faster than usual.",
+    expect: "The tank valve opens below 20 % so the pumps never run dry",
+    timeoutSec: 150,
+    setup: (lab) => {
+      const { s } = needs(lab, "WATER_LEVEL", "WATER_VALVE");
+      s.value = 27;
+      lab.weather = { ...NORMAL_WEATHER, label: "Leaky tank", tankUse: 2 };
+    },
+    check: (lab, o) => (o.turnedOn.has(lab.actuator("WATER_VALVE")!.id) ? "pass" : "waiting"),
   },
   {
     id: "feed-out",
@@ -444,6 +551,47 @@ export const SCENARIOS: Scenario[] = [
     check: (_lab, o) => (o.rejected > 0 ? "pass" : "waiting"),
   },
   {
+    id: "sensor-repair",
+    title: "Sensor repaired",
+    story: "The soil sensor is reported faulty while the bed dries out. A technician starts the repair, then tests the sensor and puts it back.",
+    expect: "While faulty or in repair the pump stays off; once the sensor is back in service the dry reading starts the pump",
+    timeoutSec: 150,
+    setup(lab) {
+      const { s } = needs(lab, "SOIL_MOISTURE", "WATER_PUMP");
+      repair.step = 0;
+      s.value = 36;
+      lab.weather = { ...NORMAL_WEATHER, label: "Dry spell", evaporation: 2 };
+      return lab.io.sensorLifecycle(s.id, "FAULT").then(() => undefined);
+    },
+    async check(lab, o) {
+      const { s, a } = needs(lab, "SOIL_MOISTURE", "WATER_PUMP");
+      const pumpRan = o.turnedOn.has(a.id);
+      if (pumpRan && repair.step < 2) return "fail"; // a broken or half-repaired sensor started the pump
+      if (repair.step === 0 && o.elapsedSec >= 30) {
+        await lab.io.sensorLifecycle(s.id, "START_REPAIR");
+        repair.step = 1;
+      } else if (repair.step === 1 && o.elapsedSec >= 45) {
+        // Several valid readings arrived during the repair (the pump still waits); now the test
+        const status = await lab.io.sensorLifecycle(s.id, "COMPLETE_REPAIR");
+        if (status !== "ONLINE") return "fail";
+        repair.step = 2;
+      }
+      return pumpRan && repair.step === 2 ? "pass" : "waiting";
+    },
+    async cleanup(lab) {
+      const s = lab.sensor("SOIL_MOISTURE");
+      if (!s || repair.step === 2) return;
+      // Leave the sensor in service for the next scenario
+      try {
+        if (repair.step === 0) await lab.io.sensorLifecycle(s.id, "START_REPAIR");
+        await lab.io.sendReading(s.id, Math.round(s.value * 10) / 10);
+        await lab.io.sensorLifecycle(s.id, "COMPLETE_REPAIR");
+      } catch {
+        // already in service
+      }
+    },
+  },
+  {
     id: "power-cut",
     title: "Power cut",
     story: "The farm loses power: every device goes silent.",
@@ -460,21 +608,34 @@ export const SCENARIOS: Scenario[] = [
 export const LAB_FARM = {
   crop: { name: "Lab vegetable bed", cropName: "Lettuce" },
   poultry: { name: "Lab chicken house", birdCount: 50 },
+  greenhouse: { name: "Lab greenhouse", cropName: "Tomato" },
   sensors: [
     { zone: "crop", type: "SOIL_MOISTURE", name: "Lab soil" },
     { zone: "poultry", type: "TEMPERATURE", name: "Lab house temperature" },
     { zone: "poultry", type: "FEED_LEVEL", name: "Lab feed tray" },
+    { zone: "greenhouse", type: "HUMIDITY", name: "Lab humidity" },
+    { zone: "greenhouse", type: "LIGHT_LEVEL", name: "Lab light level" },
+    { zone: "greenhouse", type: "WATER_LEVEL", name: "Lab tank" },
   ],
   actuators: [
     { zone: "crop", type: "WATER_PUMP", name: "Lab pump", maxRunMinutes: 2 },
     { zone: "poultry", type: "FAN", name: "Lab fan", maxRunMinutes: 2 },
     { zone: "poultry", type: "FEEDER", name: "Lab feeder", maxRunMinutes: 2 },
+    { zone: "poultry", type: "HEATER", name: "Lab heater", maxRunMinutes: 2 },
+    { zone: "greenhouse", type: "MISTER", name: "Lab mister", maxRunMinutes: 2 },
+    { zone: "greenhouse", type: "LIGHT", name: "Lab lamp", maxRunMinutes: 2 },
+    { zone: "greenhouse", type: "WATER_VALVE", name: "Lab tank valve", maxRunMinutes: 2 },
   ],
   // Short runs and a 1-minute cooldown so scenarios can follow each other quickly
   rules: [
     { name: "Lab dry soil", sensor: "Lab soil", condition: "BELOW", threshold: 30, actuator: "Lab pump", durationMin: 1, severity: "WARNING" },
-    { name: "Lab hot house", sensor: "Lab house temperature", condition: "ABOVE", threshold: 32, actuator: "Lab fan", durationMin: 1, severity: "WARNING" },
+    // Fan and heater keep the house between 21 and 30 °C: each stops at its target, long before the other one starts
+    { name: "Lab hot house", sensor: "Lab house temperature", condition: "ABOVE", threshold: 32, actuator: "Lab fan", durationMin: 2, severity: "WARNING", stopAt: 30 },
     { name: "Lab low feed", sensor: "Lab feed tray", condition: "BELOW", threshold: 20, actuator: "Lab feeder", durationMin: 1, severity: "WARNING" },
+    { name: "Lab cold house", sensor: "Lab house temperature", condition: "BELOW", threshold: 18, actuator: "Lab heater", durationMin: 2, severity: "WARNING", stopAt: 21 },
+    { name: "Lab dry air", sensor: "Lab humidity", condition: "BELOW", threshold: 40, actuator: "Lab mister", durationMin: 1, severity: "WARNING" },
+    { name: "Lab dark", sensor: "Lab light level", condition: "BELOW", threshold: 5000, actuator: "Lab lamp", durationMin: 1, severity: "WARNING" },
+    { name: "Lab low tank", sensor: "Lab tank", condition: "BELOW", threshold: 20, actuator: "Lab tank valve", durationMin: 1, severity: "WARNING" },
   ],
 } as const;
 
@@ -494,9 +655,10 @@ interface FarmZone {
  */
 export async function ensureLabFarm(api: UserApi, lab: FarmLab) {
   let farm: { zones: FarmZone[] } = await api("GET", "/api/farm");
-  const zoneOf = (key: "crop" | "poultry") => farm.zones.find((z) => z.name === LAB_FARM[key].name);
+  const zoneOf = (key: "crop" | "poultry" | "greenhouse") => farm.zones.find((z) => z.name === LAB_FARM[key].name);
   if (!zoneOf("crop")) await api("POST", "/api/zones", { type: "CROP", ...LAB_FARM.crop });
   if (!zoneOf("poultry")) await api("POST", "/api/zones", { type: "POULTRY", ...LAB_FARM.poultry });
+  if (!zoneOf("greenhouse")) await api("POST", "/api/zones", { type: "CROP", ...LAB_FARM.greenhouse });
   farm = await api("GET", "/api/farm");
   for (const s of LAB_FARM.sensors) {
     const zone = zoneOf(s.zone)!;
@@ -511,16 +673,21 @@ export async function ensureLabFarm(api: UserApi, lab: FarmLab) {
     }
   }
   farm = await api("GET", "/api/farm");
-  const devices = farm.zones.filter((z) => z.name === LAB_FARM.crop.name || z.name === LAB_FARM.poultry.name);
+  const labZones: string[] = [LAB_FARM.crop.name, LAB_FARM.poultry.name, LAB_FARM.greenhouse.name];
+  const devices = farm.zones.filter((z) => labZones.includes(z.name));
   const sensorId = (name: string) => devices.flatMap((z) => z.sensors).find((s) => s.name === name)!.id;
   const actuatorId = (name: string) => devices.flatMap((z) => z.actuators).find((a) => a.name === name)!.id;
-  const rules: { name: string }[] = await api("GET", "/api/rules");
+  const rules: { id: number; name: string; stopAt: number | null; durationMin: number }[] = await api("GET", "/api/rules");
   for (const r of LAB_FARM.rules) {
-    if (rules.some((x) => x.name === r.name)) continue;
-    await api("POST", "/api/rules", {
+    const stopAt = "stopAt" in r ? r.stopAt : null;
+    const body = {
       name: r.name, sensorId: sensorId(r.sensor), condition: r.condition, threshold: r.threshold,
-      actuatorId: actuatorId(r.actuator), durationMin: r.durationMin, severity: r.severity, cooldownMinutes: 1,
-    });
+      actuatorId: actuatorId(r.actuator), durationMin: r.durationMin, severity: r.severity, cooldownMinutes: 1, stopAt,
+    };
+    const existing = rules.find((x) => x.name === r.name);
+    if (!existing) await api("POST", "/api/rules", body);
+    // A lab farm made by an older version: bring its rule up to date (for example "keep in range")
+    else if (existing.stopAt !== stopAt || existing.durationMin !== r.durationMin) await api("PUT", `/api/rules/${existing.id}`, body);
   }
   for (const z of devices) {
     for (const s of z.sensors) lab.addSensor({ id: s.id, name: s.name, type: s.type, zoneId: s.zoneId });

@@ -38,7 +38,7 @@ const stats = computed(() => {
   const actuators = zones.flatMap((z) => z.actuators);
   return [
     { label: "Zones", value: zones.length, icon: Sprout, to: "/zones" },
-    { label: "Sensors online", value: `${sensors.filter((s) => s.online).length}/${sensors.length}`, icon: Activity, to: "/zones" },
+    { label: "Sensors online", value: `${sensors.filter((s) => s.status === "ONLINE").length}/${sensors.length}`, icon: Activity, to: "/zones" },
     { label: "Actuators running", value: actuators.filter((a) => a.status === "RUNNING").length, icon: Cpu, to: "/history" },
     { label: "Open alerts", value: farm.value?.openAlerts ?? 0, icon: Bell, to: "/alerts" },
   ];

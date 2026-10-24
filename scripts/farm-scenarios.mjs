@@ -7,8 +7,8 @@
 //   ... node scripts/farm-scenarios.mjs --only drought,heatwave     run some scenarios
 //   node scripts/farm-scenarios.mjs --list                          list the scenarios
 //
-// The first run creates two "Lab" zones with real (non-simulated) devices and rules.
-// A full run takes about 20 minutes (offline detection alone needs 2 minutes per scenario).
+// The first run creates three "Lab" zones (bed, chicken house, greenhouse) with real (non-simulated)
+// devices and rules. A full run takes about 30 minutes (offline detection alone needs 2 minutes per scenario).
 // Exit code 1 if a scenario fails; a known gap is reported but does not fail the run.
 import process from "node:process";
 import { FarmLab, SCENARIOS, ensureLabFarm } from "../frontend/app/utils/farmLab.ts";
@@ -74,6 +74,7 @@ const io = {
   },
   openAlerts: () => api("GET", "/api/alerts?status=OPEN"),
   lifecycle: (id, action, body = {}) => api("POST", `/api/actuators/${id}/lifecycle/${action}`, body),
+  sensorLifecycle: async (id, action) => (await api("POST", `/api/sensors/${id}/lifecycle/${action}`)).status,
   sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
   log: (text) => console.log(`${time()}  ${text}`),
 };

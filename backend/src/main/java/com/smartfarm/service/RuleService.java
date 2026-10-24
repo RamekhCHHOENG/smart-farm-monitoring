@@ -14,8 +14,9 @@ import java.util.List;
 @Transactional
 public class RuleService {
 
+    /** {@code stopAt} null = run for a fixed time; a value = keep the range (stop when the reading gets back there). */
     public record RuleCommand(String name, Long sensorId, Condition condition, double threshold,
-                              Long actuatorId, int durationMin, Severity severity, Integer cooldownMinutes) {
+                              Long actuatorId, int durationMin, Severity severity, Integer cooldownMinutes, Double stopAt) {
     }
 
     private final AutomationRuleRepository rules;
@@ -46,6 +47,8 @@ public class RuleService {
         if (cmd.cooldownMinutes() != null) {
             rule.update(cmd.name(), cmd.condition(), cmd.threshold(), actuator, cmd.durationMin(), cmd.severity(), cmd.cooldownMinutes());
         }
+        rule.holdUntil(cmd.stopAt());
+        checkNoFight(rule);
         return rules.save(rule);
     }
 
@@ -55,6 +58,8 @@ public class RuleService {
         checkThreshold(rule.getSensor(), cmd.threshold());
         rule.update(cmd.name(), cmd.condition(), cmd.threshold(), actuator(cmd, rule.getSensor()), cmd.durationMin(),
                 cmd.severity(), cmd.cooldownMinutes() != null ? cmd.cooldownMinutes() : rule.getCooldownMinutes());
+        rule.holdUntil(cmd.stopAt());
+        checkNoFight(rule);
         return rule;
     }
 
@@ -68,6 +73,38 @@ public class RuleService {
     public void delete(Long userId, Long ruleId) {
         access.require(userId);
         rules.delete(get(ruleId));
+    }
+
+    /**
+     * Two rules on one sensor that push in opposite directions (fan above 34, heater below 20) must leave a
+     * quiet band between them. If the heater kept heating past where the fan starts, they would take turns
+     * forever: heater on, fan on, heater on... Each rule must stop before the other one's start.
+     */
+    private void checkNoFight(AutomationRule rule) {
+        if (rule.getActuator() == null) {
+            return;
+        }
+        for (AutomationRule other : rules.findBySensor_Id(rule.getSensor().getId())) {
+            if (other == rule || other.getId() != null && other.getId().equals(rule.getId())
+                    || other.getActuator() == null || other.getCondition() == rule.getCondition()) {
+                continue;
+            }
+            AutomationRule upper = rule.getCondition() == Condition.ABOVE ? rule : other;
+            AutomationRule lower = upper == rule ? other : rule;
+            String unit = rule.getSensor().getUnit();
+            if (lower.getStopValue() >= upper.getThreshold()) {
+                throw new IllegalArgumentException("\"%s\" runs %s until %s%s, but \"%s\" starts %s above %s%s: they would fight. Make it stop below %s%s."
+                        .formatted(lower.getName(), lower.getActuator().getName(), format(lower.getStopValue()), unit,
+                                upper.getName(), upper.getActuator().getName(), format(upper.getThreshold()), unit,
+                                format(upper.getThreshold()), unit));
+            }
+            if (upper.getStopValue() <= lower.getThreshold()) {
+                throw new IllegalArgumentException("\"%s\" runs %s down to %s%s, but \"%s\" starts %s below %s%s: they would fight. Make it stop above %s%s."
+                        .formatted(upper.getName(), upper.getActuator().getName(), format(upper.getStopValue()), unit,
+                                lower.getName(), lower.getActuator().getName(), format(lower.getThreshold()), unit,
+                                format(lower.getThreshold()), unit));
+            }
+        }
     }
 
     /** A threshold the sensor can never report would make the rule fire on every reading, or never. */

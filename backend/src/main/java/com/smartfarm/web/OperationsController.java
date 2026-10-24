@@ -1,6 +1,7 @@
 package com.smartfarm.web;
 
 import com.smartfarm.domain.AlertStatus;
+import com.smartfarm.domain.Sensor;
 import com.smartfarm.domain.SensorReading;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -8,6 +9,8 @@ import com.smartfarm.service.ActuatorService;
 import com.smartfarm.service.ActuatorService.LifecycleAction;
 import com.smartfarm.service.AlertService;
 import com.smartfarm.service.QueryService;
+import com.smartfarm.service.SensorService;
+import com.smartfarm.service.SensorService.SensorAction;
 import com.smartfarm.web.Dtos.*;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -27,12 +30,15 @@ import java.util.List;
 public class OperationsController {
 
     private final ActuatorService actuatorService;
+    private final SensorService sensorService;
     private final AlertService alertService;
     private final QueryService queries;
     private final Clock clock;
 
-    public OperationsController(ActuatorService actuatorService, AlertService alertService, QueryService queries, Clock clock) {
+    public OperationsController(ActuatorService actuatorService, SensorService sensorService, AlertService alertService,
+                                QueryService queries, Clock clock) {
         this.actuatorService = actuatorService;
+        this.sensorService = sensorService;
         this.alertService = alertService;
         this.queries = queries;
         this.clock = clock;
@@ -55,6 +61,17 @@ public class OperationsController {
                                  @PathVariable LifecycleAction action,
                                  @RequestBody(required = false) RepairRequest req) {
         return ActuatorDto.of(actuatorService.lifecycle(userId, id, action, req != null && Boolean.TRUE.equals(req.testPassed())));
+    }
+
+    /**
+     * Technician: action = FAULT | START_REPAIR | COMPLETE_REPAIR. COMPLETE_REPAIR runs the sensor's
+     * test; when it fails the answer still has status MAINTENANCE (the reason is in the zone's device log).
+     */
+    @PostMapping("/sensors/{id}/lifecycle/{action}")
+    public SensorDto sensorLifecycle(@RequestAttribute(AuthInterceptor.USER_ID) Long userId, @PathVariable Long id,
+                                     @PathVariable SensorAction action) {
+        Sensor sensor = sensorService.lifecycle(userId, id, action);
+        return SensorDto.of(sensor, queries.latest(sensor).orElse(null));
     }
 
     @GetMapping("/actuators/{id}/logs")

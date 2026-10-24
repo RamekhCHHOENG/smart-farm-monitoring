@@ -10,6 +10,10 @@ import java.time.Instant;
 /**
  * "If sensor reading is ABOVE/BELOW threshold, run actuator for N minutes and alert."
  * The actuator is optional: a rule without one only raises an alert.
+ *
+ * With a {@code stopAt} value the rule keeps a range, like a thermostat (hysteresis): the actuator
+ * runs until the reading is back to {@code stopAt}, and {@code durationMin} is only the longest run.
+ * Example: fan starts above 34 °C and stops at 30 °C, instead of blowing for a fixed 5 minutes.
  */
 @Entity
 public class AutomationRule {
@@ -48,6 +52,9 @@ public class AutomationRule {
 
     private Instant lastTriggeredAt;
 
+    /** Null = fixed run time. Nullable column, so an existing database gets it without touching its rows. */
+    private Double stopAt;
+
     protected AutomationRule() {
     }
 
@@ -80,6 +87,49 @@ public class AutomationRule {
     private boolean isCoolingDown(Instant now) {
         return lastTriggeredAt != null
                 && now.isBefore(lastTriggeredAt.plus(Duration.ofMinutes(cooldownMinutes)));
+    }
+
+    /**
+     * Turns the rule into "keep in range" (or back to a fixed run with {@code null}). The stop value must lie
+     * on the comfortable side of the threshold, otherwise the actuator would stop at once or never.
+     */
+    public void holdUntil(Double stopAt) {
+        if (stopAt != null) {
+            if (actuator == null) {
+                throw new IllegalArgumentException("'Stop at' needs an actuator: an alert-only rule has nothing to stop");
+            }
+            if (condition == Condition.ABOVE && stopAt >= threshold) {
+                throw new IllegalArgumentException("'Stop at' must be below " + format(threshold) + sensor.getUnit()
+                        + " for a rule that starts above it");
+            }
+            if (condition == Condition.BELOW && stopAt <= threshold) {
+                throw new IllegalArgumentException("'Stop at' must be above " + format(threshold) + sensor.getUnit()
+                        + " for a rule that starts below it");
+            }
+        }
+        this.stopAt = stopAt;
+    }
+
+    public boolean keepsRange() {
+        return stopAt != null && actuator != null;
+    }
+
+    /** The reading is back in the comfortable range, so the actuator this rule started can stop. */
+    public boolean isTargetReached(SensorReading reading) {
+        if (!keepsRange()) {
+            return false;
+        }
+        return condition == Condition.ABOVE ? reading.getValue() <= stopAt : reading.getValue() >= stopAt;
+    }
+
+    /** Where this rule's actuator stops pushing the reading: the stop value, or the threshold for a timed run. */
+    public double getStopValue() {
+        return stopAt != null ? stopAt : threshold;
+    }
+
+    /** 30.0 -> "30", 29.5 -> "29.5": how values appear in messages. */
+    public static String format(double value) {
+        return value == Math.rint(value) ? String.valueOf((long) value) : String.valueOf(value);
     }
 
     public void markTriggered(Instant now) {
@@ -118,4 +168,5 @@ public class AutomationRule {
     public boolean isActive() { return active; }
     public int getCooldownMinutes() { return cooldownMinutes; }
     public Instant getLastTriggeredAt() { return lastTriggeredAt; }
+    public Double getStopAt() { return stopAt; }
 }

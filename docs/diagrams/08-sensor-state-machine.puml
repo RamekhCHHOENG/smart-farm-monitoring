@@ -1,0 +1,21 @@
+@startuml sensor-state-machine
+!include style.iuml
+hide empty description
+
+[*] --> ONLINE : register()
+ONLINE : do / storeReadings(), evaluateRules()
+OFFLINE : entry / raiseAlert("is offline")
+FAULT : entry / raiseAlert("is faulty")
+FAULT : do / ignoreReadings()
+MAINTENANCE : do / storeReadings()
+MAINTENANCE : do / rulesPaused()
+
+ONLINE --> OFFLINE : silent for 2 min
+OFFLINE --> ONLINE : valid reading received
+ONLINE --> FAULT : reportFault()
+OFFLINE --> FAULT : reportFault()
+FAULT --> MAINTENANCE : startRepair()
+OFFLINE --> MAINTENANCE : startRepair()
+MAINTENANCE --> ONLINE : completeRepair() [valid reading since repair began]
+MAINTENANCE --> MAINTENANCE : completeRepair() [no valid reading yet]
+@enduml

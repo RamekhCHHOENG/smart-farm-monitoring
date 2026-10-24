@@ -80,13 +80,13 @@ The dashboard is the home page. It refreshes by itself every 4 seconds, so you c
 |---|---|
 | Top cards | Number of zones, how many sensors are online, how many actuators are running, and how many alerts are open. |
 | Zone card | One card per zone with its sensors and actuators. |
-| Sensor tile | The latest value and unit. The bar shows where the value sits in the sensor's range; the small black mark is the rule's threshold, written underneath (for example "Rule < 30"). The value and bar turn **red** when a rule's threshold is crossed. Green dot = online, red dot = no reading for 2 minutes; "5s ago" tells how fresh the value is. **Click a tile** to open that sensor's history. |
-| Actuator row | Pump, fan or feeder with its status: IDLE (off), RUNNING (shows time left), FAULT, OFFLINE or MAINTENANCE. |
+| Sensor tile | The latest value and unit. The bar shows where the value sits in the sensor's range; the small black mark is the rule's threshold, written underneath (for example "Rule < 30"). The value and bar turn **red** when a rule's threshold is crossed. Green dot = online, red dot = no reading for 2 minutes or reported faulty, amber dot = under repair; "5s ago" tells how fresh the value is. A sensor that is faulty or under repair is greyed out and its rules are paused. **Click a tile** to open that sensor's history. |
+| Actuator row | Pump, fan, feeder, heater, mister, light or tank valve with its status: IDLE (off), RUNNING (shows time left), FAULT, OFFLINE or MAINTENANCE. |
 | Open alerts | The newest open alerts. "×3" means the same problem happened 3 times. Click View all alerts for the full list. |
 
 The four cards at the top are also links: click **Open alerts** to go to the alert list.
 
-### 3.2 Start or stop a pump, fan or feeder (Worker, Owner)
+### 3.2 Start or stop a pump, fan, heater or other actuator (Worker, Owner)
 
 1. Find the actuator in its zone card.
 2. Type how many minutes it should run in the small box. Each device has a safety limit, for example 10 minutes for a pump.
@@ -136,14 +136,14 @@ Click **Farm settings**, change the name or location, and click **Save**. The da
 ![New zone](screens/07-new-zone-dialog.png)
 *Figure 13. New zone*
 
-**Default rules** creates the usual rules for the zone type in one click: a crop zone waters dry soil, a poultry zone cools a hot house and refills the feeder. **Edit** renames a zone; the **bin icon** deletes it.
+**Default rules** creates the usual rules for the zone type in one click: a crop zone waters dry soil, a poultry zone cools a hot house and refills the feeder. When the zone also has a heater, mister, light or tank valve with its matching sensor, the rules for those are added too (cold house heats, dry air mists, dark switches the light on, low tank opens the valve). **Edit** renames a zone; the **bin icon** deletes it.
 
 > **Note:** Deleting a zone also deletes its devices, readings, rules and schedules. The app asks you to confirm first.
 
 ### 4.3 Register a device (Technician)
 
 1. Click **+ Device** on the zone.
-2. Choose **Sensor** or **Actuator** and its type.
+2. Choose **Sensor** (soil moisture, temperature, feed level, air humidity, light level, water tank level) or **Actuator** (water pump, fan, feeder, heater, mister, light, tank fill valve) and its type. A line under the type says what it is for. Choosing an actuator fills in a suitable safety limit.
 3. Type a name, for example "Soil moisture B1".
 4. For a real ESP32 sensor, **untick Simulated**. For an actuator, set the safety limit (the longest it may run).
 5. Click **Register**. The device appears in the table with a **#number**. Write it down: the ESP32 needs it.
@@ -156,7 +156,9 @@ Click **Farm settings**, change the name or location, and click **Save**. The da
 
 ### 4.4 Faults and repairs (Technician)
 
-The buttons next to an actuator change with its status, so only the actions that make sense are shown.
+The buttons next to a device change with its status, so only the actions that make sense are shown. This page refreshes by itself every few seconds.
+
+**Actuators** (pump, fan, feeder, heater, mister, light, tank valve):
 
 | Status | Buttons | What happens |
 |---|---|---|
@@ -170,6 +172,17 @@ The buttons next to an actuator change with its status, so only the actions that
 
 ![In MAINTENANCE: finish the repair, record a failed test, or decommission](screens/23-device-in-maintenance.png)
 *Figure 17. In MAINTENANCE: finish the repair, record a failed test, or decommission*
+
+**Sensors** have their own repair flow. A sensor that stops sending comes back **by itself** as soon as a valid reading arrives, so a cable you fixed needs no button. Use the buttons when a sensor is broken, stuck or must be tested:
+
+| Status | Buttons | What happens |
+|---|---|---|
+| ONLINE | Report fault | The sensor is taken out of service: its readings are ignored and its rules are paused, so a stuck sensor cannot run a pump. A WARNING alert tells the farm. |
+| OFFLINE | Start repair, Report fault | Into MAINTENANCE, or out of service as faulty. |
+| FAULT | Start repair | MAINTENANCE: readings are stored again so you can watch them, but rules stay paused. |
+| MAINTENANCE | Complete repair (test) | The test passes only if a valid reading arrived after the repair began. Then the sensor is ONLINE and its rules work again. If not, it stays in MAINTENANCE and the message tells you to check power, cable and Wi-Fi. |
+
+A note under the sensor says what to do next, for example "A valid reading arrived. Complete the repair to put it back in service." Every step is written to the zone's device log (History).
 
 ### 4.5 Rename a device or change its safety limit (Technician)
 
@@ -200,11 +213,16 @@ No ESP32 yet? **Farm Lab** in the menu creates as many virtual sensors and actua
 | Heavy rain | Soil gets wet | Pump stays off |
 | Heat wave | House heats towards 39 °C | Fan starts above 32 °C |
 | Cool night | 21 °C | Fan stays off |
+| Cold snap | House drops towards 10 °C | Heater starts below 18 °C |
+| Dry air | Humidity falls to 20 % | Mister starts below 40 % |
+| Dark day | Storm clouds | Light switches on below 5000 lux |
+| Tank running low | A leak drains the tank | Tank valve opens below 20 % |
 | Feed running out | Chickens eat fast | Feeder refills below 20 % |
 | Broken pump | Pump reported faulty, soil dries | CRITICAL alert: pump could NOT start |
 | Clogged pipe | Pump runs, no water | Known gap: nothing says so yet (needs a flow sensor) |
 | Sensor cable cut | Soil sensor silent | “is offline” alert after about 2 min |
 | Faulty sensor reading | Sensor reports 150 % | Rejected (HTTP 422) |
+| Sensor repaired | Soil sensor faulty while the bed dries, then repaired | Pump stays off during the fault and repair, starts after the repair |
 | Power cut | Every device silent | “is offline” for every sensor; relays off |
 
 > **Note:** To run our real ESP32 program on a simulated board, see firmware/esp32-node/WOKWI.md in the project.
@@ -346,7 +364,9 @@ Open **Users** in the menu. Every person should have their own account, so the h
 | "A Farm Worker account cannot do this" | The page or action is for another role. Ask the Farm Owner. |
 | "Cannot reach the server... Retrying" | The backend computer is off or the network is down. The page reconnects by itself when it is back. |
 | "Your session ended" | Sign in again. This happens after a server restart or after 12 hours. |
-| A sensor dot is red / "is offline" alert | The sensor sent nothing for 2 minutes. Check its power, cable and Wi-Fi (Technician). |
+| A sensor dot is red / "is offline" alert | The sensor sent nothing for 2 minutes. Check its power, cable and Wi-Fi (Technician). It comes back by itself with the next valid reading; to test it, use Start repair then Complete repair (section 4.4). |
+| A sensor is greyed out and says FAULT or MAINTENANCE | A technician took it out of service. Its readings are ignored or its rules are paused until the repair is completed (section 4.4). |
+| "Complete repair" says the test failed | No valid reading has arrived since the repair began. Check power, cable and Wi-Fi, wait for a reading, and try again. |
 | A value says "suspect" | The sensor sent an impossible value (for example 150 %). Check or recalibrate it. |
 | "Enter whole minutes from 1 to N" | Type a whole number of minutes within the device's safety limit. |
 | "Cannot start ...: it is FAULT" | The device is broken or in repair. The technician must finish the repair first. |

@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Actuator, ActuatorType, Farm, LifecycleAction, Sensor, SensorType, Zone } from "~/utils/types";
-import { actuatorLabels, sensorLabels } from "~/utils/types";
+import type { Actuator, ActuatorType, Farm, LifecycleAction, Sensor, SensorAction, SensorType, Zone } from "~/utils/types";
+import { actuatorHints, actuatorLabels, defaultRunMinutes, sensorHints, sensorLabels } from "~/utils/types";
+import { sensorBadge, sensorDone, sensorNote, sensorOptions } from "~/utils/sensorRepair";
+import { actuatorDone, actuatorOptions } from "~/utils/actuatorRepair";
 
 const api = useApi();
 const { can } = useAuth();
@@ -24,7 +26,8 @@ async function load() {
     error.value = errorMessage(e);
   }
 }
-onMounted(load);
+// Refreshes by itself, so a technician waiting for a repaired sensor's first reading sees it arrive.
+usePolling(load, 4000);
 
 const ask = (message: string) => window.confirm(message);
 
@@ -90,10 +93,16 @@ const deviceForm = reactive({ zoneId: 0, kind: "sensor" as "sensor" | "actuator"
   actuatorType: "WATER_PUMP" as ActuatorType, name: "", simulated: true, maxRunMinutes: 10 });
 
 function openDevice(zone: Zone) {
-  Object.assign(deviceForm, { zoneId: zone.id, kind: "sensor", name: "", simulated: true, maxRunMinutes: 10 });
+  Object.assign(deviceForm, { zoneId: zone.id, kind: "sensor", name: "", simulated: true,
+    maxRunMinutes: defaultRunMinutes[deviceForm.actuatorType] });
   error.value = "";
   deviceDialog.value = true;
 }
+
+// Each kind of actuator has its own sensible safety limit: a heater runs longer than a mister.
+watch(() => deviceForm.actuatorType, (type) => {
+  deviceForm.maxRunMinutes = defaultRunMinutes[type];
+});
 
 async function saveDevice() {
   const ok = await act(() => deviceForm.kind === "sensor"
@@ -124,30 +133,27 @@ async function saveEdit() {
 }
 
 // ----- technician lifecycle (Deliverable 9) -----
-const lifecycleOptions: Record<string, { action: LifecycleAction; label: string; body?: { testPassed?: boolean } }[]> = {
-  IDLE: [{ action: "FAULT", label: "Report fault" }, { action: "OFFLINE", label: "Mark offline" }],
-  RUNNING: [{ action: "FAULT", label: "Report fault" }, { action: "OFFLINE", label: "Mark offline" }],
-  OFFLINE: [{ action: "RESTORE", label: "Heartbeat restored" }, { action: "START_REPAIR", label: "Start repair" }],
-  FAULT: [{ action: "START_REPAIR", label: "Start repair" }],
-  MAINTENANCE: [
-    { action: "COMPLETE_REPAIR", label: "Repair done (test passed)", body: { testPassed: true } },
-    { action: "COMPLETE_REPAIR", label: "Test failed", body: { testPassed: false } },
-    { action: "DECOMMISSION", label: "Decommission" },
-  ],
-};
-
-const lifecycleDone: Record<LifecycleAction, string> = {
-  FAULT: "fault reported",
-  OFFLINE: "marked offline",
-  RESTORE: "back online",
-  START_REPAIR: "repair started",
-  COMPLETE_REPAIR: "repair finished",
-  DECOMMISSION: "decommissioned",
-};
-
 function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: boolean }) {
-  const done = action === "COMPLETE_REPAIR" && body?.testPassed === false ? "test failed, still in maintenance" : lifecycleDone[action];
+  const done = action === "COMPLETE_REPAIR" && body?.testPassed === false ? "test failed, still in maintenance" : actuatorDone[action];
   act(() => api(`/api/actuators/${a.id}/lifecycle/${action}`, { method: "POST", body: body ?? {} }), `${a.name}: ${done}`);
+}
+
+// ----- sensor repair: fault -> maintenance -> a valid reading proves it works (see utils/sensorRepair.ts) -----
+async function sensorLifecycle(s: Sensor, action: SensorAction) {
+  if (action === "FAULT" && !ask(`Report ${s.name} as faulty? Its readings will be ignored and its rules paused until it is repaired.`)) return;
+  error.value = "";
+  notice.value = "";
+  try {
+    const updated = await api<Sensor>(`/api/sensors/${s.id}/lifecycle/${action}`, { method: "POST" });
+    if (action === "COMPLETE_REPAIR" && updated.status === "MAINTENANCE") {
+      error.value = `${s.name}: test failed, no valid reading since the repair began. Check power, cable and Wi-Fi, then try again.`;
+    } else {
+      notice.value = `${s.name}: ${sensorDone[action]}`;
+    }
+    await load();
+  } catch (e) {
+    error.value = errorMessage(e);
+  }
 }
 </script>
 
@@ -194,10 +200,13 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: b
               <div class="flex items-center gap-2">
                 <span class="font-medium">{{ s.name }}</span>
                 <span class="text-xs text-muted-foreground">#{{ s.id }}</span>
-                <span class="ml-auto"><StatusBadge :status="s.online ? (s.suspect ? 'WARNING' : 'ONLINE') : 'OFFLINE'" /></span>
+                <span class="ml-auto"><StatusBadge :status="sensorBadge(s)" /></span>
               </div>
               <p class="text-sm text-muted-foreground">{{ sensorLabels[s.type] }} sensor · {{ s.simulated ? "simulated" : "real device" }}</p>
-              <div v-if="can('TECHNICIAN')" class="flex gap-1">
+              <p v-if="sensorNote(s)" class="text-xs text-muted-foreground">{{ sensorNote(s) }}</p>
+              <div v-if="can('TECHNICIAN')" class="flex flex-wrap gap-1">
+                <Button v-for="o in sensorOptions[s.status]" :key="o.label" size="sm" variant="outline"
+                  @click="sensorLifecycle(s, o.action)">{{ o.label }}</Button>
                 <Button size="sm" variant="outline" @click="openEdit('sensor', s)">Edit</Button>
                 <Button size="sm" variant="outline"
                   @click="ask(`Remove ${s.name}?`) && act(() => api(`/api/sensors/${s.id}`, { method: 'DELETE' }), 'Sensor removed')">Remove</Button>
@@ -211,7 +220,7 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: b
               </div>
               <p class="text-sm text-muted-foreground">{{ actuatorLabels[a.type] }} · max {{ a.maxRunMinutes }} min</p>
               <div v-if="can('TECHNICIAN')" class="flex flex-wrap gap-1">
-                <Button v-for="o in lifecycleOptions[a.status] ?? []" :key="o.label" size="sm" variant="outline"
+                <Button v-for="o in actuatorOptions[a.status] ?? []" :key="o.label" size="sm" variant="outline"
                   @click="lifecycle(a, o.action, o.body)">{{ o.label }}</Button>
                 <Button v-if="a.status === 'DECOMMISSIONED'" size="sm" variant="ghost"
                   @click="ask(`Remove ${a.name}?`) && act(() => api(`/api/actuators/${a.id}`, { method: 'DELETE' }), 'Actuator removed')">Remove</Button>
@@ -231,14 +240,19 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: b
             <TableBody>
               <TableRow v-for="s in zone.sensors" :key="`s${s.id}`">
                 <TableCell class="font-medium">{{ s.name }} <span class="text-xs text-muted-foreground">#{{ s.id }}</span></TableCell>
-                <TableCell>{{ sensorLabels[s.type] }} sensor · {{ s.simulated ? "simulated" : "real device" }}</TableCell>
-                <TableCell><StatusBadge :status="s.online ? (s.suspect ? 'WARNING' : 'ONLINE') : 'OFFLINE'" /></TableCell>
+                <TableCell>
+                  {{ sensorLabels[s.type] }} sensor · {{ s.simulated ? "simulated" : "real device" }}
+                  <div v-if="sensorNote(s)" class="text-xs text-muted-foreground">{{ sensorNote(s) }}</div>
+                </TableCell>
+                <TableCell><StatusBadge :status="sensorBadge(s)" /></TableCell>
                 <TableCell class="text-right">
-                  <template v-if="can('TECHNICIAN')">
+                  <div v-if="can('TECHNICIAN')" class="flex flex-wrap justify-end gap-1">
+                    <Button v-for="o in sensorOptions[s.status]" :key="o.label" size="sm" variant="outline"
+                      @click="sensorLifecycle(s, o.action)">{{ o.label }}</Button>
                     <Button size="sm" variant="ghost" @click="openEdit('sensor', s)">Edit</Button>
                     <Button size="sm" variant="ghost"
                       @click="ask(`Remove ${s.name}?`) && act(() => api(`/api/sensors/${s.id}`, { method: 'DELETE' }), 'Sensor removed')">Remove</Button>
-                  </template>
+                  </div>
                 </TableCell>
               </TableRow>
               <TableRow v-for="a in zone.actuators" :key="`a${a.id}`">
@@ -247,7 +261,7 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: b
                 <TableCell><StatusBadge :status="a.status" /></TableCell>
                 <TableCell class="text-right">
                   <div v-if="can('TECHNICIAN')" class="flex flex-wrap justify-end gap-1">
-                    <Button v-for="o in lifecycleOptions[a.status] ?? []" :key="o.label" size="sm" variant="outline"
+                    <Button v-for="o in actuatorOptions[a.status] ?? []" :key="o.label" size="sm" variant="outline"
                       @click="lifecycle(a, o.action, o.body)">{{ o.label }}</Button>
                     <Button v-if="a.status === 'DECOMMISSIONED'" size="sm" variant="ghost"
                       @click="ask(`Remove ${a.name}?`) && act(() => api(`/api/actuators/${a.id}`, { method: 'DELETE' }), 'Actuator removed')">Remove</Button>
@@ -362,6 +376,9 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: b
             <NativeSelect v-else id="dtype" v-model="deviceForm.actuatorType" class="w-full">
               <NativeSelectOption v-for="(label, key) in actuatorLabels" :key="key" :value="key">{{ label }}</NativeSelectOption>
             </NativeSelect>
+            <p class="text-xs text-muted-foreground">
+              {{ deviceForm.kind === "sensor" ? sensorHints[deviceForm.sensorType] : actuatorHints[deviceForm.actuatorType] }}
+            </p>
           </div>
           <div class="flex flex-col gap-1.5">
             <Label for="dname">Name</Label>

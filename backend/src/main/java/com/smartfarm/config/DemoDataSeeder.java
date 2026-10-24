@@ -22,8 +22,8 @@ import java.util.HexFormat;
 
 /**
  * On first start, creates the farm and its three users. With FARM_DEMO_DATA=false the farm
- * starts empty, ready for a real setup. Otherwise it creates a demo farm: one crop zone and one poultry zone with
- * devices, default rules (from each zone subclass), and two scheduled tasks.
+ * starts empty, ready for a real setup. Otherwise it creates a demo farm: a vegetable bed, a greenhouse and a
+ * chicken house with devices, default rules (from each zone subclass), and three scheduled tasks.
  * Demo users get the password from FARM_DEMO_PASSWORD; if it is not set, a random
  * password is generated and printed once to the server log. No password is committed.
  */
@@ -80,14 +80,26 @@ public class DemoDataSeeder implements ApplicationRunner {
         poultry.addSensor(SensorType.FEED_LEVEL, "Feed tray level 1", true);
         poultry.addActuator(ActuatorType.FAN, "Exhaust fan 1", null);
         Actuator feeder = poultry.addActuator(ActuatorType.FEEDER, "Feeder 1", null);
+        poultry.addActuator(ActuatorType.HEATER, "Brooder heater 1", null);
+
+        // Added after the first two zones, so the ids of the original devices do not change.
+        CropZone greenhouse = farm.addCropZone("Greenhouse 1", "Tomato");
+        greenhouse.addSensor(SensorType.HUMIDITY, "Greenhouse humidity", true);
+        greenhouse.addSensor(SensorType.LIGHT_LEVEL, "Greenhouse light", true);
+        greenhouse.addSensor(SensorType.WATER_LEVEL, "Water tank level", true);
+        greenhouse.addActuator(ActuatorType.MISTER, "Mist sprayer", null);
+        Actuator growLight = greenhouse.addActuator(ActuatorType.LIGHT, "Grow light", null);
+        greenhouse.addActuator(ActuatorType.WATER_VALVE, "Tank fill valve", null);
 
         farms.saveAndFlush(farm);
         rules.saveAll(crop.createDefaultRules());
         rules.saveAll(poultry.createDefaultRules());
+        rules.saveAll(greenhouse.createDefaultRules());
 
         EnumSet<DayOfWeek> everyDay = EnumSet.allOf(DayOfWeek.class);
         tasks.save(new ScheduledTask("Morning feeding", feeder, LocalTime.of(7, 0), everyDay, 3));
         tasks.save(new ScheduledTask("Evening watering", pump, LocalTime.of(17, 0), everyDay, 5));
+        tasks.save(new ScheduledTask("Evening grow light", growLight, LocalTime.of(18, 30), everyDay, 90));
     }
 
     private void createUsers(Farm farm) {

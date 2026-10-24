@@ -3,8 +3,10 @@ package com.smartfarm.domain;
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Abstract farm zone. New zone kinds (e.g. a fish pond) are added as subclasses
@@ -72,10 +74,52 @@ public abstract class Zone {
                 .findFirst();
     }
 
-    /** True when an actuator that corrects this sensor's reading is currently running. */
-    public boolean isCorrecting(Sensor sensor) {
-        return actuators.stream().anyMatch(a ->
-                a.getType() == sensor.getCorrectiveActuatorType() && a.getStatus() == ActuatorStatus.RUNNING);
+    /** Running actuators in this zone that work against {@code actuator} (a fan while the heater starts). */
+    public List<Actuator> runningOpposites(Actuator actuator) {
+        return actuators.stream()
+                .filter(a -> a != actuator && a.getStatus() == ActuatorStatus.RUNNING && actuator.opposes(a.getType()))
+                .toList();
+    }
+
+    /** The kinds of actuator running in this zone right now; the sensors react to them in the simulator. */
+    public Set<ActuatorType> runningActuatorTypes() {
+        Set<ActuatorType> running = EnumSet.noneOf(ActuatorType.class);
+        for (Actuator actuator : actuators) {
+            if (actuator.getStatus() == ActuatorStatus.RUNNING) {
+                running.add(actuator.getType());
+            }
+        }
+        return running;
+    }
+
+    /**
+     * Adds a rule for the first sensor of the given type, if the zone has one. It drives the first
+     * working actuator of {@code actuatorType}; with no actuator (or {@code null}) it only raises an alert.
+     * {@code stopAt} makes it keep a range (stop when the reading is back there); null = fixed run time.
+     */
+    protected void addRule(List<AutomationRule> rules, String name, SensorType sensorType, Condition condition,
+                           double threshold, ActuatorType actuatorType, int durationMin, Severity severity, Double stopAt) {
+        findSensor(sensorType).ifPresent(sensor -> {
+            Actuator actuator = actuatorType == null ? null : findActuator(actuatorType).orElse(null);
+            AutomationRule rule = new AutomationRule(name, sensor, condition, threshold, actuator,
+                    actuator == null ? durationMin : Math.min(durationMin, actuator.getMaxRunMinutes()), severity);
+            if (rule.getActuator() != null) {
+                rule.holdUntil(stopAt);
+            }
+            rules.add(rule);
+        });
+    }
+
+    /** Like {@link #addRule}, but only when the zone really has a working actuator of that type. */
+    protected void addActuatorRule(List<AutomationRule> rules, String name, SensorType sensorType, Condition condition,
+                                   double threshold, ActuatorType actuatorType, int durationMin, Severity severity, Double stopAt) {
+        findActuator(actuatorType).ifPresent(actuator -> findSensor(sensorType).ifPresent(sensor -> {
+            // never longer than the actuator's own safety limit, or it would refuse to start
+            AutomationRule rule = new AutomationRule(name, sensor, condition, threshold, actuator,
+                    Math.min(durationMin, actuator.getMaxRunMinutes()), severity);
+            rule.holdUntil(stopAt);
+            rules.add(rule);
+        }));
     }
 
     /** Polymorphism: each zone kind proposes its own default automation rules. */
