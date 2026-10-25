@@ -33,8 +33,11 @@ public class CatalogService {
     private final SensorRepository sensors;
     private final AccessPolicy access;
 
+    private final Tenancy tenancy;
+
     public CatalogService(MeasurementTypeRepository measurements, DeviceModelRepository models, ModelPictureRepository pictures,
-                          FarmDeviceRepository devices, SensorRepository sensors, AccessPolicy access) {
+                          FarmDeviceRepository devices, SensorRepository sensors, AccessPolicy access, Tenancy tenancy) {
+        this.tenancy = tenancy;
         this.measurements = measurements;
         this.models = models;
         this.pictures = pictures;
@@ -47,22 +50,25 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public List<MeasurementType> measurements() {
-        return measurements.findAllByOrderByNameAsc();
+        return measurements.findAllByOrderByNameAsc().stream().filter(m -> visible(m.getFarmId())).toList();
     }
 
     public MeasurementType createMeasurement(Long userId, String name, String unit, double min, double max, double typical) {
-        access.require(userId, Role.TECHNICIAN);
+        requireEditor(userId);
         String code = MeasurementType.codeFrom(name);
         if (measurements.existsByCode(code)) {
             throw new IllegalArgumentException("A measurement called " + name + " already exists");
         }
-        return measurements.save(new MeasurementType(code, name.trim(), unit.trim(), min, max, typical, false));
+        MeasurementType created = new MeasurementType(code, name.trim(), unit.trim(), min, max, typical, false);
+        created.setFarmId(newEntryFarm());
+        return measurements.save(created);
     }
 
     /** A built-in measurement keeps its unit and range: its sensor class checks readings with them. */
     public MeasurementType updateMeasurement(Long userId, Long id, String name, String unit, double min, double max, double typical) {
-        access.require(userId, Role.TECHNICIAN);
+        requireEditor(userId);
         MeasurementType m = measurement(id);
+        requireCanChange(m.getFarmId(), "Measurement", id);
         if (m.isBuiltIn() && (!m.getUnit().equals(unit) || m.getMinValid() != min || m.getMaxValid() != max)) {
             throw new IllegalArgumentException(m.getName() + " is built in: only its name and typical value can change");
         }
@@ -71,8 +77,9 @@ public class CatalogService {
     }
 
     public void deleteMeasurement(Long userId, Long id) {
-        access.require(userId, Role.TECHNICIAN);
+        requireEditor(userId);
         MeasurementType m = measurement(id);
+        requireCanChange(m.getFarmId(), "Measurement", id);
         if (m.isBuiltIn()) {
             throw new IllegalArgumentException(m.getName() + " is built in and cannot be deleted");
         }
@@ -90,7 +97,7 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public List<DeviceModel> models() {
-        return models.findAllByOrderByCategoryAscNameAsc();
+        return models.findAllByOrderByCategoryAscNameAsc().stream().filter(m -> visible(m.getFarmId())).toList();
     }
 
     @Transactional(readOnly = true)
@@ -99,16 +106,19 @@ public class CatalogService {
     }
 
     public DeviceModel createModel(Long userId, ModelCommand cmd) {
-        access.require(userId, Role.TECHNICIAN);
+        requireEditor(userId);
         if (models.existsByNameIgnoreCase(cmd.name().trim())) {
             throw new IllegalArgumentException("A model called " + cmd.name().trim() + " already exists");
         }
-        return models.save(apply(new DeviceModel(cmd.name().trim(), cmd.category(), false), cmd));
+        DeviceModel model = apply(new DeviceModel(cmd.name().trim(), cmd.category(), false), cmd);
+        model.setFarmId(newEntryFarm());
+        return models.save(model);
     }
 
     public DeviceModel updateModel(Long userId, Long id, ModelCommand cmd) {
-        access.require(userId, Role.TECHNICIAN);
+        requireEditor(userId);
         DeviceModel model = model(id);
+        requireCanChange(model.getFarmId(), "Device model", id);
         if (!model.getCategory().equals(cmd.category())) {
             throw new IllegalArgumentException("A model's category cannot change; make a new model instead");
         }
@@ -147,15 +157,17 @@ public class CatalogService {
 
     /** Retired models stay for the devices made from them but are not offered for new devices. */
     public DeviceModel setRetired(Long userId, Long id, boolean retired) {
-        access.require(userId, Role.TECHNICIAN);
+        requireEditor(userId);
         DeviceModel model = model(id);
+        requireCanChange(model.getFarmId(), "Device model", id);
         model.setRetired(retired);
         return model;
     }
 
     public void deleteModel(Long userId, Long id) {
-        access.require(userId, Role.TECHNICIAN);
+        requireEditor(userId);
         DeviceModel model = model(id);
+        requireCanChange(model.getFarmId(), "Device model", id);
         if (model.isBuiltIn()) {
             throw new IllegalArgumentException(model.getName() + " is part of the starter catalog: retire it instead");
         }
@@ -169,8 +181,9 @@ public class CatalogService {
     // ---------- pictures ----------
 
     public void savePicture(Long userId, Long modelId, String contentType, byte[] bytes) {
-        access.require(userId, Role.TECHNICIAN);
+        requireEditor(userId);
         DeviceModel model = model(modelId);
+        requireCanChange(model.getFarmId(), "Device model", modelId);
         Optional<ModelPicture> existing = pictures.findById(modelId);
         if (existing.isPresent()) {
             existing.get().replace(contentType, bytes);
@@ -181,8 +194,9 @@ public class CatalogService {
     }
 
     public void deletePicture(Long userId, Long modelId) {
-        access.require(userId, Role.TECHNICIAN);
+        requireEditor(userId);
         DeviceModel model = model(modelId);
+        requireCanChange(model.getFarmId(), "Device model", modelId);
         pictures.findById(modelId).ifPresent(pictures::delete);
         model.markPicture(false);
     }
@@ -196,7 +210,44 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public DeviceModel model(Long id) {
-        return models.findById(id).orElseThrow(() -> new NotFoundException("Device model", id));
+        DeviceModel model = models.findById(id).orElseThrow(() -> new NotFoundException("Device model", id));
+        if (!visible(model.getFarmId())) {
+            throw new NotFoundException("Device model", id); // another farm's own model
+        }
+        return model;
+    }
+
+    // ---------- shared catalog vs a farm's own entries ----------
+
+    /** Company staff keep the catalog from anywhere; on a farm, its technician and owner add the farm's own entries. */
+    private void requireEditor(Long userId) {
+        if (tenancy.current().map(c -> c.companyRole() != null).orElse(false)) {
+            access.requireCompany(userId, false);
+        } else {
+            access.require(userId, Role.TECHNICIAN);
+        }
+    }
+
+    /** A farm sees the shared catalog and its own entries; company staff on company pages see the shared catalog. */
+    private boolean visible(Long ownerFarmId) {
+        return ownerFarmId == null || !tenancy.limited() || ownerFarmId.equals(tenancy.farmId());
+    }
+
+    /** What a new entry belongs to: added by a farm's own people it is that farm's; added by company staff it is shared. */
+    private Long newEntryFarm() {
+        return tenancy.current().filter(c -> c.companyRole() == null && c.farmId() != null).map(Tenancy.Context::farmId).orElse(null);
+    }
+
+    /** The shared catalog is changed only by Smart Farm staff, since every farm uses it; a farm's own entries only by that farm. */
+    private void requireCanChange(Long ownerFarmId, String what, Long id) {
+        if (ownerFarmId == null) {
+            boolean farmAccount = tenancy.current().map(c -> c.companyRole() == null).orElse(false);
+            if (farmAccount) {
+                throw new ForbiddenException("The shared catalog is kept by Smart Farm, because every farm uses it. Add your own model for your farm instead.");
+            }
+        } else {
+            tenancy.check(null, ownerFarmId, what, id);
+        }
     }
 
     private MeasurementType measurement(Long id) {

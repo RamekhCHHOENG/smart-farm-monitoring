@@ -139,6 +139,8 @@ export interface FarmDevice {
 export type DeviceCategory = "SENSOR" | "ACTUATOR" | "CONTROLLER";
 
 export interface MeasurementType {
+  /** in the shared Smart Farm catalog (kept by company staff), as opposed to a farm's own entry */
+  shared: boolean;
   id: number;
   code: string;
   name: string;
@@ -150,6 +152,8 @@ export interface MeasurementType {
 }
 
 export interface DeviceModel {
+  /** in the shared Smart Farm catalog (kept by company staff), as opposed to a farm's own model */
+  shared: boolean;
   id: number;
   name: string;
   manufacturer: string | null;

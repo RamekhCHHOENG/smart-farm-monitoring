@@ -120,8 +120,15 @@ class CompanyFlowTest {
         send(delete("/api/controllers/" + boardId), ownerA, null, null).andExpect(status().isNotFound());
         send(get("/api/controllers"), b.ownerToken(), null, null).andExpect(jsonPath("$[*].id", hasItem(boardId)));
 
-        // an alert on farm B (a board's dry reading) stays on farm B
+        // the server-wide device key only reaches the original farm: a leaked key cannot write into farm B
         mvc.perform(post("/api/devices/readings").header("X-Device-Key", "test-device-key").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"sensorId\":" + b.sensorId() + ",\"value\":5}")).andExpect(status().isForbidden());
+        // farm B's sensor is wired to farm B's own board; a dry reading through it raises an alert that stays on farm B
+        String farmJson = send(get("/api/farm"), b.ownerToken(), null, null).andReturn().getResponse().getContentAsString();
+        int soilDevice = JsonPath.read(farmJson, "$.zones[0].sensors[0].deviceId");
+        send(put("/api/farm-devices/" + soilDevice), admin, b.farmId(), "{\"name\":\"B soil\",\"controllerId\":" + boardId + "}").andExpect(status().isOk());
+        String boardKey = JsonPath.read(boardB, "$.key");
+        mvc.perform(post("/api/devices/readings").header("X-Device-Key", boardKey).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"sensorId\":" + b.sensorId() + ",\"value\":5}")).andExpect(status().isCreated());
         String alertsB = send(get("/api/alerts"), b.ownerToken(), null, null)
                 .andExpect(jsonPath("$[*].zoneId", everyItem(is((int) b.zoneId()))))

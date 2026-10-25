@@ -27,6 +27,9 @@ public class MeasurementType {
     private double typical;
     private boolean builtIn;
 
+    /** null = shared by every farm (kept by company staff); a farm id = a measurement one farm added for itself. */
+    private Long farmId;
+
     protected MeasurementType() {
     }
 
@@ -67,4 +70,6 @@ public class MeasurementType {
     public double getMaxValid() { return maxValid; }
     public double getTypical() { return typical; }
     public boolean isBuiltIn() { return builtIn; }
+    public Long getFarmId() { return farmId; }
+    public void setFarmId(Long farmId) { this.farmId = farmId; }
 }

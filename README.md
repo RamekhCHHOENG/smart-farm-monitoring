@@ -47,14 +47,17 @@ Asking for another farm's item by its id answers "not found" (tests in `CompanyF
 - **Suspend:** a suspended farm keeps its data and keeps running its rules, but its people cannot use it.
 - **First start:** the company admin account `admin` is created (password `FARM_ADMIN_PASSWORD`, else
   `FARM_DEMO_PASSWORD`). Older databases are upgraded on start: alerts and boards are given their farm.
-- Still shared by all farms (next phase): the device catalog, the farm-wide device key (`FARM_DEVICE_KEY`) and
-  the Telegram chat. Controller boards already have their own keys per farm.
+- **Device keys:** each controller board has its own key and drives only its own devices. The server-wide
+  `FARM_DEVICE_KEY` only reaches the original farm (the first one), so a leaked key cannot write into a customer's farm.
+- **Catalog:** the shared catalog is kept by company staff. A farm's owner or technician adds models of their own,
+  which only that farm sees.
+- Still shared by all farms (next phase): the Telegram chat.
 
 ## Device catalog (master data)
 
 Devices are not a fixed list in the code. The **Device catalog** page holds every model the farm can use, with
-its picture, what it measures or does, wiring notes and a rough price; the Farm Owner and the Technician add
-their own. A starter catalog of about 40 real models is filled on first start (DHT22, DS18B20, BH1750,
+its picture, what it measures or does, wiring notes and a rough price. Company staff keep the shared catalog;
+a farm's Owner and Technician add models of their own (only their farm sees them). A starter catalog of about 40 real models is filled on first start (DHT22, DS18B20, BH1750,
 JSN-SR04T, HX711, MQ-135, MH-Z19B, pumps, 36-inch exhaust fans, brooder lamps, solenoid valves, ESP32 boards...).
 
 | Level | What it is | Example |
@@ -69,7 +72,7 @@ JSN-SR04T, HX711, MQ-135, MH-Z19B, pumps, 36-inch exhaust fans, brooder lamps, s
   `GenericSensor` takes its range from the measurement type, `GenericActuator` its effects from the model.
 - Pictures: an uploaded photo, else the model's open-source [Wokwi part](https://github.com/wokwi/wokwi-elements)
   drawing (MIT), else our animated drawing of the farm equipment.
-- A board's key only drives the devices assigned to it; the farm's single device key keeps working.
+- A board's key only drives the devices assigned to it; the server-wide device key keeps working for the original farm.
 - Devices made before the catalog existed are given a matching model on start (ids and history are kept).
 
 ## Device kinds

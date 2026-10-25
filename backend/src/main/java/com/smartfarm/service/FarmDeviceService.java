@@ -44,6 +44,9 @@ public class FarmDeviceService {
         access.require(userId, Role.TECHNICIAN);
         Zone zone = tenancy.zone(zones.findById(zoneId).orElseThrow(() -> new NotFoundException("Zone", zoneId)));
         DeviceModel model = models.findById(modelId).orElseThrow(() -> new NotFoundException("Device model", modelId));
+        if (model.getFarmId() != null) {
+            tenancy.check(model, model.getFarmId(), "Device model", modelId); // another farm's own model
+        }
         Map<String, MeasurementType> byCode = new HashMap<>();
         for (ModelChannel channel : model.getChannels()) {
             measurements.findByCode(channel.getMeasurementCode()).ifPresent(m -> byCode.put(m.getCode(), m));

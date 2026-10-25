@@ -100,8 +100,12 @@ class CatalogFlowTest {
     @Test
     void picturesAreUploadedSignedInAndShownToEveryone() throws Exception {
         String tech = login("technician");
-        long model = modelId(tech, "12 V diaphragm water pump");
         byte[] png = {(byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10, 0, 0, 0, 0};
+        // the shared catalog is kept by Smart Farm: a farm's technician photographs the farm's own model
+        long shared = modelId(tech, "12 V diaphragm water pump");
+        mvc.perform(put("/api/catalog/models/" + shared + "/photo").header("Authorization", "Bearer " + tech)
+                .contentType(MediaType.IMAGE_PNG).content(png)).andExpect(status().isForbidden());
+        long model = id(postJson(tech, "/api/catalog/models", "{\"name\":\"Farm's own pump\",\"category\":\"ACTUATOR\",\"actuatorType\":\"WATER_PUMP\"}"));
         mvc.perform(put("/api/catalog/models/" + model + "/photo").header("Authorization", "Bearer " + tech)
                 .contentType(MediaType.IMAGE_PNG).content(png)).andExpect(status().isNoContent());
         mvc.perform(get("/api/catalog/models/" + model + "/picture")) // no login: it is an <img>
@@ -147,6 +151,9 @@ class CatalogFlowTest {
 
         long soil = modelId(owner, "Capacitive soil moisture sensor v1.2");
         mvc.perform(delete("/api/catalog/models/" + soil).header("Authorization", "Bearer " + owner))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.detail").value(containsString("kept by Smart Farm")));
+        String admin = login("admin");
+        mvc.perform(delete("/api/catalog/models/" + soil).header("Authorization", "Bearer " + admin).header("X-Farm-Id", "1"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").value(containsString("retire it instead")));
         long custom = id(postJson(owner, "/api/catalog/models", "{\"name\":\"Test pH pen\",\"category\":\"SENSOR\","
                 + "\"channels\":[{\"measurementCode\":\"PH\",\"label\":\"pH\"}]}"));
@@ -160,6 +167,9 @@ class CatalogFlowTest {
         String list = mvc.perform(get("/api/catalog/measurements").header("Authorization", "Bearer " + owner)).andReturn().getResponse().getContentAsString();
         List<Integer> ids = JsonPath.read(list, "$[?(@.code=='TEMPERATURE')].id");
         mvc.perform(put("/api/catalog/measurements/" + ids.get(0)).header("Authorization", "Bearer " + owner).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Temperature\",\"unit\":\"°C\",\"minValid\":-50,\"maxValid\":60,\"typical\":29}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(put("/api/catalog/measurements/" + ids.get(0)).header("Authorization", "Bearer " + admin).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Temperature\",\"unit\":\"°C\",\"minValid\":-50,\"maxValid\":60,\"typical\":29}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").value(containsString("built in")));
     }

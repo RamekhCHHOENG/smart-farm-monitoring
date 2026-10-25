@@ -62,12 +62,17 @@ const figures = computed(() => {
 // ----- search and filter -----
 const search = ref("");
 const filter = ref<"all" | "attention" | "suspended">("all");
+// a company can have hundreds of farms: 20 at a time, the ones needing attention first
+const limit = ref(20);
+watch([search, filter], () => (limit.value = 20));
 const shown = computed(() => {
   const words = search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return (farms.value ?? [])
     .filter((f) => filter.value === "all" || (filter.value === "attention" ? !!attention(f) : f.status === "SUSPENDED"))
     .filter((f) => words.every((w) => `${f.name} ${f.location} ${f.owners.join(" ")} ${f.ownerContact ?? ""}`.toLowerCase().includes(w)))
-    .sort((a, b) => Number(!!attention(b)) - Number(!!attention(a)) || a.name.localeCompare(b.name));
+    // a farm made in this visit stays on top, so it is not lost among hundreds of others
+    .sort((a, b) => Number(b.id === justMade.value) - Number(a.id === justMade.value)
+      || Number(!!attention(b)) - Number(!!attention(a)) || a.name.localeCompare(b.name));
 });
 
 // ----- open a farm -----
@@ -78,6 +83,7 @@ function openFarm(f: CompanyFarm) {
 
 // ----- new farm -----
 const newOpen = ref(false);
+const justMade = ref<number | null>(null);
 const form = reactive({ name: "", location: "", ownerName: "", ownerUsername: "", ownerContact: "" });
 const formError = ref("");
 const usernameTouched = ref(false);
@@ -95,6 +101,9 @@ async function createFarm() {
   try {
     const res = await api<CompanyInvite>("/api/company/farms", { method: "POST", body: { ...form } });
     newOpen.value = false;
+    justMade.value = res.farm?.id ?? null;
+    search.value = "";
+    filter.value = "all";
     await load();
     showInvite(res, `${res.farm?.name} is ready`, form.ownerName);
   } catch (e) {
@@ -229,7 +238,7 @@ const menuOf = (f: CompanyFarm): MenuAction[] => isAdmin.value ? [
       </div>
 
       <ul class="stagger flex flex-col gap-3">
-        <li v-for="f in shown" :key="f.id" class="lift flex flex-wrap items-center gap-x-5 gap-y-3 rounded-[1.4rem] border bg-card p-4 shadow-soft"
+        <li v-for="f in shown.slice(0, limit)" :key="f.id" class="lift flex flex-wrap items-center gap-x-5 gap-y-3 rounded-[1.4rem] border bg-card p-4 shadow-soft"
           :class="{ 'opacity-70': f.status === 'SUSPENDED' }">
           <div class="flex min-w-[14rem] flex-1 items-start gap-3">
             <span class="badge-disc size-11 shrink-0"><Building2 class="size-5" /></span>
@@ -260,6 +269,11 @@ const menuOf = (f: CompanyFarm): MenuAction[] => isAdmin.value ? [
           </div>
         </li>
       </ul>
+      <div v-if="shown.length > limit" class="mt-4 flex justify-center">
+        <button type="button" class="round-btn w-auto px-5 text-sm" @click="limit += 20">
+          {{ t("Show more farms") }} <span class="ml-1.5 text-muted-foreground">({{ shown.length - limit }} {{ t("left") }})</span>
+        </button>
+      </div>
       <p v-if="farms.length && !shown.length" class="py-8 text-center text-sm text-muted-foreground">{{ t("No farm matches.") }}</p>
     </template>
 

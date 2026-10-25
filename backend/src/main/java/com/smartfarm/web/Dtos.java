@@ -92,10 +92,10 @@ public final class Dtos {
     }
 
     public record MeasurementDto(Long id, String code, String name, String unit, double minValid, double maxValid,
-                                 double typical, boolean builtIn) {
+                                 double typical, boolean builtIn, boolean shared) {
         static MeasurementDto of(MeasurementType m) {
             return new MeasurementDto(m.getId(), m.getCode(), m.getName(), m.getUnit(), m.getMinValid(), m.getMaxValid(),
-                    m.getTypical(), m.isBuiltIn());
+                    m.getTypical(), m.isBuiltIn(), m.getFarmId() == null);
         }
     }
 
@@ -103,13 +103,13 @@ public final class Dtos {
                                  String interfaceType, String voltage, Double priceUsd, String datasheetUrl, String wiringNotes,
                                  String wokwiPart, String artType, List<ChannelDto> channels, String actuatorType,
                                  String actionVerb, Integer defaultMaxRunMinutes, List<EffectDto> effects,
-                                 boolean hasPicture, boolean builtIn, boolean retired, boolean inUse) {
+                                 boolean hasPicture, boolean builtIn, boolean retired, boolean inUse, boolean shared) {
         static DeviceModelDto of(DeviceModel m, boolean inUse) {
             return new DeviceModelDto(m.getId(), m.getName(), m.getManufacturer(), m.getCategory(), m.getDescription(),
                     m.getInterfaceType(), m.getVoltage(), m.getPriceUsd(), m.getDatasheetUrl(), m.getWiringNotes(),
                     m.getWokwiPart(), m.getArtType(), m.getChannels().stream().map(ChannelDto::of).toList(),
                     m.getActuatorType(), m.getActionVerb(), m.getDefaultMaxRunMinutes(),
-                    m.getEffects().stream().map(EffectDto::of).toList(), m.isHasPicture(), m.isBuiltIn(), m.isRetired(), inUse);
+                    m.getEffects().stream().map(EffectDto::of).toList(), m.isHasPicture(), m.isBuiltIn(), m.isRetired(), inUse, m.getFarmId() == null);
         }
     }
 

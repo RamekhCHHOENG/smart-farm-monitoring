@@ -71,6 +71,9 @@ public class DeviceModel {
     private boolean builtIn;
     private boolean retired;
 
+    /** null = the shared Smart Farm catalog (kept by company staff); a farm id = a model one farm added for itself. */
+    private Long farmId;
+
     protected DeviceModel() {
     }
 
@@ -186,5 +189,7 @@ public class DeviceModel {
     public List<ModelEffect> getEffects() { return List.copyOf(effects); }
     public boolean isHasPicture() { return hasPicture; }
     public boolean isBuiltIn() { return builtIn; }
+    public Long getFarmId() { return farmId; }
+    public void setFarmId(Long farmId) { this.farmId = farmId; }
     public boolean isRetired() { return retired; }
 }

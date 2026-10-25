@@ -17,7 +17,9 @@ definePageMeta({ role: "TECHNICIAN" });
 // measurement types they read. Everyone can browse; the Farm Owner and the Technician manage it.
 
 const api = useApi();
-const { can, token } = useAuth();
+const { can, token, isCompany } = useAuth();
+// The shared catalog is kept by Smart Farm staff (every farm uses it); a farm changes only the models it added itself.
+const canChange = (entry: { shared: boolean }) => can("TECHNICIAN") && (isCompany.value || !entry.shared);
 const models = ref<DeviceModel[]>([]);
 const measurements = ref<MeasurementType[]>([]);
 const error = ref("");
@@ -191,7 +193,8 @@ const removeMeasurement = async (m: MeasurementType) => (await useConfirm().conf
 <template>
   <div>
     <PageHeader title="Device catalog"
-      description="Every device model the farm can use: what it measures or does, how it is wired, and what it looks like. New devices are added from this list.">
+      :description="isCompany ? 'The shared Smart Farm catalog every farm installs from. Changes here reach every customer farm.'
+        : 'Every device model your farm can use. The shared catalog is kept by Smart Farm; models you add are your farm\u2019s own.'">
       <template v-if="can('TECHNICIAN')">
         <Button v-if="tab === 'models'" @click="open()"><Plus /> Add model</Button>
         <Button v-else @click="openMeasurement()"><Plus /> Add measurement</Button>
@@ -253,7 +256,8 @@ const removeMeasurement = async (m: MeasurementType) => (await useConfirm().conf
             {{ [m.interfaceType, m.voltage, m.priceUsd != null ? `~$${m.priceUsd}` : null, m.defaultMaxRunMinutes ? `limit ${m.defaultMaxRunMinutes} min` : null].filter(Boolean).join(" · ") }}
           </p>
           <p v-if="m.wiringNotes" class="text-xs"><b>Wiring:</b> {{ m.wiringNotes }}</p>
-          <div v-if="can('TECHNICIAN')" class="mt-auto flex flex-wrap gap-1 border-t pt-2">
+          <p v-if="!m.shared" class="w-fit rounded-full bg-primary/12 px-2.5 py-0.5 text-[11px] font-medium text-primary">Your farm's own model</p>
+          <div v-if="canChange(m)" class="mt-auto flex flex-wrap gap-1 border-t pt-2">
             <Button size="sm" variant="outline" @click="open(m)"><Pencil /> Edit</Button>
             <Button size="sm" variant="ghost" @click="retire(m)"><component :is="m.retired ? ArchiveRestore : Archive" /> {{ m.retired ? "Offer again" : "Retire" }}</Button>
             <Button v-if="m.hasPicture" size="sm" variant="ghost" @click="removePhoto(m)"><X /> Photo</Button>
@@ -287,7 +291,7 @@ const removeMeasurement = async (m: MeasurementType) => (await useConfirm().conf
               <TableCell class="tabular-nums">{{ m.typical }}</TableCell>
               <TableCell class="text-xs text-muted-foreground">{{ models.filter((x) => x.channels.some((c) => c.measurementCode === m.code)).length }} model(s)</TableCell>
               <TableCell class="pr-4 text-right">
-                <template v-if="can('TECHNICIAN')">
+                <template v-if="canChange(m)">
                   <Button size="icon-sm" variant="ghost" :aria-label="`Edit ${m.name}`" @click="openMeasurement(m)"><Pencil /></Button>
                   <Button v-if="!m.builtIn" size="icon-sm" variant="ghost" :aria-label="`Delete ${m.name}`" @click="removeMeasurement(m)"><Trash2 /></Button>
                 </template>
