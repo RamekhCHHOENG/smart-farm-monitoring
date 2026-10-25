@@ -1,17 +1,16 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@fontsource-variable/geist";
-/* Khmer script: Geist has no Khmer glyphs, so Khmer text falls through to Noto Sans Khmer */
+@import "@fontsource-variable/outfit";
+@import "@fontsource-variable/jetbrains-mono";
+/* Khmer script: Outfit has no Khmer glyphs, so Khmer text falls through to Noto Sans Khmer */
 @import "@fontsource-variable/noto-sans-khmer";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: 'Geist Variable', 'Noto Sans Khmer Variable', sans-serif;
-  --font-heading: var(--font-sans);
-  --font-mono:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
-    monospace;
+  --font-sans: 'Outfit Variable', 'Noto Sans Khmer Variable', sans-serif;
+  --font-heading: 'Outfit Variable', 'Noto Sans Khmer Variable', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -55,61 +54,119 @@
   --animate-accordion-up: accordion-up 0.2s ease-out;
 }
 
-/* designkit tokens with a farm-green primary colour */
+/* "Harvest" theme. Light: warm cream and wheat gold with olive green, soft rounded cards, black pills for what is
+   selected. Dark: olive-brown field panels with an orange accent, like a farm map at dusk. */
 :root {
-  --radius: 0.75rem;
-  --background: oklch(0.985 0.004 145);
-  --foreground: oklch(0.2 0.02 150);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.02 150);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.02 150);
-  --primary: oklch(0.52 0.14 150);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.955 0.012 145);
-  --secondary-foreground: oklch(0.25 0.03 150);
-  --muted: oklch(0.955 0.01 145);
-  --muted-foreground: oklch(0.5 0.02 150);
-  --accent: oklch(0.94 0.03 145);
-  --accent-foreground: oklch(0.25 0.03 150);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.75 0.16 75);
-  --border: oklch(0.91 0.01 145);
-  --input: oklch(0.91 0.01 145);
-  --ring: oklch(0.62 0.12 150);
-  --chart-1: oklch(0.6 0.14 150);
-  --chart-2: oklch(0.65 0.15 240);
-  --chart-3: oklch(0.72 0.15 70);
-  --chart-4: oklch(0.6 0.2 25);
-  --chart-5: oklch(0.55 0.05 150);
+  --radius: 1rem;
+  --background: #fff8ee;
+  --glow: #ffe1b5;
+  /* the page wash, sampled from the reference: apricot at the top, cream in the middle, warm peach at the bottom */
+  --bg-top: #ffe1b5;
+  --bg-mid: #fff6e9;
+  --bg-light: #fffbf5;
+  --bg-bottom: #fae8cd;
+  --foreground: #1e1b14;
+  --card: #fffdfa;
+  --card-foreground: #1e1b14;
+  --popover: #fffdfa;
+  --popover-foreground: #1e1b14;
+  --primary: #5e7d1f;
+  --primary-foreground: #ffffff;
+  --secondary: #f4ead7;
+  --secondary-foreground: #3a2e12;
+  --muted: #fbf1e1;
+  --muted-foreground: #857a66;
+  --accent: #ffedbb;
+  --accent-foreground: #3a2e12;
+  --destructive: #d2532e;
+  --destructive-foreground: #ffffff;
+  --warning: #e3962a;
+  --gold: #c07f1c;
+  --ink: #141414;
+  --ink-foreground: #ffffff;
+  --water: #3f88b5;
+  --crop: #6b8e23;
+  --poultry: #e3962a;
+  --greenhouse: #3f88b5;
+  --border: #f3e4cb;
+  --input: #ecdcc0;
+  --ring: #e3a43d;
+  --chart-1: #6b8e23;
+  --chart-2: #3f88b5;
+  --chart-3: #e3a43d;
+  --chart-4: #d2532e;
+  --chart-5: #a89a80;
+  /* see-through: the page's wash shows behind the sidebar, so it is the same colour as the page */
+  --sidebar: transparent;
+  --sidebar-foreground: #5f5644;
+  --sidebar-primary: #141414;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ffefd3;
+  --sidebar-accent-foreground: #1e1b14;
+  --sidebar-border: rgb(232 205 160 / 40%);
+  --sidebar-ring: #e3a43d;
+  --shadow-soft: 0 1px 2px rgb(90 64 20 / 4%), 0 10px 30px -14px rgb(90 64 20 / 16%);
 }
 
 .dark {
-  --background: oklch(0.17 0.01 150);
-  --foreground: oklch(0.96 0.005 145);
-  --card: oklch(0.21 0.012 150);
-  --card-foreground: oklch(0.96 0.005 145);
-  --popover: oklch(0.21 0.012 150);
-  --popover-foreground: oklch(0.96 0.005 145);
-  --primary: oklch(0.7 0.15 150);
-  --primary-foreground: oklch(0.17 0.02 150);
-  --secondary: oklch(0.27 0.015 150);
-  --secondary-foreground: oklch(0.96 0.005 145);
-  --muted: oklch(0.27 0.015 150);
-  --muted-foreground: oklch(0.72 0.015 145);
-  --accent: oklch(0.3 0.03 150);
-  --accent-foreground: oklch(0.96 0.005 145);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.8 0.15 80);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.6 0.1 150);
+  --background: #13120e;
+  --glow: #2b2615;
+  --bg-top: #2a2213;
+  --bg-mid: #17150f;
+  --bg-light: #13120e;
+  --bg-bottom: #1b170f;
+  --foreground: #f3ecdd;
+  --card: #1f1d17;
+  --card-foreground: #f3ecdd;
+  --popover: #26241c;
+  --popover-foreground: #f3ecdd;
+  --primary: #93c052;
+  --primary-foreground: #13120e;
+  --secondary: #2c2a21;
+  --secondary-foreground: #f3ecdd;
+  --muted: #29271f;
+  --muted-foreground: #a69e8a;
+  --accent: #3a3324;
+  --accent-foreground: #f6ead2;
+  --destructive: #f0703f;
+  --destructive-foreground: #13120e;
+  --warning: #f2b44a;
+  --gold: #e8a64a;
+  --ink: #f3ecdd;
+  --ink-foreground: #13120e;
+  --water: #77b3d8;
+  --crop: #93c052;
+  --poultry: #f2b44a;
+  --greenhouse: #77b3d8;
+  --border: rgb(255 240 210 / 9%);
+  --input: rgb(255 240 210 / 14%);
+  --ring: #e8692c;
+  --chart-1: #93c052;
+  --chart-2: #77b3d8;
+  --chart-3: #f2b44a;
+  --chart-4: #f0703f;
+  --chart-5: #8f8874;
+  --sidebar: transparent;
+  --sidebar-foreground: #b3ab97;
+  --sidebar-primary: #f3ecdd;
+  --sidebar-primary-foreground: #13120e;
+  --sidebar-accent: #26241c;
+  --sidebar-accent-foreground: #f3ecdd;
+  --sidebar-border: rgb(255 240 210 / 7%);
+  --sidebar-ring: #e8692c;
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 30%), 0 12px 30px -16px rgb(0 0 0 / 60%);
 }
 
 @theme inline {
   --color-warning: var(--warning);
+  --color-water: var(--water);
+  --color-gold: var(--gold);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --shadow-soft: var(--shadow-soft);
+  --color-crop: var(--crop);
+  --color-poultry: var(--poultry);
+  --color-greenhouse: var(--greenhouse);
 }
 
 @layer base {
@@ -118,8 +175,221 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    /* the warm wash behind every page, top to bottom (it stays put while the page scrolls) */
+    background-image: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-mid) 34%, var(--bg-light) 60%, var(--bg-bottom) 100%);
+    background-attachment: fixed;
   }
   html {
     @apply font-sans;
   }
+  h1, h2, h3 {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+  }
 }
+
+@layer utilities {
+  /* readings and counters: the technical face with even-width digits */
+  .num {
+    font-family: var(--font-heading);
+    font-variant-numeric: tabular-nums;
+    font-weight: 400;
+    letter-spacing: -0.03em;
+  }
+  /* the round icon badge used on stat pills (wheat-coloured disc) */
+  .badge-disc {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+  /* headings in the welcome style: gold fading into olive */
+  .harvest-text {
+    background: linear-gradient(90deg, var(--gold), var(--crop));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* the box behind a device picture: a workbench with a faint dot grid */
+  .stage {
+    background: radial-gradient(120% 90% at 50% 20%, var(--card) 0%, var(--muted) 100%);
+  }
+  /* small uppercase section labels */
+  .eyebrow {
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--muted-foreground);
+  }
+}
+
+/* the current page in the sidebar: a black pill (a light one in dark mode) */
+.nav-active {
+  color: var(--sidebar-primary-foreground) !important;
+  font-weight: 500;
+}
+.nav-active:hover { background: transparent !important; }
+/* the pill itself, behind the links; it glides between them */
+.nav-pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 9999px;
+  background: var(--sidebar-primary);
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.38s var(--ease-out), width 0.38s var(--ease-out), height 0.38s var(--ease-out);
+}
+
+/* The top bar is painted with the page's own wash, fixed to the window like the page's, so it is exactly the colour
+   behind it: no band, no edge. Content scrolling under it simply disappears. */
+.topbar {
+  background-image: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-mid) 34%, var(--bg-light) 60%, var(--bg-bottom) 100%);
+  background-attachment: fixed;
+}
+/* the round white buttons in the top bar (bell, theme, key). In the components layer so utilities such as w-auto
+   on one of them (the alert pill, the language button) still win. */
+@layer components {
+  .round-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.25rem;
+    width: 2.25rem;
+    border-radius: 9999px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-soft);
+    transition: background-color 0.15s;
+  }
+  .round-btn:hover {
+    background: var(--accent);
+  }
+}
+
+/* Fields on the farm map, seen from above: crop rows, a poultry yard, greenhouse panels. */
+.field {
+  box-shadow: var(--shadow-soft), inset 0 0 0 1px rgb(255 255 255 / 8%);
+}
+.field-crop {
+  background:
+    repeating-linear-gradient(115deg, rgb(255 255 255 / 9%) 0 3px, transparent 3px 11px),
+    radial-gradient(120% 90% at 30% 20%, #9cbf4f, #5f8a2a 60%, #46681f);
+}
+.field-poultry {
+  background:
+    repeating-linear-gradient(65deg, rgb(255 255 255 / 10%) 0 2px, transparent 2px 9px),
+    radial-gradient(120% 90% at 30% 20%, #f1c77a, #d39a3c 60%, #a8742a);
+}
+.field-greenhouse {
+  background:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 16%) 0 2px, transparent 2px 22px),
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 10%) 0 1px, transparent 1px 30px),
+    radial-gradient(120% 90% at 30% 20%, #9cc7de, #5b97b9 60%, #3f7393);
+}
+.dark .field-crop { filter: saturate(0.8) brightness(0.8); }
+.dark .field-poultry { filter: saturate(0.8) brightness(0.78); }
+.dark .field-greenhouse { filter: saturate(0.75) brightness(0.75); }
+/* the stress glow: orange to red in the middle of a field */
+.field-heat {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 55% at 50% 50%, rgb(230 60 30 / 85%), rgb(240 140 40 / 55%) 55%, transparent 80%);
+  mix-blend-mode: multiply;
+}
+.dark .field-heat { mix-blend-mode: normal; }
+
+/* ===================== Motion =====================
+   Short and calm: 120-180 ms for feedback, 260-380 ms for things entering, 500-900 ms for charts drawing.
+   Only opacity and transform move (smooth on phones). Everything stops for people who ask for less motion. */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+}
+
+/* between pages: the old page fades away quickly, the new one rises in */
+.page-enter-active { transition: opacity 0.32s var(--ease-out), transform 0.32s var(--ease-out), filter 0.32s var(--ease-out); }
+.page-leave-active { transition: opacity 0.14s var(--ease-in), transform 0.14s var(--ease-in); }
+.page-enter-from { opacity: 0; transform: translateY(10px); filter: blur(3px); }
+.page-leave-to { opacity: 0; transform: translateY(-4px); }
+.layout-enter-active, .layout-leave-active { transition: opacity 0.2s ease; }
+.layout-enter-from, .layout-leave-to { opacity: 0; }
+
+/* children of .stagger rise in one after another (cards in a grid, sections of a page) */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+.stagger > * { animation: rise 0.42s var(--ease-out) both; }
+.stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger > *:nth-child(3) { animation-delay: 0.1s; }
+.stagger > *:nth-child(4) { animation-delay: 0.14s; }
+.stagger > *:nth-child(5) { animation-delay: 0.18s; }
+.stagger > *:nth-child(6) { animation-delay: 0.22s; }
+.stagger > *:nth-child(7) { animation-delay: 0.26s; }
+.stagger > *:nth-child(8) { animation-delay: 0.3s; }
+.stagger > *:nth-child(n + 9) { animation-delay: 0.34s; }
+.rise { animation: rise 0.42s var(--ease-out) both; }
+/* the entrance animation makes each card its own layer, so a tooltip inside one would hide under the next card:
+   the card being pointed at (or holding keyboard focus) comes to the front */
+.stagger > *:hover, .stagger > *:focus-within { position: relative; z-index: 5; }
+
+/* placeholders while the first data loads: a soft light sweeping across */
+@keyframes shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+.skeleton {
+  border-radius: 0.75rem;
+  background: linear-gradient(100deg, var(--muted) 30%, color-mix(in oklab, var(--card) 85%, var(--glow)) 50%, var(--muted) 70%);
+  background-size: 250% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* chart lines draw themselves from left to right (the path has pathLength="1") */
+@keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.draw { stroke-dasharray: 1; stroke-dashoffset: 0; animation: draw 0.9s var(--ease-out) both; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.fade-in { animation: fade-in 0.6s ease both; }
+
+/* cards that can be picked lift a little under the pointer */
+.lift { transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), border-color 0.18s; }
+.lift:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgb(90 64 20 / 5%), 0 18px 36px -18px rgb(90 64 20 / 28%); }
+
+/* pop-overs grow out of where they were opened */
+.pop-enter-active { transition: opacity 0.18s var(--ease-out), transform 0.18s var(--ease-out); }
+.pop-leave-active { transition: opacity 0.12s var(--ease-in), transform 0.12s var(--ease-in); pointer-events: none; }
+.pop-enter-from, .pop-leave-to { opacity: 0; transform: translateY(-6px) scale(0.97); }
+/* a panel whose content swaps (the zone card on the map) */
+.swap-enter-active { transition: opacity 0.26s var(--ease-out), transform 0.26s var(--ease-out); }
+.swap-leave-active { transition: opacity 0.1s ease; }
+.swap-enter-from { opacity: 0; transform: translateX(10px); }
+.swap-leave-to { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* items of the account menu in the top bar */
+.user-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.625rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  transition: background-color 0.15s;
+}
+.user-item:hover, .user-item:focus-visible { background: var(--accent); outline: none; }
+
+/* a larger invisible touch area around small text links and controls (fingers need about 40 px) */
+.hit { position: relative; }
+.hit::after { content: ""; position: absolute; inset: -10px -6px; }

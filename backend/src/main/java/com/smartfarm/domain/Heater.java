@@ -20,4 +20,6 @@ public class Heater extends Actuator {
     @Override public ActuatorType getType() { return ActuatorType.HEATER; }
     @Override public String getActionVerb() { return "Heating"; }
     @Override public boolean opposes(ActuatorType other) { return other == ActuatorType.FAN; }
+    @Override public String getNoEffectHint() { return "the heater's power and its element"; }
+    @Override public java.util.List<ModelEffect> getEffects() { return java.util.List.of(new ModelEffect("TEMPERATURE", 1)); }
 }

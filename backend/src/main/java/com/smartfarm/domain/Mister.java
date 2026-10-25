@@ -19,4 +19,6 @@ public class Mister extends Actuator {
 
     @Override public ActuatorType getType() { return ActuatorType.MISTER; }
     @Override public String getActionVerb() { return "Misting"; }
+    @Override public String getNoEffectHint() { return "the nozzles and the water supply"; }
+    @Override public java.util.List<ModelEffect> getEffects() { return java.util.List.of(new ModelEffect("HUMIDITY", 1)); }
 }

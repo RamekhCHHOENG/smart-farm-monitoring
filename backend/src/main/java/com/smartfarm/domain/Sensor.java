@@ -1,6 +1,8 @@
 package com.smartfarm.domain;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.Instant;
 import java.util.Random;
@@ -23,6 +25,11 @@ public abstract class Sensor {
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     private Zone zone;
+
+    /** The physical unit this reading comes from (a DHT22 gives two). Nullable: set by the catalog upgrade. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    private FarmDevice device;
 
     /** Simulated sensors get readings from the built-in simulator; real ones from an ESP32. */
     private boolean simulated;
@@ -140,7 +147,34 @@ public abstract class Sensor {
         }
     }
 
+    /** The smallest move that shows an actuator really worked: 1 % of the sensor's range (1 % soil, 0.7 °C...). */
+    public double getMinimumChange() {
+        return (getMaxValid() - getMinValid()) / 100;
+    }
+
+    void attachTo(FarmDevice device) {
+        this.device = device;
+        device.attach(this);
+    }
+
+    /** Built-in kind, or null for a measurement added in the catalog (see GenericSensor). */
     public abstract SensorType getType();
+
+    /** Stable key of what it measures: SOIL_MOISTURE, TEMPERATURE... or a catalog code like CO2. */
+    public String getMeasurementCode() {
+        return getType().name();
+    }
+
+    public String getMeasurementName() {
+        return switch (getType()) {
+            case SOIL_MOISTURE -> "Soil moisture";
+            case TEMPERATURE -> "Temperature";
+            case FEED_LEVEL -> "Feed level";
+            case HUMIDITY -> "Air humidity";
+            case LIGHT_LEVEL -> "Light level";
+            case WATER_LEVEL -> "Water tank level";
+        };
+    }
 
     public abstract String getUnit();
 
@@ -165,5 +199,6 @@ public abstract class Sensor {
     public boolean isSuspect() { return suspect; }
     public Instant getLastSeenAt() { return lastSeenAt; }
     public Instant getFaultReportedAt() { return faultReportedAt; }
+    public FarmDevice getDevice() { return device; }
     public Instant getRepairStartedAt() { return repairStartedAt; }
 }

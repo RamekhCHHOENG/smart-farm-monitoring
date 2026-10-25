@@ -15,7 +15,51 @@ export interface User {
   id: number;
   username: string;
   name: string;
-  role: Role;
+  /** the farm role; null for Smart Farm company staff */
+  role: Role | null;
+  /** ADMIN or SUPPORT for company staff, null for farm accounts */
+  companyRole: "ADMIN" | "SUPPORT" | null;
+  farmId: number | null;
+}
+
+/** The farm a company account is working on (company staff choose; farm accounts always have their own). */
+export interface ActiveFarm {
+  id: number;
+  name: string;
+}
+
+/** A customer's farm as the Smart Farm company sees it (GET /api/company/farms). */
+export interface CompanyFarm {
+  id: number;
+  name: string;
+  location: string;
+  status: "ACTIVE" | "SUSPENDED";
+  supportAllowed: boolean;
+  createdAt: string | null;
+  ownerContact: string | null;
+  owners: string[];
+  zones: number;
+  sensors: number;
+  sensorsOnline: number;
+  actuatorsRunning: number;
+  openAlerts: number;
+  lastReadingAt: string | null;
+  support: CompanyStaff[];
+}
+
+export interface CompanyStaff {
+  id: number;
+  username: string;
+  name: string;
+  companyRole: "ADMIN" | "SUPPORT";
+}
+
+/** What the server returns after making a farm or staff account: the invite token, shown once. */
+export interface CompanyInvite {
+  farm: CompanyFarm | null;
+  staff: CompanyStaff | null;
+  username: string;
+  inviteToken: string;
 }
 
 export interface Reading {
@@ -29,7 +73,9 @@ export interface Sensor {
   id: number;
   zoneId: number;
   name: string;
-  type: SensorType;
+  /** measurement code: a built-in SensorType or a catalog code like CO2 */
+  type: string;
+  measurementName: string;
   unit: string;
   minValid: number;
   maxValid: number;
@@ -42,18 +88,101 @@ export interface Sensor {
   repairStartedAt: string | null;
   lastSeenAt: string | null;
   latest: Reading | null;
+  /** the physical device it belongs to (a DHT22 has two sensors) */
+  deviceId: number | null;
+  /** an ordinary healthy value (the simulator's resting point) */
+  typical: number;
+}
+
+export interface Effect {
+  measurementCode: string;
+  /** +1 raises the measurement while running, -1 lowers it */
+  direction: number;
 }
 
 export interface Actuator {
   id: number;
   zoneId: number;
   name: string;
-  type: ActuatorType;
+  /** a built-in ActuatorType, or GENERIC for a kind added in the catalog */
+  type: string;
+  kindName: string;
   status: ActuatorStatus;
   maxRunMinutes: number;
   runningUntil: string | null;
   /** set while a rule's run is going */
   startedByRuleId: number | null;
+  deviceId: number | null;
+  effects: Effect[];
+}
+
+/** A physical unit on the farm, made from a catalog model. */
+export interface FarmDevice {
+  id: number;
+  zoneId: number;
+  name: string;
+  modelId: number;
+  modelName: string;
+  category: DeviceCategory;
+  wokwiPart: string | null;
+  artType: string | null;
+  hasPicture: boolean;
+  controllerId: number | null;
+  controllerName: string | null;
+  serialNumber: string | null;
+  notes: string | null;
+  installedAt: string | null;
+  sensorIds: number[];
+  actuatorIds: number[];
+}
+
+export type DeviceCategory = "SENSOR" | "ACTUATOR" | "CONTROLLER";
+
+export interface MeasurementType {
+  id: number;
+  code: string;
+  name: string;
+  unit: string;
+  minValid: number;
+  maxValid: number;
+  typical: number;
+  builtIn: boolean;
+}
+
+export interface DeviceModel {
+  id: number;
+  name: string;
+  manufacturer: string | null;
+  category: DeviceCategory;
+  description: string | null;
+  interfaceType: string | null;
+  voltage: string | null;
+  priceUsd: number | null;
+  datasheetUrl: string | null;
+  wiringNotes: string | null;
+  wokwiPart: string | null;
+  artType: string | null;
+  channels: { measurementCode: string; label: string }[];
+  actuatorType: string | null;
+  actionVerb: string | null;
+  defaultMaxRunMinutes: number | null;
+  effects: Effect[];
+  hasPicture: boolean;
+  builtIn: boolean;
+  retired: boolean;
+  inUse: boolean;
+}
+
+export interface ControllerBoard {
+  id: number;
+  name: string;
+  modelId: number | null;
+  modelName: string | null;
+  wokwiPart: string | null;
+  keyHint: string | null;
+  notes: string | null;
+  lastSeenAt: string | null;
+  deviceCount: number;
 }
 
 export interface Zone {
@@ -63,11 +192,18 @@ export interface Zone {
   detail: string;
   cropName: string | null;
   birdCount: number | null;
+  /** a Farm Lab test zone: its alerts stay in the lab */
+  lab: boolean;
   sensors: Sensor[];
   actuators: Actuator[];
+  devices: FarmDevice[];
 }
 
 export interface Farm {
+  /** ACTIVE or SUSPENDED (by the Smart Farm company) */
+  status: "ACTIVE" | "SUSPENDED";
+  /** the owner allows Smart Farm company support to open the farm */
+  supportAllowed: boolean;
   id: number;
   name: string;
   location: string;
@@ -125,6 +261,7 @@ export interface Alert {
   delivered: boolean;
   acknowledgedBy: string | null;
   acknowledgedAt: string | null;
+  lab: boolean;
 }
 
 export interface DeviceLog {
@@ -188,6 +325,14 @@ export const defaultRunMinutes: Record<ActuatorType, number> = {
   LIGHT: 120,
   WATER_VALVE: 15,
 };
+
+/** What a sensor measures, for labels: the built-in name, or the catalog measurement's. */
+export const sensorKind = (s: Pick<Sensor, "type" | "measurementName">) =>
+  sensorLabels[s.type as SensorType] ?? s.measurementName ?? s.type;
+
+/** What kind of actuator it is: the built-in name, or the catalog model's. */
+export const actuatorKind = (a: Pick<Actuator, "type" | "kindName">) =>
+  actuatorLabels[a.type as ActuatorType] ?? a.kindName ?? a.type;
 
 export const roleLabels: Record<Role, string> = {
   OWNER: "Farm Owner",

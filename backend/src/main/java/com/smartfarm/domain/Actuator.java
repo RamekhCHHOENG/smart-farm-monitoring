@@ -1,9 +1,12 @@
 package com.smartfarm.domain;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -24,6 +27,11 @@ public abstract class Actuator {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     private Zone zone;
 
+    /** The physical unit this output belongs to. Nullable: set by the catalog upgrade. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    private FarmDevice device;
+
     @Enumerated(EnumType.STRING)
     private ActuatorStatus status = ActuatorStatus.IDLE;
 
@@ -32,6 +40,13 @@ public abstract class Actuator {
 
     /** The rule that started the current run, so only that rule stops it at its target. Nullable column. */
     private Long startedByRuleId;
+
+    // What a rule's run should change, so the end of the run can check that it really worked
+    // (a pump that runs while the pipe is clogged). All nullable: cleared whenever the run ends.
+    private Long watchSensorId;
+    private Double watchStartValue;
+    private Integer watchDirection;
+    private Instant watchSince;
 
     protected Actuator() {
     }
@@ -91,9 +106,39 @@ public abstract class Actuator {
             return false;
         }
         status = ActuatorStatus.IDLE;
+        clearRun();
+        return true;
+    }
+
+    /**
+     * The run should move {@code sensor} from {@code startValue} up ({@code direction} +1) or down (-1).
+     * Checked when the run's time is up: see {@link #movedAsExpected}.
+     */
+    public void expectEffect(Sensor sensor, double startValue, int direction, Instant now) {
+        watchSensorId = sensor.getId();
+        watchStartValue = startValue;
+        watchDirection = direction;
+        watchSince = now;
+    }
+
+    /** True when the reading moved at least {@code minChange} in the expected direction since the run began. */
+    public boolean movedAsExpected(double latestValue, double minChange) {
+        return watchStartValue == null || watchDirection == null
+                || (latestValue - watchStartValue) * watchDirection >= minChange;
+    }
+
+    private void clearRun() {
         runningUntil = null;
         startedByRuleId = null;
-        return true;
+        watchSensorId = null;
+        watchStartValue = null;
+        watchDirection = null;
+        watchSince = null;
+    }
+
+    /** What to check when a run changed nothing; each kind of actuator knows its usual weak spot. */
+    public String getNoEffectHint() {
+        return "the device and its supply";
     }
 
     /** True while this run was started by the given rule (a person's or a schedule's run is never stopped by a rule). */
@@ -118,16 +163,14 @@ public abstract class Actuator {
     public void reportFault() {
         require(Set.of(ActuatorStatus.IDLE, ActuatorStatus.RUNNING), "report a fault");
         status = ActuatorStatus.FAULT;
-        runningUntil = null;
-        startedByRuleId = null;
+        clearRun();
     }
 
     /** IDLE/RUNNING → OFFLINE */
     public void heartbeatLost() {
         require(Set.of(ActuatorStatus.IDLE, ActuatorStatus.RUNNING), "mark offline");
         status = ActuatorStatus.OFFLINE;
-        runningUntil = null;
-        startedByRuleId = null;
+        clearRun();
     }
 
     /** OFFLINE → IDLE */
@@ -167,7 +210,36 @@ public abstract class Actuator {
         }
     }
 
+    void attachTo(FarmDevice device) {
+        this.device = device;
+        device.attach(this);
+    }
+
+    /** Built-in kind, or null for a kind added in the catalog (see GenericActuator). */
     public abstract ActuatorType getType();
+
+    /** WATER_PUMP, FAN... or GENERIC for a kind added in the catalog. */
+    public String getKindCode() {
+        return getType().name();
+    }
+
+    /** What staff call it: a built-in kind's name, or the catalog model's. */
+    public String getKindName() {
+        return switch (getType()) {
+            case WATER_PUMP -> "Water pump";
+            case FAN -> "Fan";
+            case FEEDER -> "Feeder";
+            case HEATER -> "Heater";
+            case MISTER -> "Mister";
+            case LIGHT -> "Light";
+            case WATER_VALVE -> "Tank fill valve";
+        };
+    }
+
+    /** What running this actuator does to the zone's measurements (the simulator and the Farm Lab use it). */
+    public List<ModelEffect> getEffects() {
+        return List.of();
+    }
 
     /** Short verb used in alerts and logs, e.g. "Watering". */
     public abstract String getActionVerb();
@@ -179,4 +251,9 @@ public abstract class Actuator {
     public int getMaxRunMinutes() { return maxRunMinutes; }
     public Instant getRunningUntil() { return runningUntil; }
     public Long getStartedByRuleId() { return startedByRuleId; }
+    public FarmDevice getDevice() { return device; }
+    public Long getWatchSensorId() { return watchSensorId; }
+    public Double getWatchStartValue() { return watchStartValue; }
+    public Integer getWatchDirection() { return watchDirection; }
+    public Instant getWatchSince() { return watchSince; }
 }

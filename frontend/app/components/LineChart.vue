@@ -35,6 +35,15 @@ const x = (t: number) => PAD.l + ((t - domain.value.t0) / (domain.value.t1 - dom
 const y = (v: number) => PAD.t + (1 - (v - domain.value.lo) / (domain.value.hi - domain.value.lo)) * (H - PAD.t - PAD.b);
 
 const path = computed(() => props.points.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(""));
+// the soft fill under the line
+const area = computed(() => {
+  const pts = props.points;
+  if (pts.length < 2) return "";
+  const base = (H - PAD.b).toFixed(1);
+  return `${path.value}L${x(pts[pts.length - 1]!.t).toFixed(1)},${base}L${x(pts[0]!.t).toFixed(1)},${base}Z`;
+});
+// A new range or sensor draws the line again from the left; a resize or a hover does not.
+const drawKey = computed(() => `${props.points.length}:${props.points[0]?.t ?? 0}:${props.points[props.points.length - 1]?.t ?? 0}`);
 
 const yTicks = computed(() => {
   const { lo, hi } = domain.value;
@@ -79,15 +88,29 @@ const hovered = computed(() => (hover.value === null ? null : props.points[hover
         <line :x1="PAD.l" :x2="W - PAD.r" :y1="y(th.value)" :y2="y(th.value)" stroke="var(--destructive)" stroke-dasharray="5 4" />
         <text :x="W - PAD.r - 4" :y="y(th.value) - 5" text-anchor="end" font-size="11" fill="var(--destructive)">{{ th.label }}</text>
       </g>
-      <path :d="path" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linejoin="round" />
-      <g v-if="hovered">
-        <line :x1="x(hovered.t)" :x2="x(hovered.t)" :y1="PAD.t" :y2="H - PAD.b" stroke="var(--muted-foreground)" stroke-opacity="0.4" />
-        <circle :cx="x(hovered.t)" :cy="y(hovered.v)" r="4" fill="var(--primary)" stroke="var(--card)" stroke-width="2" />
+      <defs>
+        <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="var(--primary)" stop-opacity="0.22" />
+          <stop offset="1" stop-color="var(--primary)" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+      <path :key="`a${drawKey}`" :d="area" fill="url(#chart-fill)" class="fade-in" style="animation-delay: 0.35s" />
+      <path :key="`l${drawKey}`" :d="path" pathLength="1" fill="none" stroke="var(--primary)" stroke-width="2.25"
+        stroke-linejoin="round" stroke-linecap="round" class="draw" />
+      <g v-if="hovered" class="chart-hover" :style="{ transform: `translateX(${x(hovered.t)}px)` }">
+        <line x1="0" x2="0" :y1="PAD.t" :y2="H - PAD.b" stroke="var(--muted-foreground)" stroke-opacity="0.4" />
+        <circle cx="0" :cy="y(hovered.v)" r="4.5" fill="var(--primary)" stroke="var(--card)" stroke-width="2" class="chart-dot" />
       </g>
     </svg>
-    <div v-if="hovered" class="pointer-events-none absolute top-2 left-14 rounded-md border bg-popover px-2 py-1 text-xs shadow-sm">
+    <div v-if="hovered" class="pointer-events-none absolute top-2 left-14 rounded-lg border bg-popover px-2.5 py-1 text-xs shadow-soft">
       <span class="font-semibold tabular-nums">{{ hovered.v.toFixed(1) }}{{ unit }}</span>
       <span class="ml-2 text-muted-foreground">{{ new Date(hovered.t).toLocaleString() }}</span>
     </div>
   </div>
 </template>
+
+<style scoped>
+/* the hover marker glides to the nearest reading instead of jumping */
+.chart-hover { transition: transform 0.12s ease-out; }
+.chart-dot { transition: cy 0.12s ease-out; }
+</style>

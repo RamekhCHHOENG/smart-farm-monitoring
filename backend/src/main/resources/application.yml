@@ -23,6 +23,10 @@ spring:
 farm:
   device-key: ${FARM_DEVICE_KEY:}
   demo-password: ${FARM_DEMO_PASSWORD:}
+  # password of the company admin account "admin" (empty = FARM_DEMO_PASSWORD, else a random one in the log)
+  admin-password: ${FARM_ADMIN_PASSWORD:}
+  # how long an invite link (new farm owner, new company staff) keeps working
+  invite-ttl: P7D
   # false = start with an empty farm (no demo zones) for a real installation
   demo-data: ${FARM_DEMO_DATA:true}
   # Time zone of the farm for schedules, e.g. Asia/Phnom_Penh (empty = the server's own zone)

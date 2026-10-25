@@ -19,4 +19,6 @@ public class Fan extends Actuator {
     @Override public ActuatorType getType() { return ActuatorType.FAN; }
     @Override public String getActionVerb() { return "Cooling"; }
     @Override public boolean opposes(ActuatorType other) { return other == ActuatorType.HEATER; }
+    @Override public String getNoEffectHint() { return "the fan motor and the air inlet"; }
+    @Override public java.util.List<ModelEffect> getEffects() { return java.util.List.of(new ModelEffect("TEMPERATURE", -1), new ModelEffect("HUMIDITY", -1)); }
 }

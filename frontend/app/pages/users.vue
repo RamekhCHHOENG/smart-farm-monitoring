@@ -11,11 +11,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { Role, User } from "~/utils/types";
 import { roleLabels } from "~/utils/types";
 
+
+definePageMeta({ role: "OWNER" });
 const api = useApi();
 const { user: me, can } = useAuth();
 const users = ref<User[]>([]);
 const error = ref("");
 const notice = ref("");
+// results of actions show as a toast at the bottom of the screen, so they are seen wherever the person scrolled to
+const toast = useToast();
+watch(notice, (v) => { if (v) { toast.success(v); notice.value = ""; } });
 
 async function load() {
   try {
@@ -79,8 +84,8 @@ async function saveReset() {
   if (ok) resetDialog.value = false;
 }
 
-function remove(u: User) {
-  if (window.confirm(`Remove ${u.name}? They will be signed out and can no longer sign in. Their past actions stay in the history.`)) {
+async function remove(u: User) {
+  if (await useConfirm().confirm({ title: `Remove ${u.name}?`, message: "They will be signed out and can no longer sign in. Their past actions stay in the history.", confirmLabel: "Remove user", danger: true })) {
     act(() => api(`/api/users/${u.id}`, { method: "DELETE" }), `${u.name} removed`);
   }
 }
@@ -93,7 +98,6 @@ function remove(u: User) {
     </PageHeader>
 
     <Alert v-if="error && !(dialog || resetDialog)" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
-    <Alert v-if="notice" class="mb-4"><AlertDescription>{{ notice }}</AlertDescription></Alert>
 
     <Card>
       <CardContent class="overflow-x-auto">
@@ -110,7 +114,7 @@ function remove(u: User) {
             <TableRow v-for="u in users" :key="u.id">
               <TableCell class="font-medium">{{ u.name }} <span v-if="u.id === me?.id" class="text-xs text-muted-foreground">(you)</span></TableCell>
               <TableCell class="font-mono text-sm">{{ u.username }}</TableCell>
-              <TableCell>{{ t(roleLabels[u.role]) }}</TableCell>
+              <TableCell>{{ u.role ? t(roleLabels[u.role]) : "" }}</TableCell>
               <TableCell class="text-right whitespace-nowrap">
                 <Button size="icon-sm" variant="ghost" :aria-label="`Edit ${u.name}`" @click="open(u)"><Pencil /></Button>
                 <Button size="icon-sm" variant="ghost" :aria-label="`Reset password of ${u.name}`" title="Reset password" @click="openReset(u)"><KeyRound /></Button>

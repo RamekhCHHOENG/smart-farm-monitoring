@@ -41,10 +41,24 @@ async function login(user, password = PASSWORD) {
   await button("Sign in").click();
   await page.waitForURL(`${BASE}/`, { timeout: 10000 });
 }
+// Account settings and Log out sit in the account menu in the top bar.
+async function accountMenu(item) {
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("menuitem", { name: item }).click();
+}
+// Rows and cards show at most one button; the other actions are in their "⋯" menu.
+async function rowMenu(row, item) {
+  await row.getByRole("button", { name: /^More actions for / }).click();
+  await page.getByRole("menuitem", { name: item, exact: true }).click();
+}
+// The app's own confirm dialog (not the browser's): press its confirm button.
+async function confirmDialog() {
+  await page.locator("[data-confirm]").filter({ visible: true }).click();
+}
 async function logout() {
   await page.keyboard.press("Escape");
   await page.goto(`${BASE}/`);
-  await button("Log out").click();
+  await accountMenu("Log out");
   await page.waitForURL(`${BASE}/login`);
 }
 async function device(path, body) {
@@ -140,7 +154,7 @@ await step("Technician registers a real sensor and a pump", async () => {
 
 await step("Technician runs the fault -> repair cycle (state machine)", async () => {
   const row = page.getByRole("row").filter({ hasText: "E2E pump" });
-  await row.getByRole("button", { name: "Report fault" }).click();
+  await rowMenu(row, "Report fault");
   await row.getByText("FAULT").waitFor();
   await row.getByRole("button", { name: "Start repair" }).click();
   await row.getByText("MAINTENANCE").waitFor();
@@ -188,8 +202,10 @@ await step("Real device: wet then dry reading starts the pump", async () => {
   const card = page.locator("[data-slot=card]").filter({ hasText: "E2E Bed" });
   await card.getByText("21.0").first().waitFor({ timeout: 8000 });
   await card.getByText("RUNNING").waitFor({ timeout: 8000 });
-  await expectText("E2E soil reads 21.0%");
   await page.screenshot({ path: `${SHOTS}/e2e-dashboard.png`, fullPage: true });
+  // the alert is on the Alerts page (the dashboard shows only the count)
+  await page.goto(`${BASE}/alerts`);
+  await expectText("E2E soil reads 21.0%");
 });
 
 await step("Invalid reading is rejected", async () => {
@@ -243,7 +259,7 @@ await step("History shows readings chart and device log", async () => {
 });
 
 await step("Worker changes password and logs in with the new one", async () => {
-  await button("Change password").click();
+  await accountMenu("Change password");
   await page.fill("#pw-current", PASSWORD);
   await page.fill("#pw-new", "worker-new-pass");
   await page.fill("#pw-repeat", "worker-new-pass");
@@ -259,7 +275,9 @@ await step("(log out)", logout);
 await step("Owner deletes the test zone (cascade)", async () => {
   await login("owner");
   await page.goto(`${BASE}/zones`);
-  await page.getByRole("button", { name: "Delete E2E Bed" }).click();
+  await page.getByRole("button", { name: "More actions for E2E Bed" }).click();
+  await page.getByRole("menuitem", { name: "Delete zone" }).click();
+  await confirmDialog();
   await expectText("Zone deleted");
   await page.goto(`${BASE}/rules`);
   await page.waitForTimeout(800);
@@ -299,7 +317,7 @@ await step("Sensor renamed without changing its #id", async () => {
   await page.goto(`${BASE}/zones`);
   const row = page.getByRole("row").filter({ hasText: "Air temperature A" });
   const before = await idOf("Air temperature A");
-  await row.getByRole("button", { name: "Edit" }).click();
+  await rowMenu(row, "Edit");
   await page.fill("#ename", "Air temperature A (shade)");
   await dialog().getByRole("button", { name: "Save" }).click();
   await expectText("Device updated");
@@ -372,7 +390,7 @@ await step("Khmer language switch", async () => {
 await step("A device fault shows the critical alert banner on every page", async () => {
   await page.goto(`${BASE}/zones`);
   const feeder = page.getByRole("row").filter({ hasText: "Feeder 1" });
-  await feeder.getByRole("button", { name: "Report fault" }).click();
+  await rowMenu(feeder, "Report fault");
   await feeder.getByText("FAULT").waitFor();
   await page.goto(`${BASE}/schedules`);
   await page.getByRole("button", { name: "Report fault" }).count(); // stay on another page
@@ -380,7 +398,7 @@ await step("A device fault shows the critical alert banner on every page", async
   await feeder.getByRole("button", { name: "Start repair" }).click();
   await feeder.getByRole("button", { name: "Repair done (test passed)" }).click();
   await feeder.getByText("IDLE").waitFor();
-  await feeder.getByRole("button", { name: "Report fault" }).click(); // second fault: same open alert, counted
+  await rowMenu(feeder, "Report fault"); // second fault: same open alert, counted
   await expectText("New critical alert", 15000);
   await page.goto(`${BASE}/alerts`);
   await page.getByRole("row").filter({ hasText: "Feeder 1 reported a fault" }).getByText("happened 2 times").waitFor();
@@ -393,10 +411,10 @@ await step("A device fault shows the critical alert banner on every page", async
 
 await step("Dark mode and mobile layout render", async () => {
   await page.goto(`${BASE}/`);
-  await button("Dark mode").click();
+  await accountMenu("Dark mode");
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${SHOTS}/e2e-dark.png` });
-  await button("Light mode").click();
+  await accountMenu("Light mode");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await expectText("Group 1 Test Farm");

@@ -8,4 +8,6 @@ import java.util.List;
 public interface ActuatorRepository extends JpaRepository<Actuator, Long> {
 
     List<Actuator> findByStatus(ActuatorStatus status);
+
+    List<Actuator> findByDeviceIsNull();
 }

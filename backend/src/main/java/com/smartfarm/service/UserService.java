@@ -23,8 +23,13 @@ public class UserService {
     private final AccessPolicy access;
     private final AuthService auth;
     private final LoginGuard guard;
+    private final Tenancy tenancy;
+    private final FarmService farms;
 
-    public UserService(AppUserRepository users, PasswordEncoder encoder, AccessPolicy access, AuthService auth, LoginGuard guard) {
+    public UserService(AppUserRepository users, PasswordEncoder encoder, AccessPolicy access, AuthService auth, LoginGuard guard,
+                       Tenancy tenancy, FarmService farms) {
+        this.tenancy = tenancy;
+        this.farms = farms;
         this.guard = guard;
         this.users = users;
         this.encoder = encoder;
@@ -35,11 +40,11 @@ public class UserService {
     @Transactional(readOnly = true)
     public List<AppUser> list(Long userId) {
         access.require(userId);
-        return users.findAllByOrderByIdAsc();
+        return tenancy.limited() ? users.findByFarm_IdOrderByIdAsc(tenancy.farmId()) : users.findAllByOrderByIdAsc();
     }
 
     public AppUser create(Long userId, String username, String name, Role role, String password) {
-        AppUser owner = access.require(userId);
+        access.require(userId);
         String normalized = username.trim().toLowerCase(Locale.ROOT);
         if (!USERNAME.matcher(normalized).matches()) {
             throw new IllegalArgumentException("Username: use 3-30 letters, numbers, dots or dashes, no spaces");
@@ -48,7 +53,8 @@ public class UserService {
             throw new IllegalArgumentException("Username '" + normalized + "' is already taken");
         }
         AuthService.checkNewPassword(password);
-        return users.save(new AppUser(owner.getFarm(), normalized, name.trim(), encoder.encode(password), role));
+        // a new person joins the farm being worked on (a company admin setting up a farm adds its people too)
+        return users.save(new AppUser(farms.farm(), normalized, name.trim(), encoder.encode(password), role));
     }
 
     public AppUser update(Long userId, Long targetId, String name, Role role) {
@@ -86,7 +92,7 @@ public class UserService {
     }
 
     private void requireAnotherOwner(AppUser target) {
-        boolean another = users.findAllByOrderByIdAsc().stream()
+        boolean another = users.findByFarm_IdOrderByIdAsc(target.getFarm().getId()).stream()
                 .anyMatch(u -> u.getRole() == Role.OWNER && !u.getId().equals(target.getId()));
         if (!another) {
             throw new IllegalArgumentException("The farm needs at least one Farm Owner");
@@ -94,6 +100,6 @@ public class UserService {
     }
 
     private AppUser find(Long id) {
-        return users.findById(id).orElseThrow(() -> new NotFoundException("User", id));
+        return tenancy.user(users.findById(id).orElseThrow(() -> new NotFoundException("User", id)));
     }
 }

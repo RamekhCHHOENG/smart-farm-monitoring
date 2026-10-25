@@ -21,7 +21,8 @@ async function submit() {
   busy.value = true;
   try {
     await login(username.value.trim(), password.value);
-    await navigateTo("/");
+    // company staff start on their farm list; farm accounts on their farm's dashboard
+    await navigateTo(useAuth().isCompany.value ? "/company" : "/");
   } catch (e) {
     error.value = errorMessage(e);
   } finally {

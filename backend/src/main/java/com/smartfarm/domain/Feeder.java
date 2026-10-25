@@ -18,4 +18,6 @@ public class Feeder extends Actuator {
 
     @Override public ActuatorType getType() { return ActuatorType.FEEDER; }
     @Override public String getActionVerb() { return "Feeding"; }
+    @Override public String getNoEffectHint() { return "the feed hopper for a jam or an empty bin"; }
+    @Override public java.util.List<ModelEffect> getEffects() { return java.util.List.of(new ModelEffect("FEED_LEVEL", 1)); }
 }

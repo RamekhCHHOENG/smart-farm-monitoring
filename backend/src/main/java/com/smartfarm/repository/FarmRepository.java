@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface FarmRepository extends JpaRepository<Farm, Long> {
 
     Optional<Farm> findFirstByOrderByIdAsc();
+
+    java.util.List<Farm> findAllByOrderByNameAsc();
 }

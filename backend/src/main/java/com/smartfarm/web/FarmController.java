@@ -1,7 +1,7 @@
 package com.smartfarm.web;
 
 import com.smartfarm.domain.*;
-import com.smartfarm.repository.AlertRepository;
+import com.smartfarm.service.AlertService;
 import com.smartfarm.service.FarmService;
 import com.smartfarm.service.QueryService;
 import com.smartfarm.web.Dtos.*;
@@ -20,10 +20,10 @@ public class FarmController {
 
     private final FarmService farmService;
     private final QueryService queries;
-    private final AlertRepository alerts;
+    private final AlertService alerts;
     private final Clock clock;
 
-    public FarmController(FarmService farmService, QueryService queries, AlertRepository alerts, Clock clock) {
+    public FarmController(FarmService farmService, QueryService queries, AlertService alerts, Clock clock) {
         this.farmService = farmService;
         this.queries = queries;
         this.alerts = alerts;
@@ -35,7 +35,18 @@ public class FarmController {
     public FarmDto farm() {
         Farm farm = farmService.farm();
         return new FarmDto(farm.getId(), farm.getName(), farm.getLocation(), clock.getZone().getId(),
-                alerts.countByStatus(AlertStatus.OPEN), farm.getZones().stream().map(this::toDto).toList());
+                alerts.countOpenOnFarm(), farm.getZones().stream().map(this::toDto).toList(), farm.getStatus(), farm.isSupportAllowed());
+    }
+
+    public record SupportAccessRequest(boolean allowed) {
+    }
+
+    /** The owner allows or stops Smart Farm company support from opening this farm. */
+    @PutMapping("/farm/support-access")
+    @Transactional
+    public FarmDto supportAccess(@RequestAttribute(AuthInterceptor.USER_ID) Long userId, @RequestBody SupportAccessRequest req) {
+        farmService.setSupportAccess(userId, req.allowed());
+        return farm();
     }
 
     @PutMapping("/farm")
@@ -49,14 +60,14 @@ public class FarmController {
     @ResponseStatus(HttpStatus.CREATED)
     @Transactional
     public ZoneDto createZone(@RequestAttribute(AuthInterceptor.USER_ID) Long userId, @Valid @RequestBody ZoneRequest req) {
-        return toDto(farmService.createZone(userId, req.type(), req.name(), req.cropName(), req.birdCount()));
+        return toDto(farmService.createZone(userId, req.type(), req.name(), req.cropName(), req.birdCount(), req.lab()));
     }
 
     @PutMapping("/zones/{id}")
     @Transactional
     public ZoneDto updateZone(@RequestAttribute(AuthInterceptor.USER_ID) Long userId, @PathVariable Long id,
                               @Valid @RequestBody ZoneRequest req) {
-        return toDto(farmService.updateZone(userId, id, req.name(), req.cropName(), req.birdCount()));
+        return toDto(farmService.updateZone(userId, id, req.name(), req.cropName(), req.birdCount(), req.lab()));
     }
 
     @DeleteMapping("/zones/{id}")
@@ -123,6 +134,6 @@ public class FarmController {
         return new ZoneDto(zone.getId(), zone.getName(), zone.getZoneType(), zone.getDetail(),
                 zone instanceof CropZone c ? c.getCropName() : null,
                 zone instanceof PoultryZone p ? p.getBirdCount() : null,
-                sensors, actuators);
+                zone.isLab(), sensors, actuators, zone.getDevices().stream().map(FarmDeviceDto::of).toList());
     }
 }

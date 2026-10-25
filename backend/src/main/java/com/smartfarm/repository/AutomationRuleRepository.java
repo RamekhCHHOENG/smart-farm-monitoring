@@ -12,4 +12,6 @@ public interface AutomationRuleRepository extends JpaRepository<AutomationRule, 
     List<AutomationRule> findBySensor_Id(Long sensorId);
 
     List<AutomationRule> findAllByOrderByIdAsc();
+
+    List<AutomationRule> findBySensor_Zone_Farm_IdOrderByIdAsc(Long farmId);
 }

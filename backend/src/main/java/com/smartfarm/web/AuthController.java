@@ -3,6 +3,7 @@ package com.smartfarm.web;
 import com.smartfarm.repository.AppUserRepository;
 import com.smartfarm.service.AuthService;
 import com.smartfarm.service.AuthService.LoginResult;
+import com.smartfarm.service.InviteService;
 import com.smartfarm.service.NotFoundException;
 import com.smartfarm.web.Dtos.UserDto;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,17 +27,35 @@ public class AuthController {
     public record LoginResponse(String token, Instant expiresAt, UserDto user) {
     }
 
+    public record AcceptInviteRequest(@NotBlank String password) {
+    }
+
     private final AuthService authService;
     private final AppUserRepository users;
+    private final InviteService invites;
 
-    public AuthController(AuthService authService, AppUserRepository users) {
+    public AuthController(AuthService authService, AppUserRepository users, InviteService invites) {
         this.authService = authService;
         this.users = users;
+        this.invites = invites;
     }
 
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest req) {
         LoginResult result = authService.login(req.username(), req.password());
+        return new LoginResponse(result.token(), result.expiresAt(), UserDto.of(result.user()));
+    }
+
+    /** The "set your password" page: who the invite link is for (no sign-in needed). */
+    @GetMapping("/invites/{token}")
+    public InviteService.InviteInfo invite(@PathVariable String token) {
+        return invites.read(token);
+    }
+
+    /** Sets the password from the invite link and signs the person in. */
+    @PostMapping("/invites/{token}")
+    public LoginResponse acceptInvite(@PathVariable String token, @Valid @RequestBody AcceptInviteRequest req) {
+        LoginResult result = invites.accept(token, req.password());
         return new LoginResponse(result.token(), result.expiresAt(), UserDto.of(result.user()));
     }
 

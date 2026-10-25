@@ -60,7 +60,11 @@ public class AuthService {
             throw new UnauthorizedException("Wrong username or password");
         }
         guard.succeeded(normalized);
-        AppUser user = found.get();
+        return startSession(found.get());
+    }
+
+    /** Signs the person in: a new random token that is valid until the session time runs out. */
+    public LoginResult startSession(AppUser user) {
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);

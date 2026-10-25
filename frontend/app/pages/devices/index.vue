@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Activity, AlertTriangle, Cpu, Plus, Search } from "lucide-vue-next";
+import { Activity, AlertTriangle, CircleAlert, Cpu, Image, List, Pencil, Plus, Search, Trash2, TriangleAlert, Unplug, Wrench } from "lucide-vue-next";
+import type { MenuAction } from "~/utils/menu";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,25 +9,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Actuator, Farm, LifecycleAction, Sensor, SensorAction } from "~/utils/types";
-import { actuatorLabels, sensorLabels } from "~/utils/types";
-import { actuatorIcons, sensorIcons } from "~/utils/deviceIcons";
+import type { Actuator, ControllerBoard, Farm, FarmDevice, LifecycleAction, Sensor, SensorAction } from "~/utils/types";
+import { actuatorKind, sensorKind } from "~/utils/types";
+import { actuatorIcon, sensorIcon } from "~/utils/deviceIcons";
 import { sensorBadge, sensorDone, sensorNote, sensorOptions } from "~/utils/sensorRepair";
 import { actuatorDone, actuatorOptions } from "~/utils/actuatorRepair";
 
 // Every sensor and actuator of the farm on one page, with filters, live status and the technician's actions.
 
 type Row =
-  | { kind: "sensor"; key: string; zoneName: string; device: Sensor; status: string }
-  | { kind: "actuator"; key: string; zoneName: string; device: Actuator; status: string };
+  | { kind: "sensor"; key: string; zoneName: string; lab: boolean; device: Sensor; status: string }
+  | { kind: "actuator"; key: string; zoneName: string; lab: boolean; device: Actuator; status: string };
 
 const api = useApi();
 const { can } = useAuth();
 const route = useRoute();
 const router = useRouter();
 const farm = ref<Farm | null>(null);
+const boards = ref<ControllerBoard[]>([]);
 const error = ref("");
 const notice = ref("");
+// results of actions show as a toast at the bottom of the screen, so they are seen wherever the person scrolled to
+const toast = useToast();
+watch(notice, (v) => { if (v) { toast.success(v); notice.value = ""; } });
+watch(error, (v) => { if (v && !editOpen.value) toast.error(v); });
 
 async function load() {
   try {
@@ -36,11 +42,29 @@ async function load() {
   }
 }
 usePolling(load, 4000);
+onMounted(async () => {
+  try {
+    boards.value = await api<ControllerBoard[]>("/api/controllers");
+  } catch {
+    // boards are optional here
+  }
+});
 
-const rows = computed<Row[]>(() => (farm.value?.zones ?? []).flatMap((z) => [
-  ...z.sensors.map((s): Row => ({ kind: "sensor", key: `s${s.id}`, zoneName: z.name, device: s, status: sensorBadge(s) })),
-  ...z.actuators.map((a): Row => ({ kind: "actuator", key: `a${a.id}`, zoneName: z.name, device: a, status: a.status })),
+/** The physical unit (catalog model, board, serial) behind each reading or output. */
+const units = computed(() => new Map((farm.value?.zones ?? []).flatMap((z) => z.devices).map((d) => [d.id, d])));
+const unitOf = (r: Row): FarmDevice | undefined => (r.device.deviceId ? units.value.get(r.device.deviceId) : undefined);
+
+const allRows = computed<Row[]>(() => (farm.value?.zones ?? []).flatMap((z) => [
+  ...z.sensors.map((s): Row => ({ kind: "sensor", key: `s${s.id}`, zoneName: z.name, lab: z.lab, device: s, status: sensorBadge(s) })),
+  ...z.actuators.map((a): Row => ({ kind: "actuator", key: `a${a.id}`, zoneName: z.name, lab: z.lab, device: a, status: a.status })),
 ]));
+// Farm Lab test devices are hidden unless asked for, like on the dashboard
+const showLab = ref(route.query.lab === "1");
+const labCount = computed(() => allRows.value.filter((r) => r.lab).length);
+const rows = computed(() => allRows.value.filter((r) => showLab.value || !r.lab));
+
+// Pictures (default) or a compact table
+const view = ref<"pictures" | "table">(route.query.view === "table" ? "table" : "pictures");
 
 // ----- filters (kept in the address) -----
 const ATTENTION = ["OFFLINE", "FAULT", "MAINTENANCE", "WARNING"];
@@ -50,8 +74,11 @@ const filters = reactive({
   status: (route.query.status as string) ?? "",
   q: "",
 });
-watch(() => [filters.zone, filters.kind, filters.status], () => router.replace({
-  query: { zone: filters.zone === "" ? undefined : String(filters.zone), kind: filters.kind || undefined, status: filters.status || undefined },
+watch(() => [filters.zone, filters.kind, filters.status, view.value, showLab.value], () => router.replace({
+  query: {
+    zone: filters.zone === "" ? undefined : String(filters.zone), kind: filters.kind || undefined, status: filters.status || undefined,
+    view: view.value === "table" ? "table" : undefined, lab: showLab.value ? "1" : undefined,
+  },
 }));
 
 const shown = computed(() => {
@@ -74,8 +101,8 @@ const stats = computed(() => {
   ];
 });
 
-const typeLabel = (r: Row) => (r.kind === "sensor" ? `${sensorLabels[r.device.type]} sensor` : actuatorLabels[r.device.type]);
-const iconOf = (r: Row) => (r.kind === "sensor" ? sensorIcons[r.device.type] : actuatorIcons[r.device.type]);
+const typeLabel = (r: Row) => (r.kind === "sensor" ? `${sensorKind(r.device)} sensor` : actuatorKind(r.device));
+const iconOf = (r: Row) => (r.kind === "sensor" ? sensorIcon(r.device.type) : actuatorIcon(r.device.type));
 
 function readingOf(r: Row) {
   if (r.kind === "sensor") {
@@ -91,7 +118,7 @@ function noteOf(r: Row) {
 }
 
 // ----- actions -----
-const ask = (message: string) => window.confirm(message);
+const { confirm } = useConfirm();
 
 async function act(fn: () => Promise<unknown>, done: string) {
   error.value = "";
@@ -106,7 +133,8 @@ async function act(fn: () => Promise<unknown>, done: string) {
 }
 
 async function sensorStep(s: Sensor, action: SensorAction) {
-  if (action === "FAULT" && !ask(`Report ${s.name} as faulty? Its readings will be ignored and its rules paused until it is repaired.`)) return;
+  if (action === "FAULT" && !(await confirm({ title: `Report ${s.name} as faulty?`,
+    message: "Its readings will be ignored and its rules paused until it is repaired.", confirmLabel: "Report fault", danger: true }))) return;
   error.value = "";
   notice.value = "";
   try {
@@ -127,18 +155,41 @@ function actuatorStep(a: Actuator, action: LifecycleAction, body?: { testPassed?
   act(() => api(`/api/actuators/${a.id}/lifecycle/${action}`, { method: "POST", body: body ?? {} }), `${a.name}: ${done}`);
 }
 
-function remove(r: Row) {
-  if (!ask(`Remove ${r.device.name}?${r.kind === "sensor" ? " Its readings and rules are deleted too." : ""}`)) return;
+async function remove(r: Row) {
+  if (!(await confirm({ title: `Remove ${r.device.name}?`, message: r.kind === "sensor" ? "Its readings and rules are deleted too." : undefined,
+    confirmLabel: "Remove", danger: true }))) return;
   act(() => api(`/api/${r.kind === "sensor" ? "sensors" : "actuators"}/${r.device.id}`, { method: "DELETE" }), `${r.device.name} removed`);
+}
+
+// One visible button when something needs doing (a fault, a repair); everything else in the ⋯ menu.
+const abnormal = (status: string) => ["OFFLINE", "FAULT", "MAINTENANCE"].includes(status);
+const stepIcon = (action: string) => (action === "FAULT" ? CircleAlert : action === "OFFLINE" ? Unplug : Wrench);
+function stepsOf(r: Row): MenuAction[] {
+  return r.kind === "sensor"
+    ? sensorOptions[(r.device as Sensor).status].map((o) => ({ label: o.label, icon: stepIcon(o.action), run: () => sensorStep(r.device as Sensor, o.action) }))
+    : (actuatorOptions[(r.device as Actuator).status] ?? []).map((o) => ({ label: o.label, icon: stepIcon(o.action), run: () => actuatorStep(r.device as Actuator, o.action, o.body) }));
+}
+const primaryOf = (r: Row) => (abnormal(r.device.status) ? stepsOf(r)[0] ?? null : null);
+function menuOf(r: Row): MenuAction[] {
+  const steps = stepsOf(r);
+  return [
+    ...(primaryOf(r) ? steps.slice(1) : steps),
+    { label: "Edit", icon: Pencil, separated: true, run: () => openEdit(r) },
+    ...(r.kind === "sensor" || r.status === "DECOMMISSIONED" ? [{ label: "Remove", icon: Trash2, danger: true, run: () => remove(r) }] : []),
+  ];
 }
 
 // ----- edit: rename, or change an actuator's safety limit -----
 const editOpen = ref(false);
-const editForm = reactive({ kind: "sensor" as "sensor" | "actuator", id: 0, name: "", maxRunMinutes: 10 });
+const editForm = reactive({ kind: "sensor" as "sensor" | "actuator", id: 0, name: "", maxRunMinutes: 10,
+  unitId: 0, unitName: "", modelName: "", controllerId: "" as number | "", serialNumber: "", notes: "" });
 
 function openEdit(r: Row) {
+  const unit = unitOf(r);
   Object.assign(editForm, { kind: r.kind, id: r.device.id, name: r.device.name,
-    maxRunMinutes: r.kind === "actuator" ? r.device.maxRunMinutes : 10 });
+    maxRunMinutes: r.kind === "actuator" ? r.device.maxRunMinutes : 10,
+    unitId: unit?.id ?? 0, unitName: unit?.name ?? "", modelName: unit?.modelName ?? "",
+    controllerId: unit?.controllerId ?? "", serialNumber: unit?.serialNumber ?? "", notes: unit?.notes ?? "" });
   error.value = "";
   editOpen.value = true;
 }
@@ -149,6 +200,12 @@ async function saveEdit() {
     await (editForm.kind === "sensor"
       ? api(`/api/sensors/${editForm.id}`, { method: "PUT", body: { name: editForm.name } })
       : api(`/api/actuators/${editForm.id}`, { method: "PUT", body: { name: editForm.name, maxRunMinutes: editForm.maxRunMinutes } }));
+    if (editForm.unitId) {
+      await api(`/api/farm-devices/${editForm.unitId}`, { method: "PUT", body: {
+        name: editForm.unitName.trim() || editForm.name, serialNumber: editForm.serialNumber, notes: editForm.notes,
+        controllerId: editForm.controllerId === "" ? null : editForm.controllerId,
+      } });
+    }
     editOpen.value = false;
     notice.value = "Device updated";
     await load();
@@ -166,18 +223,14 @@ const addLink = computed(() => ({ path: "/devices/new", query: filters.zone === 
       <Button v-if="can('TECHNICIAN')" as-child><NuxtLink :to="addLink"><Plus /> Add device</NuxtLink></Button>
     </PageHeader>
 
-    <div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="mb-5 grid grid-cols-2 gap-y-4 sm:flex sm:flex-wrap sm:divide-x">
       <button v-for="s in stats" :key="s.label" type="button"
-        class="rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        :class="{ 'border-primary': s.status && filters.status === s.status }"
+        class="group relative pr-6 pb-1 text-left sm:px-6 sm:first:pl-0 focus-visible:outline-none"
+        :title="s.status ? 'Show only these' : 'Show all'"
         @click="filters.status = filters.status === s.status ? '' : s.status">
-        <div class="flex items-center gap-3">
-          <div class="flex size-9 items-center justify-center rounded-lg bg-accent text-accent-foreground"><component :is="s.icon" class="size-4" /></div>
-          <div>
-            <div class="text-xl font-semibold tabular-nums">{{ s.value }}</div>
-            <div class="text-xs text-muted-foreground">{{ s.label }}</div>
-          </div>
-        </div>
+        <div class="eyebrow group-hover:text-foreground" :class="{ '!text-primary': s.status && filters.status === s.status }">{{ s.label }}</div>
+        <div class="num mt-1 text-3xl leading-none font-semibold" :class="{ 'text-warning': s.status === 'ATTENTION' && Number(s.value) > 0 }">{{ s.value }}</div>
+        <span v-if="s.status && filters.status === s.status" class="absolute right-6 -bottom-1 left-0 h-0.5 bg-primary sm:left-6 sm:first:left-0" />
       </button>
     </div>
 
@@ -210,14 +263,57 @@ const addLink = computed(() => ({ path: "/devices/new", query: filters.zone === 
         <Search class="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input id="dsearch" v-model="filters.q" type="search" class="pl-8" placeholder="Name, #id or type" />
       </div>
+      <label v-if="labCount" class="flex items-center gap-2 pb-2 text-sm text-muted-foreground">
+        <input v-model="showLab" type="checkbox" class="size-4 accent-[var(--primary)]"> Farm Lab devices ({{ labCount }})
+      </label>
       <p class="pb-2 text-sm text-muted-foreground">{{ shown.length }} of {{ rows.length }}</p>
+      <div class="ml-auto inline-flex rounded-lg border p-0.5" role="radiogroup" aria-label="View">
+        <button type="button" role="radio" :aria-checked="view === 'pictures'" class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm"
+          :class="view === 'pictures' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'" @click="view = 'pictures'"><Image class="size-4" /> Pictures</button>
+        <button type="button" role="radio" :aria-checked="view === 'table'" class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm"
+          :class="view === 'table' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'" @click="view = 'table'"><List class="size-4" /> Table</button>
+      </div>
     </div>
 
     <Alert v-if="error && !editOpen" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
-    <Alert v-if="notice" class="mb-4"><AlertDescription>{{ notice }}</AlertDescription></Alert>
+
+    <!-- Pictures: every device drawn as the physical thing, moving with its live state -->
+    <div v-if="view === 'pictures'" class="grid-cols-1 stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+      <article v-for="r in shown" :key="`p${r.key}`" class="lift flex flex-col gap-2.5 rounded-[1.4rem] border bg-card p-3.5 shadow-soft"
+        :class="{ 'border-destructive/60': r.status === 'FAULT', 'border-warning': r.status === 'MAINTENANCE' || r.status === 'OFFLINE', 'ring-2 ring-primary/40': r.status === 'RUNNING' }">
+        <div class="stage relative rounded-2xl p-2">
+          <StatusBadge :status="r.status" class="absolute top-2.5 left-2.5 z-10 bg-card/90 backdrop-blur" />
+          <DevicePicture v-if="r.kind === 'sensor'" :model-id="unitOf(r)?.modelId" :has-picture="unitOf(r)?.hasPicture" :wokwi-part="unitOf(r)?.wokwiPart"
+            :art-type="unitOf(r)?.artType" :type="r.device.type" kind="sensor" :value="r.device.latest?.value ?? null"
+            :offline="r.device.status === 'OFFLINE'" :fault="r.device.status === 'FAULT' || r.device.status === 'MAINTENANCE'" :height="130" />
+          <DevicePicture v-else :model-id="unitOf(r)?.modelId" :has-picture="unitOf(r)?.hasPicture" :wokwi-part="unitOf(r)?.wokwiPart"
+            :art-type="unitOf(r)?.artType" :type="r.device.type" kind="actuator" :on="r.device.status === 'RUNNING'"
+            :offline="r.device.status === 'OFFLINE' || r.device.status === 'DECOMMISSIONED'" :fault="r.device.status === 'FAULT' || r.device.status === 'MAINTENANCE'" :height="130" />
+        </div>
+        <div class="flex items-start gap-2">
+          <div class="min-w-0 flex-1">
+            <div class="truncate font-medium">{{ r.device.name }}</div>
+            <div class="truncate text-xs text-muted-foreground"><span class="font-mono">#{{ r.device.id }}</span> · {{ typeLabel(r) }} · {{ r.zoneName }}<template v-if="r.lab"> · LAB</template></div>
+            <div v-if="unitOf(r)" class="truncate text-xs text-muted-foreground">{{ unitOf(r)!.modelName }}<template v-if="unitOf(r)!.controllerName"> · board {{ unitOf(r)!.controllerName }}</template></div>
+          </div>
+        </div>
+        <div class="num text-2xl leading-none">{{ readingOf(r) }}
+          <span v-if="r.kind === 'sensor'" class="text-xs font-normal text-muted-foreground">{{ timeAgo(r.device.lastSeenAt) }}</span>
+        </div>
+        <p v-if="noteOf(r)" class="flex items-start gap-1 text-xs" :class="['OFFLINE', 'FAULT', 'MAINTENANCE'].includes(r.status) ? 'text-warning' : 'text-muted-foreground'">
+          <TriangleAlert v-if="['OFFLINE', 'FAULT', 'MAINTENANCE'].includes(r.status)" class="mt-px size-3 shrink-0" />{{ noteOf(r) }}</p>
+        <div v-if="can('TECHNICIAN')" class="mt-auto flex flex-wrap gap-1 border-t pt-2">
+          <Button v-if="primaryOf(r)" size="sm" @click="primaryOf(r)!.run()">{{ primaryOf(r)!.label }}</Button>
+          <span class="ml-auto"><ActionMenu :actions="menuOf(r)" :label="`More actions for ${r.device.name}`" /></span>
+        </div>
+      </article>
+      <p v-if="!shown.length" class="col-span-full py-8 text-center text-muted-foreground">
+        {{ rows.length ? "No device matches these filters." : "No devices yet." }}
+      </p>
+    </div>
 
     <!-- Phones: one card per device -->
-    <div class="flex flex-col gap-2 md:hidden">
+    <div v-if="view === 'table'" class="flex flex-col gap-2 md:hidden">
       <div v-for="r in shown" :key="`m${r.key}`" class="flex flex-col gap-2 rounded-lg border bg-card p-3">
         <div class="flex items-center gap-2">
           <component :is="iconOf(r)" class="size-4 shrink-0 text-muted-foreground" />
@@ -228,19 +324,13 @@ const addLink = computed(() => ({ path: "/devices/new", query: filters.zone === 
         <p class="text-sm text-muted-foreground">{{ typeLabel(r) }} · {{ r.zoneName }} · {{ readingOf(r) }}</p>
         <p v-if="noteOf(r)" class="text-xs text-muted-foreground">{{ noteOf(r) }}</p>
         <div v-if="can('TECHNICIAN')" class="flex flex-wrap gap-1">
-          <template v-if="r.kind === 'sensor'">
-            <Button v-for="o in sensorOptions[r.device.status]" :key="o.label" size="sm" variant="outline" @click="sensorStep(r.device, o.action)">{{ o.label }}</Button>
-          </template>
-          <template v-else>
-            <Button v-for="o in actuatorOptions[r.device.status] ?? []" :key="o.label" size="sm" variant="outline" @click="actuatorStep(r.device, o.action, o.body)">{{ o.label }}</Button>
-          </template>
-          <Button size="sm" variant="ghost" @click="openEdit(r)">Edit</Button>
-          <Button v-if="r.kind === 'sensor' || r.status === 'DECOMMISSIONED'" size="sm" variant="ghost" @click="remove(r)">Remove</Button>
+          <Button v-if="primaryOf(r)" size="sm" @click="primaryOf(r)!.run()">{{ primaryOf(r)!.label }}</Button>
+          <span class="ml-auto"><ActionMenu :actions="menuOf(r)" :label="`More actions for ${r.device.name}`" /></span>
         </div>
       </div>
     </div>
 
-    <Card class="hidden py-0 md:block">
+    <Card v-if="view === 'table'" class="hidden py-0 md:block">
       <CardContent class="px-0">
         <Table>
           <TableHeader>
@@ -265,6 +355,7 @@ const addLink = computed(() => ({ path: "/devices/new", query: filters.zone === 
               <TableCell>
                 {{ typeLabel(r) }}
                 <div class="text-xs text-muted-foreground">
+                  <template v-if="unitOf(r)">{{ unitOf(r)!.modelName }} · </template>
                   <template v-if="r.kind === 'sensor'">{{ r.device.simulated ? "simulated" : "real device" }}</template>
                   <template v-else>safety limit {{ r.device.maxRunMinutes }} min</template>
                 </div>
@@ -280,14 +371,8 @@ const addLink = computed(() => ({ path: "/devices/new", query: filters.zone === 
               </TableCell>
               <TableCell class="pr-4">
                 <div v-if="can('TECHNICIAN')" class="flex flex-wrap justify-end gap-1">
-                  <template v-if="r.kind === 'sensor'">
-                    <Button v-for="o in sensorOptions[r.device.status]" :key="o.label" size="sm" variant="outline" @click="sensorStep(r.device, o.action)">{{ o.label }}</Button>
-                  </template>
-                  <template v-else>
-                    <Button v-for="o in actuatorOptions[r.device.status] ?? []" :key="o.label" size="sm" variant="outline" @click="actuatorStep(r.device, o.action, o.body)">{{ o.label }}</Button>
-                  </template>
-                  <Button size="sm" variant="ghost" @click="openEdit(r)">Edit</Button>
-                  <Button v-if="r.kind === 'sensor' || r.status === 'DECOMMISSIONED'" size="sm" variant="ghost" @click="remove(r)">Remove</Button>
+                  <Button v-if="primaryOf(r)" size="sm" @click="primaryOf(r)!.run()">{{ primaryOf(r)!.label }}</Button>
+                  <span class="ml-auto"><ActionMenu :actions="menuOf(r)" :label="`More actions for ${r.device.name}`" /></span>
                 </div>
               </TableCell>
             </TableRow>
@@ -316,6 +401,28 @@ const addLink = computed(() => ({ path: "/devices/new", query: filters.zone === 
             <Label for="demax">Safety limit (minutes)</Label>
             <Input id="demax" v-model.number="editForm.maxRunMinutes" type="number" min="1" max="240" required />
           </div>
+          <fieldset v-if="editForm.unitId" class="flex flex-col gap-3 rounded-lg border p-3">
+            <legend class="px-1 text-sm font-medium">Physical device · {{ editForm.modelName }}</legend>
+            <div class="flex flex-col gap-1.5">
+              <Label for="duname">Device name</Label>
+              <Input id="duname" v-model="editForm.unitName" maxlength="80" />
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <Label for="duboard">Controller board</Label>
+              <NativeSelect id="duboard" v-model="editForm.controllerId" class="w-full">
+                <NativeSelectOption value="">None (farm device key)</NativeSelectOption>
+                <NativeSelectOption v-for="b in boards" :key="b.id" :value="b.id">{{ b.name }}</NativeSelectOption>
+              </NativeSelect>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <Label for="duserial">Serial number</Label>
+              <Input id="duserial" v-model="editForm.serialNumber" maxlength="80" />
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <Label for="dunotes">Setup and calibration notes</Label>
+              <Input id="dunotes" v-model="editForm.notes" maxlength="1000" />
+            </div>
+          </fieldset>
           <FormError :message="error" />
           <DialogFooter><Button type="submit">Save</Button></DialogFooter>
         </form>

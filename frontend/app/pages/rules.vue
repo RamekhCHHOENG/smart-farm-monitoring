@@ -28,9 +28,14 @@ const zoneCounts = computed(() => {
   for (const r of rules.value) counts.set(r.zoneId, (counts.get(r.zoneId) ?? 0) + 1);
   return counts;
 });
+// Farm Lab test rules stay out of the way unless asked for
+const showLab = ref(false);
+const labZoneIds = computed(() => new Set((farm.value?.zones ?? []).filter((z) => z.lab).map((z) => z.id)));
+const labRuleCount = computed(() => rules.value.filter((r) => labZoneIds.value.has(r.zoneId)).length);
 const shownRules = computed(() => {
   const q = search.value.trim().toLowerCase();
-  return rules.value.filter((r) => (zoneFilter.value === "" || r.zoneId === zoneFilter.value)
+  return rules.value.filter((r) => (showLab.value || zoneFilter.value === r.zoneId || !labZoneIds.value.has(r.zoneId))
+    && (zoneFilter.value === "" || r.zoneId === zoneFilter.value)
     && (!q || [r.name, r.sensorName, r.actuatorName ?? "", r.zoneName].some((x) => x.toLowerCase().includes(q))));
 });
 
@@ -105,7 +110,7 @@ async function toggle(rule: Rule, active: boolean) {
 }
 
 async function remove(rule: Rule) {
-  if (!window.confirm(`Delete rule "${rule.name}"?`)) return;
+  if (!(await useConfirm().confirm({ title: `Delete the rule "${rule.name}"?`, message: "The zone stops reacting to this reading.", confirmLabel: "Delete rule", danger: true }))) return;
   try {
     await api(`/api/rules/${rule.id}`, { method: "DELETE" });
     await load();
@@ -138,6 +143,9 @@ async function remove(rule: Rule) {
       </div>
       <p class="pb-2 text-sm text-muted-foreground">{{ shownRules.length }} of {{ rules.length }} rules</p>
     </div>
+      <label v-if="labRuleCount" class="flex items-center gap-2 self-end pb-2 text-sm text-muted-foreground">
+        <input v-model="showLab" type="checkbox" class="size-4 accent-[var(--primary)]"> {{ t("Show Farm Lab rules") }} ({{ labRuleCount }})
+      </label>
 
     <Card>
       <CardContent class="overflow-x-auto">

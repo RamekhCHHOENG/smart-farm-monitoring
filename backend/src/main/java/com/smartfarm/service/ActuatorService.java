@@ -3,6 +3,8 @@ package com.smartfarm.service;
 import com.smartfarm.domain.*;
 import com.smartfarm.repository.ActuatorRepository;
 import com.smartfarm.repository.DeviceLogRepository;
+import com.smartfarm.repository.SensorReadingRepository;
+import com.smartfarm.repository.SensorRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,14 +21,23 @@ public class ActuatorService {
 
     private final ActuatorRepository actuators;
     private final DeviceLogRepository deviceLogs;
+    private final SensorRepository sensors;
+    private final SensorReadingRepository readings;
     private final AlertService alertService;
     private final AccessPolicy access;
     private final Clock clock;
 
-    public ActuatorService(ActuatorRepository actuators, DeviceLogRepository deviceLogs,
-                           AlertService alertService, AccessPolicy access, Clock clock) {
+    private final Tenancy tenancy;
+
+
+    public ActuatorService(ActuatorRepository actuators, DeviceLogRepository deviceLogs, SensorRepository sensors,
+                           SensorReadingRepository readings, AlertService alertService, AccessPolicy access, Clock clock, Tenancy tenancy) {
+
+        this.tenancy = tenancy;
         this.actuators = actuators;
         this.deviceLogs = deviceLogs;
+        this.sensors = sensors;
+        this.readings = readings;
         this.alertService = alertService;
         this.access = access;
         this.clock = clock;
@@ -115,12 +126,42 @@ public class ActuatorService {
         Instant now = clock.instant();
         int stopped = 0;
         for (Actuator actuator : actuators.findByStatus(ActuatorStatus.RUNNING)) {
-            if (actuator.isRunExpired(now) && actuator.deactivate()) {
+            if (!actuator.isRunExpired(now)) {
+                continue;
+            }
+            String noEffect = noEffectMessage(actuator);
+            if (actuator.deactivate()) {
                 deviceLogs.save(new DeviceLog(actuator, "DEACTIVATED", LogSource.SAFETY, null, "run time finished", now));
                 stopped++;
+                if (noEffect != null) {
+                    alertService.raise(noEffect, Severity.WARNING, actuator.getZone().getId(), null);
+                }
             }
         }
         return stopped;
+    }
+
+    /**
+     * A rule's run used its whole time: did the reading move the way it should? A pump that runs while the pipe
+     * is clogged, or a heater with a burnt element, changes nothing, and staff must hear about it.
+     * Null when the run worked, was not started by a rule, or there is no fresh reading to judge by.
+     */
+    private String noEffectMessage(Actuator actuator) {
+        if (actuator.getWatchSensorId() == null || actuator.getWatchSince() == null) {
+            return null;
+        }
+        Sensor sensor = sensors.findById(actuator.getWatchSensorId()).orElse(null);
+        SensorReading latest = sensor == null ? null : readings.findFirstBySensor_IdOrderByRecordedAtDesc(sensor.getId()).orElse(null);
+        // No reading since the run began (sensor offline): the offline alert covers it, no guess here.
+        if (latest == null || !latest.getRecordedAt().isAfter(actuator.getWatchSince())
+                || actuator.movedAsExpected(latest.getValue(), sensor.getMinimumChange())) {
+            return null;
+        }
+        return "%s: %s ran its full time but %s did not %s (%s → %s%s). Check %s."
+                .formatted(actuator.getZone().getName(), actuator.getName(), sensor.getName(),
+                        actuator.getWatchDirection() > 0 ? "rise" : "fall",
+                        AutomationRule.format(actuator.getWatchStartValue()), AutomationRule.format(latest.getValue()),
+                        sensor.getUnit(), actuator.getNoEffectHint());
     }
 
     /** Called by the scheduler for a due ScheduledTask (FR-07). */
@@ -140,11 +181,12 @@ public class ActuatorService {
 
     @Transactional(readOnly = true)
     public List<DeviceLog> logs(Long actuatorId) {
+        get(actuatorId); // another farm's actuator is "not found"
         return deviceLogs.findTop50ByActuatorIdOrderByAtDesc(actuatorId);
     }
 
     @Transactional(readOnly = true)
     public Actuator get(Long actuatorId) {
-        return actuators.findById(actuatorId).orElseThrow(() -> new NotFoundException("Actuator", actuatorId));
+        return tenancy.actuator(actuators.findById(actuatorId).orElseThrow(() -> new NotFoundException("Actuator", actuatorId)));
     }
 }

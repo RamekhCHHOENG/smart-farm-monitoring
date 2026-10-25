@@ -3,12 +3,13 @@
 // virtual sensors and actuators talk to the server like real ESP32 boards, and each scenario
 // (dry spell, heat wave, broken pump, power cut...) checks how the system reacts.
 //
-//   FARM_DEVICE_KEY=... FARM_USER=owner FARM_PASSWORD=... node scripts/farm-scenarios.mjs
+//   FARM_USER=owner FARM_PASSWORD=... node scripts/farm-scenarios.mjs
 //   ... node scripts/farm-scenarios.mjs --only drought,heatwave     run some scenarios
 //   node scripts/farm-scenarios.mjs --list                          list the scenarios
 //
 // The first run creates three "Lab" zones (bed, chicken house, greenhouse) with real (non-simulated)
-// devices and rules. A full run takes about 30 minutes (offline detection alone needs 2 minutes per scenario).
+// devices and rules. Lab zones are driven with the signed-in account (no device key), and their alerts
+// stay in the lab (never sent to staff phones). A full run takes about 30 minutes (offline detection alone needs 2 minutes per scenario).
 // Exit code 1 if a scenario fails; a known gap is reported but does not fail the run.
 import process from "node:process";
 import { FarmLab, SCENARIOS, ensureLabFarm } from "../frontend/app/utils/farmLab.ts";
@@ -20,11 +21,10 @@ if (args.includes("--list")) {
 }
 
 const BASE = process.env.FARM_URL ?? "http://localhost:8080";
-const KEY = process.env.FARM_DEVICE_KEY;
 const USER = process.env.FARM_USER ?? "owner";
 const PASSWORD = process.env.FARM_PASSWORD;
-if (!KEY || !PASSWORD) {
-  console.error("Set FARM_DEVICE_KEY and FARM_PASSWORD (the Farm Owner's password); FARM_URL defaults to http://localhost:8080");
+if (!PASSWORD) {
+  console.error("Set FARM_PASSWORD (the Farm Owner's password); FARM_URL defaults to http://localhost:8080");
   process.exit(2);
 }
 
@@ -54,9 +54,9 @@ const time = () => new Date().toLocaleTimeString();
 const io = {
   async sendReading(sensorId, value) {
     try {
-      const res = await fetch(`${BASE}/api/devices/readings`, {
+      const res = await fetch(`${BASE}/api/lab/readings`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Device-Key": KEY },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ sensorId, value }),
       });
       return res.status;
@@ -66,13 +66,13 @@ const io = {
   },
   async relayState(actuatorId) {
     try {
-      const res = await fetch(`${BASE}/api/devices/actuators/${actuatorId}/state`, { headers: { "X-Device-Key": KEY } });
+      const res = await fetch(`${BASE}/api/lab/actuators/${actuatorId}/state`, { headers: { Authorization: `Bearer ${token}` } });
       return res.ok ? (await res.json()).relayOn : null;
     } catch {
       return null;
     }
   },
-  openAlerts: () => api("GET", "/api/alerts?status=OPEN"),
+  openAlerts: () => api("GET", "/api/alerts?status=OPEN&scope=LAB"),
   lifecycle: (id, action, body = {}) => api("POST", `/api/actuators/${id}/lifecycle/${action}`, body),
   sensorLifecycle: async (id, action) => (await api("POST", `/api/sensors/${id}/lifecycle/${action}`)).status,
   sleep: (ms) => new Promise((r) => setTimeout(r, ms)),

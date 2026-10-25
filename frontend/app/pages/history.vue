@@ -87,15 +87,21 @@ async function downloadCsv() {
   }
 }
 watch([sensorId, zoneId], load);
+// a changed date applies by itself after a short pause, like the zone and sensor do
+let dateTimer: ReturnType<typeof setTimeout> | undefined;
+watch([from, to], () => { clearTimeout(dateTimer); dateTimer = setTimeout(load, 600); });
 
 // Answers can arrive out of order when someone switches zone or sensor quickly;
 // only the answer to the latest request may fill the chart.
 let latestRequest = 0;
+// true while readings for a new choice are on their way: the chart shows a shimmering placeholder
+const loading = ref(true);
 
 async function load() {
   if (!zoneId.value) return;
   const request = ++latestRequest;
   error.value = "";
+  loading.value = true;
   const query = { from: localInputToIso(from.value), to: localInputToIso(to.value) };
   try {
     const [r, l] = await Promise.all([
@@ -107,6 +113,8 @@ async function load() {
     logs.value = l;
   } catch (e) {
     if (request === latestRequest) error.value = errorMessage(e);
+  } finally {
+    if (request === latestRequest) loading.value = false;
   }
 }
 </script>
@@ -124,7 +132,7 @@ async function load() {
         <div class="flex flex-wrap gap-1.5">
           <Button v-for="p in PRESETS" :key="p.hours" type="button" size="sm" variant="outline" @click="preset(p.hours)">{{ t(p.label) }}</Button>
         </div>
-        <form class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:items-end" @submit.prevent="load">
+        <form class="grid-cols-1 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:items-end" @submit.prevent="load">
           <div class="flex flex-col gap-1.5">
             <Label for="hzone">{{ t("Zone") }}</Label>
             <NativeSelect id="hzone" v-model.number="zoneId" class="w-full">
@@ -150,7 +158,7 @@ async function load() {
       </CardContent>
     </Card>
 
-    <div class="grid gap-4 xl:grid-cols-[1fr_380px]">
+    <div class="grid-cols-1 grid gap-4 xl:grid-cols-[1fr_380px]">
       <Card>
         <CardHeader>
           <CardTitle>{{ sensor?.name ?? t("Sensor") }}</CardTitle>
@@ -159,7 +167,8 @@ async function load() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <LineChart v-if="points.length > 1" :points="points" :unit="sensor?.unit ?? ''" :thresholds="thresholds" />
+          <div v-if="loading && points.length < 2" class="skeleton h-[260px]" aria-busy="true" />
+          <LineChart v-else-if="points.length > 1" :points="points" :unit="sensor?.unit ?? ''" :thresholds="thresholds" />
           <p v-else class="py-12 text-center text-sm text-muted-foreground">{{ t("Not enough readings in this range.") }}</p>
         </CardContent>
       </Card>

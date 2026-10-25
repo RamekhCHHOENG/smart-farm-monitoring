@@ -26,6 +26,9 @@ public abstract class Zone {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     private Farm farm;
 
+    /** A Farm Lab test zone: its alerts never reach staff phones or the farm's alert list. Nullable column. */
+    private Boolean lab;
+
     // Composition: deleting a zone deletes its devices (Zone ◆── Sensor, Zone ◆── Actuator).
     @OneToMany(mappedBy = "zone", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id")
@@ -34,6 +37,11 @@ public abstract class Zone {
     @OneToMany(mappedBy = "zone", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id")
     private List<Actuator> actuators = new ArrayList<>();
+
+    // The physical units in this zone (each made from a catalog model); their channels are listed above.
+    @OneToMany(mappedBy = "zone", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id")
+    private List<FarmDevice> devices = new ArrayList<>();
 
     protected Zone() {
     }
@@ -54,6 +62,91 @@ public abstract class Zone {
         Actuator actuator = Actuator.create(type, this, name, maxRunMinutes);
         actuators.add(actuator);
         return actuator;
+    }
+
+    /**
+     * GRASP Creator: installs a device made from a catalog model, with one channel per reading (a DHT22 gives
+     * temperature and humidity) or one output for an actuator. {@code measurements} maps the model's measurement
+     * codes to their master data, for readings that have no built-in class (CO2, pH...).
+     */
+    public FarmDevice addDevice(DeviceModel model, String name, boolean simulated, Integer maxRunMinutes,
+                                java.util.Map<String, MeasurementType> measurements, java.time.Instant now) {
+        if (model.isRetired()) {
+            throw new IllegalArgumentException(model.getName() + " is retired from the catalog");
+        }
+        FarmDevice device = new FarmDevice(this, model, name, now);
+        switch (model.getCategory()) {
+            case "SENSOR" -> {
+                if (model.getChannels().isEmpty()) {
+                    throw new IllegalArgumentException(model.getName() + " has no readings in the catalog");
+                }
+                boolean several = model.getChannels().size() > 1;
+                for (ModelChannel channel : model.getChannels()) {
+                    String channelName = several ? name + " · " + channel.getLabel() : name;
+                    SensorType builtIn = DeviceModel.builtInSensorType(channel.getMeasurementCode());
+                    Sensor sensor;
+                    if (builtIn != null) {
+                        sensor = Sensor.create(builtIn, this, channelName, simulated);
+                    } else {
+                        MeasurementType m = measurements.get(channel.getMeasurementCode());
+                        if (m == null) {
+                            throw new IllegalArgumentException("Unknown measurement " + channel.getMeasurementCode());
+                        }
+                        sensor = new GenericSensor(this, channelName, simulated, m);
+                    }
+                    sensor.attachTo(device);
+                    sensors.add(sensor);
+                }
+            }
+            case "ACTUATOR" -> {
+                Integer limit = maxRunMinutes != null ? maxRunMinutes : model.getDefaultMaxRunMinutes();
+                Actuator actuator = model.getActuatorType() != null
+                        ? Actuator.create(ActuatorType.valueOf(model.getActuatorType()), this, name, limit)
+                        : new GenericActuator(this, name, limit != null ? limit : 10, model.getName(), model.getActionVerb());
+                actuator.attachTo(device);
+                actuators.add(actuator);
+            }
+            default -> throw new IllegalArgumentException("A controller board is added on the Controllers page, not in a zone");
+        }
+        devices.add(device);
+        return device;
+    }
+
+    /** Puts a channel made before the catalog existed into a device of its own (one-time upgrade). */
+    public FarmDevice adopt(Sensor sensor, DeviceModel model, java.time.Instant now) {
+        FarmDevice device = new FarmDevice(this, model, sensor.getName(), now);
+        sensor.attachTo(device);
+        devices.add(device);
+        return device;
+    }
+
+    public FarmDevice adopt(Actuator actuator, DeviceModel model, java.time.Instant now) {
+        FarmDevice device = new FarmDevice(this, model, actuator.getName(), now);
+        actuator.attachTo(device);
+        devices.add(device);
+        return device;
+    }
+
+    /** Composition: removing a device removes its readings and outputs (and with them their rules and logs). */
+    public void removeDevice(FarmDevice device) {
+        sensors.removeIf(s -> s.getDevice() == device);
+        actuators.removeIf(a -> a.getDevice() == device);
+        devices.remove(device);
+    }
+
+    /** The sum of the directions (+1/-1) that running actuators push this measurement in. */
+    public int netEffect(String measurementCode) {
+        int net = 0;
+        for (Actuator actuator : actuators) {
+            if (actuator.getStatus() == ActuatorStatus.RUNNING) {
+                for (ModelEffect effect : actuator.getEffects()) {
+                    if (effect.getMeasurementCode().equals(measurementCode)) {
+                        net += effect.getDirection();
+                    }
+                }
+            }
+        }
+        return net;
     }
 
     public void removeSensor(Sensor sensor) {
@@ -85,7 +178,7 @@ public abstract class Zone {
     public Set<ActuatorType> runningActuatorTypes() {
         Set<ActuatorType> running = EnumSet.noneOf(ActuatorType.class);
         for (Actuator actuator : actuators) {
-            if (actuator.getStatus() == ActuatorStatus.RUNNING) {
+            if (actuator.getStatus() == ActuatorStatus.RUNNING && actuator.getType() != null) {
                 running.add(actuator.getType());
             }
         }
@@ -133,9 +226,18 @@ public abstract class Zone {
         this.name = name;
     }
 
+    public boolean isLab() {
+        return Boolean.TRUE.equals(lab);
+    }
+
+    public void markLab(boolean lab) {
+        this.lab = lab;
+    }
+
     public Long getId() { return id; }
     public String getName() { return name; }
     public Farm getFarm() { return farm; }
     public List<Sensor> getSensors() { return List.copyOf(sensors); }
     public List<Actuator> getActuators() { return List.copyOf(actuators); }
+    public List<FarmDevice> getDevices() { return List.copyOf(devices); }
 }

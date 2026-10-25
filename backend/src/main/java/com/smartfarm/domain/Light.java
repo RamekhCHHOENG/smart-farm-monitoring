@@ -19,4 +19,6 @@ public class Light extends Actuator {
 
     @Override public ActuatorType getType() { return ActuatorType.LIGHT; }
     @Override public String getActionVerb() { return "Lighting"; }
+    @Override public String getNoEffectHint() { return "the lamp and its power"; }
+    @Override public java.util.List<ModelEffect> getEffects() { return java.util.List.of(new ModelEffect("LIGHT_LEVEL", 1)); }
 }

@@ -1,7 +1,8 @@
-import type { Role, User } from "~/utils/types";
+import type { ActiveFarm, Role, User } from "~/utils/types";
 
 const TOKEN_KEY = "smartfarm.token";
 const USER_KEY = "smartfarm.user";
+const FARM_KEY = "smartfarm.activeFarm";
 
 function read(key: string): string | null {
   try {
@@ -27,16 +28,33 @@ export function useAuth() {
     const raw = read(USER_KEY);
     return raw ? (JSON.parse(raw) as User) : null;
   });
+  // Company staff work on one customer's farm at a time; every request then names it (X-Farm-Id, see useApi).
+  const activeFarm = useState<ActiveFarm | null>("auth.activeFarm", () => {
+    const raw = read(FARM_KEY);
+    try {
+      return raw ? (JSON.parse(raw) as ActiveFarm) : null;
+    } catch {
+      return null;
+    }
+  });
+  const isCompany = computed(() => !!user.value?.companyRole);
 
-  async function login(username: string, password: string) {
-    const res = await $fetch<{ token: string; user: User }>("/api/auth/login", {
-      method: "POST",
-      body: { username, password },
-    });
+  function setActiveFarm(farm: ActiveFarm | null) {
+    activeFarm.value = farm;
+    write(FARM_KEY, farm ? JSON.stringify(farm) : null);
+  }
+
+  /** Signs in from what the server returned (a login or an accepted invite link). */
+  function signedIn(res: { token: string; user: User }) {
     token.value = res.token;
     user.value = res.user;
     write(TOKEN_KEY, res.token);
     write(USER_KEY, JSON.stringify(res.user));
+    setActiveFarm(null);
+  }
+
+  async function login(username: string, password: string) {
+    signedIn(await $fetch<{ token: string; user: User }>("/api/auth/login", { method: "POST", body: { username, password } }));
   }
 
   function clear() {
@@ -44,6 +62,7 @@ export function useAuth() {
     user.value = null;
     write(TOKEN_KEY, null);
     write(USER_KEY, null);
+    setActiveFarm(null);
   }
 
   async function logout() {
@@ -57,10 +76,19 @@ export function useAuth() {
     await navigateTo("/login");
   }
 
+  /** The role on the farm being worked on: a company admin works as its owner, company support as a technician. */
+  const farmRole = computed<Role | null>(() => {
+    if (!user.value) return null;
+    if (!user.value.companyRole) return user.value.role;
+    if (!activeFarm.value) return null;
+    return user.value.companyRole === "ADMIN" ? "OWNER" : "TECHNICIAN";
+  });
+
   /** Mirrors the backend AccessPolicy: the owner can do everything. */
   function can(...roles: Role[]) {
-    return !!user.value && (user.value.role === "OWNER" || roles.includes(user.value.role));
+    const role = farmRole.value;
+    return !!role && (role === "OWNER" || roles.includes(role));
   }
 
-  return { token, user, login, logout, clear, can };
+  return { token, user, login, signedIn, logout, clear, can, farmRole, isCompany, activeFarm, setActiveFarm };
 }

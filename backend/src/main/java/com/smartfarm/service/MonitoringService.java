@@ -34,9 +34,14 @@ public class MonitoringService {
     private final ActuatorService actuatorService;
     private final Clock clock;
 
+    private final Tenancy tenancy;
+
+
     public MonitoringService(SensorRepository sensors, SensorReadingRepository readings,
                              AutomationRuleRepository rules, DeviceLogRepository deviceLogs,
-                             AlertService alertService, ActuatorService actuatorService, Clock clock) {
+                             AlertService alertService, ActuatorService actuatorService, Clock clock, Tenancy tenancy) {
+
+        this.tenancy = tenancy;
         this.sensors = sensors;
         this.readings = readings;
         this.rules = rules;
@@ -48,7 +53,7 @@ public class MonitoringService {
 
     public ReadingResult processReading(Long sensorId, double value) {
         Instant now = clock.instant();
-        Sensor sensor = sensors.findById(sensorId).orElseThrow(() -> new NotFoundException("Sensor", sensorId));
+        Sensor sensor = tenancy.sensor(sensors.findById(sensorId).orElseThrow(() -> new NotFoundException("Sensor", sensorId)));
 
         // A sensor a technician reported as broken is not trusted: nothing is stored and no rule runs.
         if (sensor.getStatus() == SensorStatus.FAULT) {
@@ -99,6 +104,8 @@ public class MonitoringService {
             outcome = "alert only";
         } else if (actuator.activateForRule(rule.getDurationMin(), now, rule.getId())) {
             Sensor sensor = rule.getSensor();
+            // An ABOVE rule's actuator should bring the reading down, a BELOW rule's up: checked when the run ends.
+            actuator.expectEffect(sensor, reading.getValue(), rule.getCondition() == Condition.ABOVE ? -1 : 1, now);
             outcome = actuator.getActionVerb() + ": " + actuator.getName() + " started "
                     + (rule.keepsRange()
                         ? "until " + AutomationRule.format(rule.getStopAt()) + sensor.getUnit() + " (max " + rule.getDurationMin() + " min)"

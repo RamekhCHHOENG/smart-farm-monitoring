@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Plus, Settings, Trash2, Wand2 } from "lucide-vue-next";
+import { CircleAlert, Pencil, Plus, Search, Settings, Trash2, Unplug, Wand2, Wrench } from "lucide-vue-next";
+import type { MenuAction } from "~/utils/menu";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,15 +10,19 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Actuator, ActuatorType, Farm, LifecycleAction, Sensor, SensorAction, SensorType, Zone } from "~/utils/types";
-import { actuatorHints, actuatorLabels, defaultRunMinutes, sensorHints, sensorLabels } from "~/utils/types";
+import { actuatorHints, actuatorKind, actuatorLabels, defaultRunMinutes, sensorHints, sensorKind, sensorLabels } from "~/utils/types";
 import { sensorBadge, sensorDone, sensorNote, sensorOptions } from "~/utils/sensorRepair";
 import { actuatorDone, actuatorOptions } from "~/utils/actuatorRepair";
 
 const api = useApi();
-const { can } = useAuth();
+const { can, isCompany } = useAuth();
 const farm = ref<Farm | null>(null);
 const error = ref("");
 const notice = ref("");
+// results of actions show as a toast at the bottom of the screen, so they are seen wherever the person scrolled to
+const toast = useToast();
+watch(notice, (v) => { if (v) { toast.success(v); notice.value = ""; } });
+watch(error, (v) => { if (v && !(farmDialog.value || zoneDialog.value || deviceDialog.value || editDialog.value)) toast.error(v); });
 
 async function load() {
   try {
@@ -29,7 +34,7 @@ async function load() {
 // Refreshes by itself, so a technician waiting for a repaired sensor's first reading sees it arrive.
 usePolling(load, 4000);
 
-const ask = (message: string) => window.confirm(message);
+const { confirm } = useConfirm();
 
 async function act(fn: () => Promise<unknown>, done?: string) {
   error.value = "";
@@ -45,6 +50,16 @@ async function act(fn: () => Promise<unknown>, done?: string) {
   }
 }
 
+// A farm can have hundreds of zones: search by name, crop or device, 10 zones at a time.
+const search = ref("");
+const zoneLimit = ref(10);
+watch(search, () => (zoneLimit.value = 10));
+const filteredZones = computed(() => {
+  const q = search.value.trim().toLowerCase();
+  return (farm.value?.zones ?? []).filter((z) => !q || [z.name, z.detail, ...z.sensors.map((s) => s.name), ...z.actuators.map((a) => a.name)]
+    .some((x) => (x ?? "").toLowerCase().includes(q)));
+});
+
 // ----- farm settings -----
 const farmDialog = ref(false);
 const farmForm = reactive({ name: "", location: "" });
@@ -53,6 +68,20 @@ function openFarm() {
   Object.assign(farmForm, { name: farm.value?.name ?? "", location: farm.value?.location ?? "" });
   error.value = "";
   farmDialog.value = true;
+}
+
+// Only the farm's own owner decides; company staff working on the farm see the setting but cannot change it.
+const supportBusy = ref(false);
+async function setSupportAccess(allowed: boolean) {
+  supportBusy.value = true;
+  try {
+    farm.value = await api<Farm>("/api/farm/support-access", { method: "PUT", body: { allowed } });
+    toast.success(allowed ? "Smart Farm support can open this farm" : "Smart Farm support can no longer open this farm");
+  } catch (e) {
+    error.value = errorMessage(e);
+  } finally {
+    supportBusy.value = false;
+  }
 }
 
 async function saveFarm() {
@@ -81,11 +110,17 @@ async function saveZone() {
   if (ok) zoneDialog.value = false;
 }
 
-function deleteZone(zone: Zone) {
-  if (ask(`Delete "${zone.name}" with all its devices, readings, rules and schedules?`)) {
+async function deleteZone(zone: Zone) {
+  if (await confirm({ title: `Delete ${zone.name}?`, message: "All its devices, readings, rules and schedules are deleted too. This cannot be undone.",
+    confirmLabel: "Delete zone", danger: true })) {
     act(() => api(`/api/zones/${zone.id}`, { method: "DELETE" }), "Zone deleted");
   }
 }
+const zoneMenu = (zone: Zone): MenuAction[] => [
+  { label: "Default rules", icon: Wand2, run: () => act(() => api(`/api/zones/${zone.id}/default-rules`, { method: "POST" }), "Default rules added") },
+  { label: "Edit zone", icon: Pencil, run: () => openZone(zone) },
+  { label: "Delete zone", icon: Trash2, danger: true, separated: true, run: () => deleteZone(zone) },
+];
 
 // ----- device dialog (UC-2) -----
 const deviceDialog = ref(false);
@@ -140,7 +175,8 @@ function lifecycle(a: Actuator, action: LifecycleAction, body?: { testPassed?: b
 
 // ----- sensor repair: fault -> maintenance -> a valid reading proves it works (see utils/sensorRepair.ts) -----
 async function sensorLifecycle(s: Sensor, action: SensorAction) {
-  if (action === "FAULT" && !ask(`Report ${s.name} as faulty? Its readings will be ignored and its rules paused until it is repaired.`)) return;
+  if (action === "FAULT" && !(await confirm({ title: `Report ${s.name} as faulty?`,
+    message: "Its readings will be ignored and its rules paused until it is repaired.", confirmLabel: "Report fault", danger: true }))) return;
   error.value = "";
   notice.value = "";
   try {
@@ -155,6 +191,33 @@ async function sensorLifecycle(s: Sensor, action: SensorAction) {
     error.value = errorMessage(e);
   }
 }
+
+async function removeSensor(s: Sensor) {
+  if (await confirm({ title: `Remove ${s.name}?`, message: "Its readings and rules are deleted too.", confirmLabel: "Remove", danger: true })) {
+    act(() => api(`/api/sensors/${s.id}`, { method: "DELETE" }), "Sensor removed");
+  }
+}
+async function removeActuator(a: Actuator) {
+  if (await confirm({ title: `Remove ${a.name}?`, confirmLabel: "Remove", danger: true })) {
+    act(() => api(`/api/actuators/${a.id}`, { method: "DELETE" }), "Actuator removed");
+  }
+}
+
+// One visible button per row, only when something needs doing (a fault, a repair); the rest sit in the ⋯ menu.
+const abnormal = (status: string) => ["OFFLINE", "FAULT", "MAINTENANCE"].includes(status);
+const optionIcon = (action: string) => (action === "FAULT" ? CircleAlert : action === "OFFLINE" ? Unplug : Wrench);
+const sensorPrimary = (s: Sensor) => (abnormal(s.status) ? sensorOptions[s.status][0] ?? null : null);
+const sensorMenu = (s: Sensor): MenuAction[] => [
+  ...sensorOptions[s.status].filter((o) => o !== sensorPrimary(s)).map((o) => ({ label: o.label, icon: optionIcon(o.action), run: () => sensorLifecycle(s, o.action) })),
+  { label: "Edit", icon: Pencil, separated: true, run: () => openEdit("sensor", s) },
+  { label: "Remove", icon: Trash2, danger: true, run: () => removeSensor(s) },
+];
+const actuatorPrimary = (a: Actuator) => (abnormal(a.status) ? actuatorOptions[a.status]?.[0] ?? null : null);
+const actuatorMenu = (a: Actuator): MenuAction[] => [
+  ...(actuatorOptions[a.status] ?? []).filter((o) => o !== actuatorPrimary(a)).map((o) => ({ label: o.label, icon: optionIcon(o.action), run: () => lifecycle(a, o.action, o.body) })),
+  ...(a.status !== "DECOMMISSIONED" ? [{ label: "Edit", icon: Pencil, separated: true, run: () => openEdit("actuator", a) }] : []),
+  ...(a.status === "DECOMMISSIONED" ? [{ label: "Remove", icon: Trash2, danger: true, separated: true, run: () => removeActuator(a) }] : []),
+];
 </script>
 
 <template>
@@ -175,21 +238,27 @@ async function sensorLifecycle(s: Sensor, action: SensorAction) {
     </Card>
 
     <Alert v-if="error && !(farmDialog || zoneDialog || deviceDialog || editDialog)" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
-    <Alert v-if="notice" class="mb-4"><AlertDescription>{{ notice }}</AlertDescription></Alert>
 
-    <div class="flex flex-col gap-4">
-      <Card v-for="zone in farm?.zones ?? []" :key="zone.id">
+    <div v-if="(farm?.zones.length ?? 0) > 3" class="mb-4 flex flex-wrap items-center gap-3">
+      <div class="relative min-w-[16rem] flex-1">
+        <Search class="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input v-model="search" class="h-10 pl-10" :placeholder="t('Find a zone or device')" :aria-label="t('Find a zone or device')" />
+      </div>
+      <span class="text-sm text-muted-foreground">{{ filteredZones.length }} / {{ farm?.zones.length }} {{ t("zones") }}</span>
+    </div>
+
+    <div class="stagger flex flex-col gap-4">
+      <Card v-for="zone in filteredZones.slice(0, zoneLimit)" :key="zone.id">
         <CardHeader>
-          <CardTitle>{{ zone.name }}</CardTitle>
+          <CardTitle class="flex items-center gap-2">
+            {{ zone.name }}
+            <span v-if="zone.lab" class="eyebrow text-primary" title="Farm Lab test zone: its alerts stay in the lab">LAB</span>
+          </CardTitle>
           <CardDescription>{{ zone.type === "CROP" ? "Crop zone" : "Poultry zone" }} · {{ zone.detail }}</CardDescription>
-          <CardAction class="flex flex-wrap gap-2">
+          <CardAction class="flex items-center gap-2">
+            <Button size="sm" variant="ghost" as-child><NuxtLink :to="`/zone/${zone.id}`">Open</NuxtLink></Button>
             <Button v-if="can('TECHNICIAN')" size="sm" variant="outline" @click="openDevice(zone)"><Plus /> Device</Button>
-            <Button v-if="can()" size="sm" variant="outline" title="Create the default rules this zone type proposes"
-              @click="act(() => api(`/api/zones/${zone.id}/default-rules`, { method: 'POST' }), 'Default rules added')">
-              <Wand2 /> Default rules
-            </Button>
-            <Button v-if="can()" size="sm" variant="outline" @click="openZone(zone)">Edit</Button>
-            <Button v-if="can()" size="icon-sm" variant="ghost" :aria-label="`Delete ${zone.name}`" @click="deleteZone(zone)"><Trash2 /></Button>
+            <ActionMenu v-if="can()" :actions="zoneMenu(zone)" :label="`More actions for ${zone.name}`" />
           </CardAction>
         </CardHeader>
         <CardContent>
@@ -202,14 +271,11 @@ async function sensorLifecycle(s: Sensor, action: SensorAction) {
                 <span class="text-xs text-muted-foreground">#{{ s.id }}</span>
                 <span class="ml-auto"><StatusBadge :status="sensorBadge(s)" /></span>
               </div>
-              <p class="text-sm text-muted-foreground">{{ sensorLabels[s.type] }} sensor · {{ s.simulated ? "simulated" : "real device" }}</p>
+              <p class="text-sm text-muted-foreground">{{ sensorKind(s) }} sensor · {{ s.simulated ? "simulated" : "real device" }}</p>
               <p v-if="sensorNote(s)" class="text-xs text-muted-foreground">{{ sensorNote(s) }}</p>
-              <div v-if="can('TECHNICIAN')" class="flex flex-wrap gap-1">
-                <Button v-for="o in sensorOptions[s.status]" :key="o.label" size="sm" variant="outline"
-                  @click="sensorLifecycle(s, o.action)">{{ o.label }}</Button>
-                <Button size="sm" variant="outline" @click="openEdit('sensor', s)">Edit</Button>
-                <Button size="sm" variant="outline"
-                  @click="ask(`Remove ${s.name}?`) && act(() => api(`/api/sensors/${s.id}`, { method: 'DELETE' }), 'Sensor removed')">Remove</Button>
+              <div v-if="can('TECHNICIAN')" class="flex items-center justify-end gap-2">
+                <Button v-if="sensorPrimary(s)" size="sm" @click="sensorLifecycle(s, sensorPrimary(s)!.action)">{{ sensorPrimary(s)!.label }}</Button>
+                <ActionMenu :actions="sensorMenu(s)" :label="`More actions for ${s.name}`" />
               </div>
             </div>
             <div v-for="a in zone.actuators" :key="`ma${a.id}`" class="flex flex-col gap-2 rounded-lg border p-3">
@@ -218,13 +284,10 @@ async function sensorLifecycle(s: Sensor, action: SensorAction) {
                 <span class="text-xs text-muted-foreground">#{{ a.id }}</span>
                 <span class="ml-auto"><StatusBadge :status="a.status" /></span>
               </div>
-              <p class="text-sm text-muted-foreground">{{ actuatorLabels[a.type] }} · max {{ a.maxRunMinutes }} min</p>
-              <div v-if="can('TECHNICIAN')" class="flex flex-wrap gap-1">
-                <Button v-for="o in actuatorOptions[a.status] ?? []" :key="o.label" size="sm" variant="outline"
-                  @click="lifecycle(a, o.action, o.body)">{{ o.label }}</Button>
-                <Button v-if="a.status === 'DECOMMISSIONED'" size="sm" variant="ghost"
-                  @click="ask(`Remove ${a.name}?`) && act(() => api(`/api/actuators/${a.id}`, { method: 'DELETE' }), 'Actuator removed')">Remove</Button>
-                <Button v-if="a.status !== 'DECOMMISSIONED'" size="sm" variant="ghost" @click="openEdit('actuator', a)">Edit</Button>
+              <p class="text-sm text-muted-foreground">{{ actuatorKind(a) }} · max {{ a.maxRunMinutes }} min</p>
+              <div v-if="can('TECHNICIAN')" class="flex items-center justify-end gap-2">
+                <Button v-if="actuatorPrimary(a)" size="sm" @click="lifecycle(a, actuatorPrimary(a)!.action, actuatorPrimary(a)!.body)">{{ actuatorPrimary(a)!.label }}</Button>
+                <ActionMenu :actions="actuatorMenu(a)" :label="`More actions for ${a.name}`" />
               </div>
             </div>
           </div>
@@ -241,31 +304,25 @@ async function sensorLifecycle(s: Sensor, action: SensorAction) {
               <TableRow v-for="s in zone.sensors" :key="`s${s.id}`">
                 <TableCell class="font-medium">{{ s.name }} <span class="text-xs text-muted-foreground">#{{ s.id }}</span></TableCell>
                 <TableCell>
-                  {{ sensorLabels[s.type] }} sensor · {{ s.simulated ? "simulated" : "real device" }}
+                  {{ sensorKind(s) }} sensor · {{ s.simulated ? "simulated" : "real device" }}
                   <div v-if="sensorNote(s)" class="text-xs text-muted-foreground">{{ sensorNote(s) }}</div>
                 </TableCell>
                 <TableCell><StatusBadge :status="sensorBadge(s)" /></TableCell>
                 <TableCell class="text-right">
-                  <div v-if="can('TECHNICIAN')" class="flex flex-wrap justify-end gap-1">
-                    <Button v-for="o in sensorOptions[s.status]" :key="o.label" size="sm" variant="outline"
-                      @click="sensorLifecycle(s, o.action)">{{ o.label }}</Button>
-                    <Button size="sm" variant="ghost" @click="openEdit('sensor', s)">Edit</Button>
-                    <Button size="sm" variant="ghost"
-                      @click="ask(`Remove ${s.name}?`) && act(() => api(`/api/sensors/${s.id}`, { method: 'DELETE' }), 'Sensor removed')">Remove</Button>
+                  <div v-if="can('TECHNICIAN')" class="flex items-center justify-end gap-2">
+                    <Button v-if="sensorPrimary(s)" size="sm" @click="sensorLifecycle(s, sensorPrimary(s)!.action)">{{ sensorPrimary(s)!.label }}</Button>
+                    <ActionMenu :actions="sensorMenu(s)" :label="`More actions for ${s.name}`" />
                   </div>
                 </TableCell>
               </TableRow>
               <TableRow v-for="a in zone.actuators" :key="`a${a.id}`">
                 <TableCell class="font-medium">{{ a.name }} <span class="text-xs text-muted-foreground">#{{ a.id }}</span></TableCell>
-                <TableCell>{{ actuatorLabels[a.type] }} · max {{ a.maxRunMinutes }} min</TableCell>
+                <TableCell>{{ actuatorKind(a) }} · max {{ a.maxRunMinutes }} min</TableCell>
                 <TableCell><StatusBadge :status="a.status" /></TableCell>
                 <TableCell class="text-right">
-                  <div v-if="can('TECHNICIAN')" class="flex flex-wrap justify-end gap-1">
-                    <Button v-for="o in actuatorOptions[a.status] ?? []" :key="o.label" size="sm" variant="outline"
-                      @click="lifecycle(a, o.action, o.body)">{{ o.label }}</Button>
-                    <Button v-if="a.status === 'DECOMMISSIONED'" size="sm" variant="ghost"
-                      @click="ask(`Remove ${a.name}?`) && act(() => api(`/api/actuators/${a.id}`, { method: 'DELETE' }), 'Actuator removed')">Remove</Button>
-                    <Button v-if="a.status !== 'DECOMMISSIONED'" size="sm" variant="ghost" @click="openEdit('actuator', a)">Edit</Button>
+                  <div v-if="can('TECHNICIAN')" class="flex items-center justify-end gap-2">
+                    <Button v-if="actuatorPrimary(a)" size="sm" @click="lifecycle(a, actuatorPrimary(a)!.action, actuatorPrimary(a)!.body)">{{ actuatorPrimary(a)!.label }}</Button>
+                    <ActionMenu :actions="actuatorMenu(a)" :label="`More actions for ${a.name}`" />
                   </div>
                 </TableCell>
               </TableRow>
@@ -277,6 +334,13 @@ async function sensorLifecycle(s: Sensor, action: SensorAction) {
         </CardContent>
       </Card>
     </div>
+
+    <div v-if="filteredZones.length > zoneLimit" class="mt-4 flex justify-center">
+      <button type="button" class="round-btn w-auto px-5 text-sm" @click="zoneLimit += 10">
+        {{ t("Show more zones") }} <span class="ml-1.5 text-muted-foreground">({{ filteredZones.length - zoneLimit }} {{ t("left") }})</span>
+      </button>
+    </div>
+    <p v-if="farm && farm.zones.length && !filteredZones.length" class="py-8 text-center text-sm text-muted-foreground">{{ t("No zone or device matches.") }}</p>
 
     <Dialog v-model:open="editDialog">
       <DialogContent>
@@ -316,6 +380,13 @@ async function sensorLifecycle(s: Sensor, action: SensorAction) {
             <Label for="farm-location">Location</Label>
             <Input id="farm-location" v-model="farmForm.location" maxlength="120" placeholder="e.g. Takeo, Cambodia" />
           </div>
+          <label class="flex items-start gap-3 rounded-xl border p-3 text-sm" :class="{ 'opacity-60': isCompany }">
+            <input type="checkbox" class="mt-0.5 size-4 accent-[var(--primary)]" :checked="farm?.supportAllowed ?? true"
+              :disabled="isCompany || supportBusy" @change="setSupportAccess(($event.target as HTMLInputElement).checked)">
+            <span><b class="font-medium">Allow Smart Farm support to open this farm</b><br>
+              <span class="text-muted-foreground">Support staff assigned to your farm can check devices and fix problems from a distance.
+                Everything they do appears in the activity log under their name.<template v-if="isCompany"> Only the farm's owner can change this.</template></span></span>
+          </label>
           <FormError :message="error" />
           <DialogFooter><Button type="submit">Save</Button></DialogFooter>
         </form>

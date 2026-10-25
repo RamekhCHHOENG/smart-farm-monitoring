@@ -19,4 +19,6 @@ public class WaterValve extends Actuator {
 
     @Override public ActuatorType getType() { return ActuatorType.WATER_VALVE; }
     @Override public String getActionVerb() { return "Refilling"; }
+    @Override public String getNoEffectHint() { return "the valve and the water supply"; }
+    @Override public java.util.List<ModelEffect> getEffects() { return java.util.List.of(new ModelEffect("WATER_LEVEL", 1)); }
 }

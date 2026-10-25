@@ -27,6 +27,51 @@ For people working in the field:
   system pop-up. The same problem happening again is counted on one alert ("×3") instead of flooding the list.
 - **History**: quick ranges (1 h, 24 h, 7 days, 30 days) and a **CSV download** of every reading for Excel.
 
+## Company model: one system, many customer farms
+
+Smart Farm is run by a company that sets up farms for its customers. One server holds every customer's farm, and
+**each farm sees only its own data**: zones, devices, readings, rules, schedules, alerts, controller boards and people.
+Asking for another farm's item by its id answers "not found" (tests in `CompanyFlowTest`).
+
+| Account | Belongs to | Works as |
+|---|---|---|
+| Company admin | The company | Creates farms, invites owners, manages company staff; opens any farm as its owner |
+| Company support | The company | Opens the farms assigned to it, as a technician, while the owner allows support |
+| Farm owner / technician / worker | One farm | As before, on their own farm only |
+
+- **New customer:** Customer farms → *New farm* (farm, owner's name, username and phone) gives a one-time
+  **invite link** (7 days) to send by Telegram or SMS; the owner sets their own password. No shared passwords.
+- **Working on a farm:** company staff press *Open farm*; every request then carries `X-Farm-Id` and a bar shows
+  which farm they are on. The server decides the role there (`FarmAccessResolver`).
+- **Owner's consent:** Zones & devices → Farm settings → *Allow Smart Farm support to open this farm*.
+- **Suspend:** a suspended farm keeps its data and keeps running its rules, but its people cannot use it.
+- **First start:** the company admin account `admin` is created (password `FARM_ADMIN_PASSWORD`, else
+  `FARM_DEMO_PASSWORD`). Older databases are upgraded on start: alerts and boards are given their farm.
+- Still shared by all farms (next phase): the device catalog, the farm-wide device key (`FARM_DEVICE_KEY`) and
+  the Telegram chat. Controller boards already have their own keys per farm.
+
+## Device catalog (master data)
+
+Devices are not a fixed list in the code. The **Device catalog** page holds every model the farm can use, with
+its picture, what it measures or does, wiring notes and a rough price; the Farm Owner and the Technician add
+their own. A starter catalog of about 40 real models is filled on first start (DHT22, DS18B20, BH1750,
+JSN-SR04T, HX711, MQ-135, MH-Z19B, pumps, 36-inch exhaust fans, brooder lamps, solenoid valves, ESP32 boards...).
+
+| Level | What it is | Example |
+|---|---|---|
+| Measurement type | Something a sensor can read, with its unit and valid range | CO₂ in ppm (0-5000) |
+| Device model | A real product: its readings, or its actuator kind, effects and safety limit | DHT22: temperature + humidity |
+| Farm device | One physical unit in a zone, made from a model; its readings and outputs are what rules use | "House sensor 1", a DHT22 |
+| Controller board | An ESP32 node with **its own key** (stored hashed, shown once) and generated `secrets.h` | "Chicken house node" |
+
+- **Add device** picks a model from the catalog by its picture; a DHT22 becomes one device with two readings.
+- New measurements (CO₂, pH, ammonia...) and new actuator kinds (a CO₂ vent, a siren) need **no code**:
+  `GenericSensor` takes its range from the measurement type, `GenericActuator` its effects from the model.
+- Pictures: an uploaded photo, else the model's open-source [Wokwi part](https://github.com/wokwi/wokwi-elements)
+  drawing (MIT), else our animated drawing of the farm equipment.
+- A board's key only drives the devices assigned to it; the farm's single device key keeps working.
+- Devices made before the catalog existed are given a matching model on start (ids and history are kept).
+
 ## Device kinds
 
 A zone can hold any mix of these. Each kind is one small class (Open/Closed Principle), so the services,
@@ -78,13 +123,15 @@ ESP32 or simulator ──POST /api/devices/readings─────┘        └
 
 ```
 backend/src/main/java/com/smartfarm
-├── domain/        Entities: Farm, Zone (CropZone, PoultryZone), Sensor (6 kinds), Actuator (7 kinds),
+├── domain/        Entities: Farm, Zone (CropZone, PoultryZone), Sensor (6 kinds + GenericSensor), Actuator (7 kinds +
+│                  GenericActuator), FarmDevice, ControllerBoard, catalog: MeasurementType, DeviceModel;
 │                  SensorReading, AutomationRule, ScheduledTask, Alert, DeviceLog, AppUser
-├── service/       MonitoringService, ActuatorService, SensorService, RuleService, TaskService, AlertService, ...
+├── service/       MonitoringService, ActuatorService, SensorService, RuleService, CatalogService, FarmDeviceService,
+│                  ControllerService, DeviceAccess (farm key or board key), LabService, AlertService, ...
 ├── notification/  NotificationService interface + ConsoleNotifier, TelegramNotifier
 ├── web/           REST controllers, DTOs, login interceptor, error handling
 ├── simulation/    DeviceSimulator (plays the Sensor Device actor)
-└── config/        Wiring, device key, demo data, SchemaUpgrade (lets an older database accept new device kinds)
+└── config/        Wiring, device key, demo data, CatalogSeeder (starter catalog), DeviceUpgrade, SchemaUpgrade
 frontend/app       pages/ (dashboard, zones, rules, schedules, alerts, history, users), components/,
                    utils/i18n.ts (Khmer / English), composables/useCriticalAlerts.ts
 firmware/          ESP32 sensor node (works with soil sensor only; DHT22 and relay optional)
@@ -127,7 +174,7 @@ and test it with `scripts/fake-device.mjs` (no hardware) or an ESP32 (about USD 
 ### Tests
 
 ```bash
-cd backend && mvn test          # 51 tests: domain rules, actuator and sensor state machines, new device kinds, API flows,
+cd backend && mvn test          # 71 tests: domain rules, actuator and sensor state machines, new device kinds, API flows,
                                 #           permissions, real-device setup, accounts, lockout, editing, CSV export,
                                 #           alert grouping, pool reconnect, upgrade of an older database
 cd frontend && npm run typecheck
@@ -179,7 +226,7 @@ wets it, heat rises and the fan cools it (the heater warms it), chickens eat and
 the humidity, the lamp brightens the greenhouse and the valve fills the tank. Each lab sensor also shows what the
 server thinks of it, with the same repair buttons as the Zones page.
 
-Sixteen scenarios check how the whole system reacts, each with an automatic PASS / FAIL:
+Seventeen scenarios check how the whole system reacts, each with an automatic PASS / FAIL:
 
 | Scenario | Expected reaction |
 |---|---|
@@ -189,22 +236,31 @@ Sixteen scenarios check how the whole system reacts, each with an automatic PASS
 | Heat wave | Fan starts above 32 °C |
 | Cool night | Fan stays off |
 | Cold snap | Heater starts below 18 °C |
+| Thermostat | Fan stops by itself at 30 °C, long before its time limit; the heater never starts |
 | Dry air | Mister starts below 40 % humidity |
 | Dark day | Light switches on below 5000 lux |
 | Tank running low | Tank valve opens below 20 % |
 | Feed running out | Feeder refills below 20 % |
 | Broken pump | CRITICAL alert: the pump could NOT start |
-| Clogged pipe | **Known gap**: the pump runs, no water arrives, and nothing says so (needs a flow sensor) |
+| Clogged pipe | When the run is over, an alert says the soil did not rise: check the pump and the pipe |
 | Sensor cable cut | "is offline" alert after about 2 minutes |
 | Faulty sensor reading | 150 % rejected with HTTP 422 |
 | Sensor repaired | Pump stays off while the sensor is faulty or in repair, and starts once the repaired sensor is back |
 | Power cut | "is offline" alert for every sensor; relays fail safe |
 
+Lab zones are marked as such: their devices are driven with your sign-in (no device key), their alerts stay
+in the Farm Lab (never sent to Telegram, not counted on the dashboard), and the dashboard hides them unless
+you tick *Show Farm Lab test zones*. Every device is drawn as the physical thing (pot, thermometer, pump with
+flowing water, spinning fan, glowing heater...), on the Farm Lab and on the Devices page's picture view.
+
+Every rule's run is also checked when its time is up: if the reading did not move the way it should (soil did
+not rise while the pump ran), an alert says what to check. That is how the clogged pipe is caught.
+
 Run them in the browser (**Farm Lab → Create lab farm → Power on → Run**) or from a terminal:
 
 ```bash
-FARM_DEVICE_KEY=<key> FARM_PASSWORD=<owner password> node scripts/farm-scenarios.mjs        # all, about 30 min
-FARM_DEVICE_KEY=<key> FARM_PASSWORD=<owner password> node scripts/farm-scenarios.mjs --only drought,heatwave
+FARM_PASSWORD=<owner password> node scripts/farm-scenarios.mjs        # all, about 30 min
+FARM_PASSWORD=<owner password> node scripts/farm-scenarios.mjs --only drought,heatwave
 ```
 
 ## Demo video

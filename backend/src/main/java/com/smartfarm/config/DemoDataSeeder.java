@@ -28,6 +28,7 @@ import java.util.HexFormat;
  * password is generated and printed once to the server log. No password is committed.
  */
 @Component
+@org.springframework.core.annotation.Order(100)
 public class DemoDataSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DemoDataSeeder.class);

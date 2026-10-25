@@ -10,6 +10,9 @@ export default defineNuxtConfig({
   ssr: false,
 
   app: {
+    // pages fade and rise in (CSS in assets/css/tailwind.css, "Motion")
+    pageTransition: { name: "page", mode: "out-in" },
+    layoutTransition: { name: "layout", mode: "out-in" },
     head: {
       title: "Smart Farm Monitoring",
       meta: [{ name: "description", content: "Agri-IoT dashboard for crop and poultry zones" }],
@@ -21,6 +24,16 @@ export default defineNuxtConfig({
 
   vite: {
     plugins: [tailwindcss()],
+    server: {
+      allowedHosts: true,
+    },
+  },
+
+  // <wokwi-dht22>, <wokwi-servo>...: open-source part drawings (web components, plugins/wokwi.client.ts)
+  vue: {
+    compilerOptions: {
+      isCustomElement: (tag: string) => tag.startsWith("wokwi-"),
+    },
   },
 
   // designkit components are imported explicitly from ~/components/ui

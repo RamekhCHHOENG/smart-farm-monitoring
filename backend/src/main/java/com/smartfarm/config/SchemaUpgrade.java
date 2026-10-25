@@ -53,6 +53,15 @@ public class SchemaUpgrade implements ApplicationRunner {
                     default -> log.debug("No type-check upgrade for {}", product);
                 }
             }
+            // Company accounts belong to no farm: older databases made app_user.farm_id NOT NULL.
+            if (!tableExists(connection, "app_user")) {
+                return; // a brand-new database: Hibernate creates the table right after, already nullable
+            }
+            switch (product) {
+                case "H2" -> execute(connection, "ALTER TABLE app_user ALTER COLUMN farm_id SET NULL");
+                case "PostgreSQL" -> execute(connection, "ALTER TABLE app_user ALTER COLUMN farm_id DROP NOT NULL");
+                default -> log.debug("No farm_id upgrade for {}", product);
+            }
         }
     }
 
@@ -84,7 +93,18 @@ public class SchemaUpgrade implements ApplicationRunner {
         return names;
     }
 
-    private void execute(Connection connection, String sql) throws SQLException {
+    private boolean tableExists(Connection connection, String table) throws SQLException {
+        for (String name : new String[] {table, table.toUpperCase()}) {
+            try (ResultSet rows = connection.getMetaData().getTables(null, null, name, null)) {
+                if (rows.next()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+        private void execute(Connection connection, String sql) throws SQLException {
         try (Statement statement = connection.createStatement()) {
             statement.execute(sql);
         }

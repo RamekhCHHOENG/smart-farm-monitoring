@@ -67,8 +67,8 @@ async function save() {
   if (await run(request)) dialog.value = false;
 }
 
-function confirmDelete(task: Task) {
-  if (window.confirm(`Delete schedule "${task.name}"?`)) run(() => api(`/api/tasks/${task.id}`, { method: "DELETE" }));
+async function confirmDelete(task: Task) {
+  if (await useConfirm().confirm({ title: `Delete the schedule "${task.name}"?`, confirmLabel: "Delete schedule", danger: true })) run(() => api(`/api/tasks/${task.id}`, { method: "DELETE" }));
 }
 
 function days(list: string[]) {

@@ -154,6 +154,18 @@ Click **Farm settings**, change the name or location, and click **Save**. The da
 ![Zones & devices (Technician)](screens/21-zones-technician.png)
 *Figure 15. Zones & devices (Technician)*
 
+### 4.3b The device catalog, Add device and controller boards (Technician, Owner)
+
+- **Device catalog** (menu): every device model the farm can use, with its picture, what it measures or does,
+  wiring and price. *Add model* creates your own: name, category, readings (for a sensor) or kind, safety limit
+  and effects (for an actuator), a Wokwi drawing or a photo. *Measurement types* adds things to measure
+  (for example soil salinity in dS/m). A model in use cannot be deleted: *Retire* it instead.
+- **Devices → Add device**: choose the zone, then the model by its picture, then the name, safety limit,
+  controller board and notes. A DHT22 gives two readings (temperature and humidity), each with its own #id.
+- **Controller boards** (menu): add an ESP32 board to give it its own key. The key and the `secrets.h` lines are
+  shown **once**; copy them into the board. *Firmware* shows the settings again (without the key), *New key*
+  replaces a lost key. Assign devices to a board when you add them, or from Devices → Edit.
+
 ### 4.4 Faults and repairs (Technician)
 
 The buttons next to a device change with its status, so only the actions that make sense are shown. This page refreshes by itself every few seconds.

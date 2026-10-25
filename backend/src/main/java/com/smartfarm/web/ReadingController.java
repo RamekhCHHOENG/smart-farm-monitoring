@@ -1,8 +1,7 @@
 package com.smartfarm.web;
 
-import com.smartfarm.config.DeviceKey;
 import com.smartfarm.service.ActuatorService;
-import com.smartfarm.service.ForbiddenException;
+import com.smartfarm.service.DeviceAccess;
 import com.smartfarm.service.MonitoringService;
 import com.smartfarm.service.MonitoringService.ReadingResult;
 import com.smartfarm.web.Dtos.ActuatorStateDto;
@@ -22,35 +21,33 @@ public class ReadingController {
 
     private final MonitoringService monitoringService;
     private final ActuatorService actuatorService;
-    private final DeviceKey deviceKey;
+    private final DeviceAccess deviceAccess;
 
-    public ReadingController(MonitoringService monitoringService, ActuatorService actuatorService, DeviceKey deviceKey) {
+    public ReadingController(MonitoringService monitoringService, ActuatorService actuatorService, DeviceAccess deviceAccess) {
         this.monitoringService = monitoringService;
         this.actuatorService = actuatorService;
-        this.deviceKey = deviceKey;
+        this.deviceAccess = deviceAccess;
     }
 
     /** UC-3 Submit Sensor Reading. 201 when stored, 202 when the sensor is marked faulty, 422 when the value is invalid. */
     @PostMapping("/readings")
     public ResponseEntity<ReadingResult> submitReading(@RequestHeader("X-Device-Key") String key,
                                                        @Valid @RequestBody ReadingRequest request) {
-        checkKey(key);
+        deviceAccess.checkSensor(key, request.sensorId()); // the farm's key, or the key of the board that carries it
         ReadingResult result = monitoringService.processReading(request.sensorId(), request.value());
-        HttpStatus status = result.hasInvalidValue() ? HttpStatus.UNPROCESSABLE_CONTENT
+        return ResponseEntity.status(httpStatus(result)).body(result);
+    }
+
+    /** 201 stored, 202 ignored (sensor marked faulty), 422 impossible value. Shared with the Farm Lab's endpoint. */
+    static HttpStatus httpStatus(ReadingResult result) {
+        return result.hasInvalidValue() ? HttpStatus.UNPROCESSABLE_CONTENT
                 : result.isIgnored() ? HttpStatus.ACCEPTED : HttpStatus.CREATED;
-        return ResponseEntity.status(status).body(result);
     }
 
     /** Polled by an ESP32 to know whether to switch its relay on. */
     @GetMapping("/actuators/{id}/state")
     public ActuatorStateDto actuatorState(@RequestHeader("X-Device-Key") String key, @PathVariable Long id) {
-        checkKey(key);
+        deviceAccess.checkActuator(key, id);
         return ActuatorStateDto.of(actuatorService.get(id));
-    }
-
-    private void checkKey(String key) {
-        if (!deviceKey.matches(key)) {
-            throw new ForbiddenException("Invalid device key");
-        }
     }
 }

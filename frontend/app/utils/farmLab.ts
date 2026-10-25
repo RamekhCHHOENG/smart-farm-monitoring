@@ -6,10 +6,25 @@
 export type LabSensorType = "SOIL_MOISTURE" | "TEMPERATURE" | "FEED_LEVEL" | "HUMIDITY" | "LIGHT_LEVEL" | "WATER_LEVEL";
 export type LabActuatorType = "WATER_PUMP" | "FAN" | "FEEDER" | "HEATER" | "MISTER" | "LIGHT" | "WATER_VALVE";
 
+/** Range of a measurement without built-in physics (CO2, pH... from the catalog). */
+export interface LabRange {
+  unit: string;
+  min: number;
+  max: number;
+  typical: number;
+}
+
+export interface LabEffect {
+  measurementCode: string;
+  direction: number;
+}
+
 export interface LabSensor {
   id: number;
   name: string;
-  type: LabSensorType;
+  /** a built-in LabSensorType, or a catalog measurement code */
+  type: string;
+  range?: LabRange;
   zoneId: number;
   value: number;
   /** false = unplugged: sends nothing */
@@ -20,7 +35,9 @@ export interface LabSensor {
 export interface LabActuator {
   id: number;
   name: string;
-  type: LabActuatorType;
+  /** a built-in LabActuatorType, or GENERIC for a catalog kind (its effects say what it does) */
+  type: string;
+  effects?: LabEffect[];
   zoneId: number;
   relayOn: boolean;
   /** true = the relay switches but nothing happens (clogged pipe, burnt motor) */
@@ -57,6 +74,14 @@ const RANGE: Record<LabSensorType, [number, number]> = {
   LIGHT_LEVEL: [0, 100_000],
   WATER_LEVEL: [0, 100],
 };
+
+const BUILT_IN = new Set<string>(Object.keys(HEALTHY));
+const isBuiltIn = (type: string): type is LabSensorType => BUILT_IN.has(type);
+
+/** Healthy start, and valid range, for any lab sensor (catalog measurements use their own range). */
+export const healthyOf = (s: Pick<LabSensor, "type" | "range">) => (isBuiltIn(s.type) ? HEALTHY[s.type] : s.range?.typical ?? 0);
+const rangeOf = (s: Pick<LabSensor, "type" | "range">): [number, number] =>
+  isBuiltIn(s.type) ? RANGE[s.type] : [s.range?.min ?? 0, s.range?.max ?? 100];
 
 /** How the page draws a lab sensor: unit, slider and a value the server must reject. */
 export const LAB_UI: Record<LabSensorType, { unit: string; min: number; max: number; step: number; impossible: number }> = {
@@ -127,6 +152,13 @@ export interface ScenarioResult {
 
 const first = <T>(list: T[], pred: (x: T) => boolean) => list.find(pred);
 
+/** What a failed device call means, so the log says what to fix. */
+const explain = (status: number) =>
+  status === 403 ? " (wrong device key: paste FARM_DEVICE_KEY from the server's .env)"
+    : status === 404 ? " (no sensor with this #id)"
+    : status === -1 ? " (server not reachable)"
+    : "";
+
 export class FarmLab {
   sensors: LabSensor[] = [];
   actuators: LabActuator[] = [];
@@ -146,7 +178,7 @@ export class FarmLab {
 
   addSensor(s: Omit<LabSensor, "value" | "sending" | "lastStatus"> & { value?: number }) {
     if (this.sensors.some((x) => x.id === s.id)) return;
-    this.sensors.push({ ...s, value: s.value ?? HEALTHY[s.type], sending: true, lastStatus: null });
+    this.sensors.push({ ...s, value: s.value ?? healthyOf(s), sending: true, lastStatus: null });
   }
 
   addActuator(a: Omit<LabActuator, "relayOn" | "noEffect">) {
@@ -159,11 +191,11 @@ export class FarmLab {
     else this.actuators = this.actuators.filter((a) => a.id !== id);
   }
 
-  sensor(type: LabSensorType) {
+  sensor(type: string) {
     return first(this.sensors, (s) => s.type === type);
   }
 
-  actuator(type: LabActuatorType) {
+  actuator(type: string) {
     return first(this.actuators, (a) => a.type === type);
   }
 
@@ -171,7 +203,7 @@ export class FarmLab {
   resetFarm() {
     this.weather = { ...NORMAL_WEATHER };
     for (const s of this.sensors) {
-      s.value = HEALTHY[s.type];
+      s.value = healthyOf(s);
       s.sending = true;
     }
     for (const a of this.actuators) a.noEffect = false;
@@ -182,9 +214,19 @@ export class FarmLab {
     const w = this.weather;
     const working = (type: LabActuatorType, zoneId: number) =>
       this.actuators.some((a) => a.type === type && a.zoneId === zoneId && a.relayOn && !a.noEffect);
+    // Catalog actuators (a CO2 vent, an evaporative cooler...) push measurements by their catalog effects
+    const catalogPush = (code: string, zoneId: number) => this.actuators
+      .filter((a) => a.type === "GENERIC" && a.zoneId === zoneId && a.relayOn && !a.noEffect)
+      .flatMap((a) => a.effects ?? []).filter((e) => e.measurementCode === code).reduce((sum, e) => sum + e.direction, 0);
     for (const s of this.sensors) {
       const noise = (Math.random() - 0.5) * 0.2;
-      if (s.type === "SOIL_MOISTURE") {
+      const [lo0, hi0] = rangeOf(s);
+      const span = hi0 - lo0;
+      s.value += catalogPush(s.type, s.zoneId) * span * 0.03;
+      if (!isBuiltIn(s.type)) {
+        // A catalog measurement: drifts back to its typical value
+        s.value += (healthyOf(s) - s.value) * 0.05 + noise * span * 0.02;
+      } else if (s.type === "SOIL_MOISTURE") {
         s.value += -w.evaporation + w.rain + (working("WATER_PUMP", s.zoneId) ? 4 : 0) + noise;
       } else if (s.type === "TEMPERATURE") {
         s.value += (w.ambient - s.value) * 0.15 - (working("FAN", s.zoneId) ? 1.2 : 0)
@@ -200,8 +242,7 @@ export class FarmLab {
       } else {
         s.value += -w.feedUse + (working("FEEDER", s.zoneId) ? 5 : 0) + noise / 2;
       }
-      const [lo, hi] = RANGE[s.type];
-      s.value = Math.min(hi, Math.max(lo, s.value));
+      s.value = Math.min(hi0, Math.max(lo0, s.value));
     }
   }
 
@@ -216,7 +257,7 @@ export class FarmLab {
       s.lastStatus = status;
       if (status === 422 && this.current) this.current.observed.rejected++;
       if (status === 202) this.io.log(`${s.name} = ${v} -> ignored by the server (sensor is marked faulty)`, "warn");
-      else if (status !== 201) this.io.log(`${s.name} = ${v} -> HTTP ${status}`, status === 422 ? "warn" : "error");
+      else if (status !== 201) this.io.log(`${s.name} = ${v} -> HTTP ${status}${explain(status)}`, status === 422 ? "warn" : "error");
     }
     for (const a of this.actuators) {
       const on = await this.io.relayState(a.id);
@@ -249,7 +290,7 @@ export class FarmLab {
   async sendRaw(sensorId: number, value: number) {
     const status = await this.io.sendReading(sensorId, value);
     if (status === 422 && this.current) this.current.observed.rejected++;
-    this.io.log(`Sensor ${sensorId} = ${value} -> HTTP ${status}${status === 422 ? " (rejected as impossible)" : ""}`, status === 422 ? "warn" : "info");
+    this.io.log(`Sensor ${sensorId} = ${value} -> HTTP ${status}${status === 422 ? " (rejected as impossible)" : explain(status)}`, status === 422 ? "warn" : "error");
     return status;
   }
 
@@ -509,21 +550,22 @@ export const SCENARIOS: Scenario[] = [
     id: "clogged-pipe",
     title: "Clogged pipe",
     story: "The pump motor runs, but no water comes out.",
-    expect: "Ideally an alert that watering did not work",
-    knownGap: "The system cannot see this yet: the pump ran but the soil stayed dry and no alert said so. A flow sensor or a \"soil did not rise after watering\" check would close the gap.",
-    timeoutSec: 180,
+    expect: "When the run is over, an alert says the soil did not rise and to check the pump and the pipe",
+    timeoutSec: 200,
     setup: (lab) => {
       const { s, a } = needs(lab, "SOIL_MOISTURE", "WATER_PUMP");
       a.noEffect = true;
       s.value = 33;
-      lab.weather = { ...NORMAL_WEATHER, label: "Dry spell", evaporation: 1 };
+      lab.weather = { ...NORMAL_WEATHER, label: "Dry spell", evaporation: 0.5 };
     },
     check: (lab, o) => {
       const pump = lab.actuator("WATER_PUMP")!;
-      if (!o.turnedOn.has(pump.id) || !o.turnedOffAfterOn.has(pump.id)) return "waiting";
-      // The run is over: did anything tell the farmer that the water never arrived?
-      const warned = o.alerts.some((a) => /water|flow|did not rise/i.test(a.message) && !a.message.includes("started"));
-      return warned ? "pass" : "gap";
+      if (o.alerts.some((a) => a.message.includes(pump.name) && a.message.includes("did not rise"))) return "pass";
+      return "waiting"; // the server checks when the run's time is up (within ~10 s after it)
+    },
+    cleanup: (lab) => {
+      const a = lab.actuator("WATER_PUMP");
+      if (a) a.noEffect = false;
     },
   },
   {
@@ -645,8 +687,9 @@ export type UserApi = (method: string, path: string, body?: unknown) => Promise<
 interface FarmZone {
   id: number;
   name: string;
-  sensors: { id: number; name: string; type: LabSensorType; zoneId: number; simulated: boolean }[];
-  actuators: { id: number; name: string; type: LabActuatorType; zoneId: number }[];
+  lab: boolean;
+  sensors: { id: number; name: string; type: string; zoneId: number; simulated: boolean; unit: string; minValid: number; maxValid: number; typical: number }[];
+  actuators: { id: number; name: string; type: string; zoneId: number; effects?: LabEffect[] }[];
 }
 
 /**
@@ -656,9 +699,13 @@ interface FarmZone {
 export async function ensureLabFarm(api: UserApi, lab: FarmLab) {
   let farm: { zones: FarmZone[] } = await api("GET", "/api/farm");
   const zoneOf = (key: "crop" | "poultry" | "greenhouse") => farm.zones.find((z) => z.name === LAB_FARM[key].name);
-  if (!zoneOf("crop")) await api("POST", "/api/zones", { type: "CROP", ...LAB_FARM.crop });
-  if (!zoneOf("poultry")) await api("POST", "/api/zones", { type: "POULTRY", ...LAB_FARM.poultry });
-  if (!zoneOf("greenhouse")) await api("POST", "/api/zones", { type: "CROP", ...LAB_FARM.greenhouse });
+  const zoneTypes = { crop: "CROP", poultry: "POULTRY", greenhouse: "CROP" } as const;
+  for (const key of ["crop", "poultry", "greenhouse"] as const) {
+    const zone = zoneOf(key);
+    // Lab zones are marked as such: their alerts stay in the lab and never reach staff phones
+    if (!zone) await api("POST", "/api/zones", { type: zoneTypes[key], ...LAB_FARM[key], lab: true });
+    else if (!zone.lab) await api("PUT", `/api/zones/${zone.id}`, { type: zoneTypes[key], ...LAB_FARM[key], lab: true });
+  }
   farm = await api("GET", "/api/farm");
   for (const s of LAB_FARM.sensors) {
     const zone = zoneOf(s.zone)!;
@@ -690,8 +737,10 @@ export async function ensureLabFarm(api: UserApi, lab: FarmLab) {
     else if (existing.stopAt !== stopAt || existing.durationMin !== r.durationMin) await api("PUT", `/api/rules/${existing.id}`, body);
   }
   for (const z of devices) {
-    for (const s of z.sensors) lab.addSensor({ id: s.id, name: s.name, type: s.type, zoneId: s.zoneId });
-    for (const a of z.actuators) lab.addActuator({ id: a.id, name: a.name, type: a.type, zoneId: a.zoneId });
+    // catalog measurements (CO2, pH...) bring their own range; catalog actuators their effects
+    for (const s of z.sensors) lab.addSensor({ id: s.id, name: s.name, type: s.type, zoneId: s.zoneId,
+      range: { unit: s.unit, min: s.minValid, max: s.maxValid, typical: s.typical } });
+    for (const a of z.actuators) lab.addActuator({ id: a.id, name: a.name, type: a.type, zoneId: a.zoneId, effects: a.effects });
   }
   return devices;
 }

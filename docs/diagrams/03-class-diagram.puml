@@ -115,6 +115,34 @@ package "domain" {
     DECOMMISSIONED
   }
 
+  class MeasurementType <<master data>> {
+    -code: String
+    -unit: String
+    -minValid: double
+    -maxValid: double
+    -typical: double
+  }
+  class DeviceModel <<master data>> {
+    -name: String
+    -category: String
+    -channels: List<ModelChannel>
+    -actuatorType: String
+    -effects: List<ModelEffect>
+    -wokwiPart: String
+  }
+  class FarmDevice {
+    -name: String
+    -serialNumber: String
+    -notes: String
+  }
+  class ControllerBoard {
+    -keyHash: String
+    -lastSeenAt: Instant
+    +newKey(): String
+  }
+  class GenericSensor
+  class GenericActuator
+
   class AutomationRule {
     -id: Long
     -condition: Condition
@@ -215,6 +243,14 @@ Actuator <|-- Mister
 Actuator <|-- Light
 Actuator <|-- WaterValve
 Actuator --> ActuatorStatus
+Sensor <|-- GenericSensor
+Actuator <|-- GenericActuator
+GenericSensor --> MeasurementType
+Zone "1" *-- "0..*" FarmDevice
+FarmDevice --> DeviceModel : made from
+FarmDevice "1" o-- "1..*" Sensor : readings
+FarmDevice "1" o-- "0..1" Actuator : output
+FarmDevice "0..*" --> "0..1" ControllerBoard : wired to
 Sensor ..> SensorReading : <<create>>
 SensorReading "0..*" --> "1" Sensor
 AutomationRule "0..*" --> "1" Sensor : monitors

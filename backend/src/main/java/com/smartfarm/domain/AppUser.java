@@ -2,7 +2,11 @@ package com.smartfarm.domain;
 
 import jakarta.persistence.*;
 
-/** A person who works on the farm. Named AppUser because "user" is a reserved word in SQL. */
+/**
+ * A person who signs in. Farm accounts belong to one farm and have a farm role (owner, worker, technician).
+ * Company accounts belong to the company that sets up farms: no farm, and a company role (ADMIN or SUPPORT).
+ * Named AppUser because "user" is a reserved word in SQL.
+ */
 @Entity
 public class AppUser {
 
@@ -21,8 +25,11 @@ public class AppUser {
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     private Farm farm;
+
+    /** ADMIN or SUPPORT for company accounts; null for farm accounts. */
+    private String companyRole;
 
     protected AppUser() {
     }
@@ -34,6 +41,22 @@ public class AppUser {
         this.passwordHash = passwordHash;
         this.role = role;
     }
+
+    public static AppUser company(String username, String name, String passwordHash, String companyRole) {
+        AppUser user = new AppUser(null, username, name, passwordHash, null);
+        user.setCompanyRole(companyRole);
+        return user;
+    }
+
+    public void setCompanyRole(String companyRole) {
+        if (!companyRole.equals("ADMIN") && !companyRole.equals("SUPPORT")) {
+            throw new IllegalArgumentException("A company account is ADMIN or SUPPORT");
+        }
+        this.companyRole = companyRole;
+    }
+
+    public boolean isCompany() { return companyRole != null; }
+    public String getCompanyRole() { return companyRole; }
 
     public void changePasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;

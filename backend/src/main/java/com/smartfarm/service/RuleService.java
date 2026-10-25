@@ -24,8 +24,13 @@ public class RuleService {
     private final ActuatorRepository actuators;
     private final AccessPolicy access;
 
+    private final Tenancy tenancy;
+
+
     public RuleService(AutomationRuleRepository rules, SensorRepository sensors,
-                       ActuatorRepository actuators, AccessPolicy access) {
+                       ActuatorRepository actuators, AccessPolicy access, Tenancy tenancy) {
+
+        this.tenancy = tenancy;
         this.rules = rules;
         this.sensors = sensors;
         this.actuators = actuators;
@@ -34,12 +39,12 @@ public class RuleService {
 
     @Transactional(readOnly = true)
     public List<AutomationRule> list() {
-        return rules.findAllByOrderByIdAsc();
+        return tenancy.limited() ? rules.findBySensor_Zone_Farm_IdOrderByIdAsc(tenancy.farmId()) : rules.findAllByOrderByIdAsc();
     }
 
     public AutomationRule create(Long userId, RuleCommand cmd) {
         access.require(userId);
-        Sensor sensor = sensors.findById(cmd.sensorId()).orElseThrow(() -> new NotFoundException("Sensor", cmd.sensorId()));
+        Sensor sensor = tenancy.sensor(sensors.findById(cmd.sensorId()).orElseThrow(() -> new NotFoundException("Sensor", cmd.sensorId())));
         checkThreshold(sensor, cmd.threshold());
         Actuator actuator = actuator(cmd, sensor);
         AutomationRule rule = new AutomationRule(cmd.name(), sensor, cmd.condition(), cmd.threshold(),
@@ -123,7 +128,7 @@ public class RuleService {
         if (cmd.actuatorId() == null) {
             return null;
         }
-        Actuator actuator = actuators.findById(cmd.actuatorId()).orElseThrow(() -> new NotFoundException("Actuator", cmd.actuatorId()));
+        Actuator actuator = tenancy.actuator(actuators.findById(cmd.actuatorId()).orElseThrow(() -> new NotFoundException("Actuator", cmd.actuatorId())));
         if (!actuator.getZone().getId().equals(sensor.getZone().getId())) {
             throw new IllegalArgumentException("Sensor and actuator must be in the same zone");
         }
@@ -134,6 +139,6 @@ public class RuleService {
     }
 
     private AutomationRule get(Long ruleId) {
-        return rules.findById(ruleId).orElseThrow(() -> new NotFoundException("Rule", ruleId));
+        return tenancy.rule(rules.findById(ruleId).orElseThrow(() -> new NotFoundException("Rule", ruleId)));
     }
 }

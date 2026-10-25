@@ -80,18 +80,21 @@ public class OperationsController {
         return actuatorService.logs(id).stream().map(DeviceLogDto::of).toList();
     }
 
+    /** scope = FARM (default: the real farm), LAB (Farm Lab tests) or ALL. */
     @GetMapping("/alerts")
     @Transactional(readOnly = true)
-    public List<AlertDto> alerts(@RequestParam(required = false) AlertStatus status) {
-        return alertService.list(status).stream().map(AlertDto::of).toList();
+    public List<AlertDto> alerts(@RequestParam(required = false) AlertStatus status,
+                                 @RequestParam(defaultValue = "FARM") AlertService.Scope scope) {
+        return alertService.list(status, scope).stream().map(AlertDto::of).toList();
     }
 
     public record CountDto(int count) {
     }
 
     @PostMapping("/alerts/acknowledge-all")
-    public CountDto acknowledgeAll(@RequestAttribute(AuthInterceptor.USER_ID) Long userId) {
-        return new CountDto(alertService.acknowledgeAll(userId));
+    public CountDto acknowledgeAll(@RequestAttribute(AuthInterceptor.USER_ID) Long userId,
+                                   @RequestParam(defaultValue = "FARM") AlertService.Scope scope) {
+        return new CountDto(alertService.acknowledgeAll(userId, scope));
     }
 
     @PostMapping("/alerts/{id}/acknowledge")

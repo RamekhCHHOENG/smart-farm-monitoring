@@ -15,4 +15,10 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
     long countByStatus(AlertStatus status);
 
     Optional<Alert> findFirstByStatusAndMessage(AlertStatus status, String message);
+
+    // one farm's alerts
+    List<Alert> findTop200ByFarmIdOrderByRaisedAtDesc(Long farmId);
+    List<Alert> findByFarmIdAndStatusOrderByRaisedAtDesc(Long farmId, AlertStatus status);
+    Optional<Alert> findFirstByFarmIdAndStatusAndMessage(Long farmId, AlertStatus status, String message);
+    List<Alert> findByFarmIdIsNull();
 }

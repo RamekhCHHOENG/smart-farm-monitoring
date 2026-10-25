@@ -23,7 +23,7 @@ import java.time.ZoneId;
 @EnableScheduling
 public class AppConfig implements WebMvcConfigurer {
 
-    @Value("${farm.cors.allowed-origins:http://localhost:3000}")
+    @Value("${farm.cors.allowed-origins:http://localhost:3000,https://*.trycloudflare.com}")
     private String[] allowedOrigins;
 
     private final AuthInterceptor authInterceptor;
@@ -66,11 +66,11 @@ public class AppConfig implements WebMvcConfigurer {
         // Devices authenticate with the device key instead of a user login.
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/auth/login", "/api/devices/**");
+                .excludePathPatterns("/api/auth/login", "/api/auth/invites/**", "/api/devices/**", "/api/catalog/models/*/picture");
     }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**").allowedOrigins(allowedOrigins).allowedMethods("*");
+        registry.addMapping("/api/**").allowedOriginPatterns(allowedOrigins).allowedMethods("*");
     }
 }

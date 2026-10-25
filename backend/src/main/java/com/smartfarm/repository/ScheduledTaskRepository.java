@@ -10,4 +10,6 @@ public interface ScheduledTaskRepository extends JpaRepository<ScheduledTask, Lo
     List<ScheduledTask> findByActiveTrue();
 
     List<ScheduledTask> findAllByOrderByRunTimeAsc();
+
+    List<ScheduledTask> findByActuator_Zone_Farm_IdOrderByRunTimeAsc(Long farmId);
 }

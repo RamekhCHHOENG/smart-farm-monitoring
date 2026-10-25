@@ -10,4 +10,6 @@ public interface SensorRepository extends JpaRepository<Sensor, Long> {
     List<Sensor> findBySimulatedTrue();
 
     List<Sensor> findByOnlineTrue();
+
+    List<Sensor> findByDeviceIsNull();
 }

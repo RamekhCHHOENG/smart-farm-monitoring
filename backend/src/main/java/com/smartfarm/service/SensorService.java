@@ -25,8 +25,13 @@ public class SensorService {
     private final AccessPolicy access;
     private final Clock clock;
 
+    private final Tenancy tenancy;
+
+
     public SensorService(SensorRepository sensors, DeviceLogRepository deviceLogs, AlertService alertService,
-                         AccessPolicy access, Clock clock) {
+                         AccessPolicy access, Clock clock, Tenancy tenancy) {
+
+        this.tenancy = tenancy;
         this.sensors = sensors;
         this.deviceLogs = deviceLogs;
         this.alertService = alertService;
@@ -36,7 +41,7 @@ public class SensorService {
 
     public Sensor lifecycle(Long userId, Long sensorId, SensorAction action) {
         AppUser user = access.require(userId, Role.TECHNICIAN);
-        Sensor sensor = sensors.findById(sensorId).orElseThrow(() -> new NotFoundException("Sensor", sensorId));
+        Sensor sensor = tenancy.sensor(sensors.findById(sensorId).orElseThrow(() -> new NotFoundException("Sensor", sensorId)));
         Instant now = clock.instant();
         String detail = null;
         switch (action) {

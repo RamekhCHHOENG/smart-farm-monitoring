@@ -27,7 +27,7 @@ const delegatedProps = reactiveOmit(props, "class", "variant");
     v-bind="delegatedProps"
     :class="
       cn(
-        'group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground',
+        'group/tabs-list inline-flex w-fit items-center justify-center rounded-full border bg-card p-1 text-muted-foreground [&>button]:min-h-9',
         variant === 'line' ? 'gap-1 bg-transparent rounded-none' : 'bg-muted',
         props.class
       )

@@ -18,4 +18,6 @@ public class WaterPump extends Actuator {
 
     @Override public ActuatorType getType() { return ActuatorType.WATER_PUMP; }
     @Override public String getActionVerb() { return "Watering"; }
+    @Override public String getNoEffectHint() { return "the pump and the pipe for a blockage or a leak"; }
+    @Override public java.util.List<ModelEffect> getEffects() { return java.util.List.of(new ModelEffect("SOIL_MOISTURE", 1), new ModelEffect("WATER_LEVEL", -1)); }
 }

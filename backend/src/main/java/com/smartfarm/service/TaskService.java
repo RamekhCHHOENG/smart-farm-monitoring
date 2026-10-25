@@ -25,8 +25,13 @@ public class TaskService {
     private final AccessPolicy access;
     private final Clock clock;
 
+    private final Tenancy tenancy;
+
+
     public TaskService(ScheduledTaskRepository tasks, ActuatorRepository actuators,
-                       ActuatorService actuatorService, AccessPolicy access, Clock clock) {
+                       ActuatorService actuatorService, AccessPolicy access, Clock clock, Tenancy tenancy) {
+
+        this.tenancy = tenancy;
         this.tasks = tasks;
         this.actuators = actuators;
         this.actuatorService = actuatorService;
@@ -36,7 +41,7 @@ public class TaskService {
 
     @Transactional(readOnly = true)
     public List<ScheduledTask> list() {
-        return tasks.findAllByOrderByRunTimeAsc();
+        return tenancy.limited() ? tasks.findByActuator_Zone_Farm_IdOrderByRunTimeAsc(tenancy.farmId()) : tasks.findAllByOrderByRunTimeAsc();
     }
 
     public ScheduledTask create(Long userId, String name, Long actuatorId, LocalTime runTime,
@@ -47,7 +52,7 @@ public class TaskService {
     }
 
     private Actuator checkedActuator(Long actuatorId, int durationMin) {
-        Actuator actuator = actuators.findById(actuatorId).orElseThrow(() -> new NotFoundException("Actuator", actuatorId));
+        Actuator actuator = tenancy.actuator(actuators.findById(actuatorId).orElseThrow(() -> new NotFoundException("Actuator", actuatorId)));
         if (durationMin <= 0 || durationMin > actuator.getMaxRunMinutes()) {
             throw new IllegalArgumentException("Duration must be 1-" + actuator.getMaxRunMinutes() + " min for " + actuator.getName());
         }
@@ -57,7 +62,7 @@ public class TaskService {
     public ScheduledTask update(Long userId, Long taskId, String name, Long actuatorId, LocalTime runTime,
                                 Set<DayOfWeek> days, int durationMin) {
         access.require(userId);
-        ScheduledTask task = tasks.findById(taskId).orElseThrow(() -> new NotFoundException("Task", taskId));
+        ScheduledTask task = tenancy.task(tasks.findById(taskId).orElseThrow(() -> new NotFoundException("Task", taskId)));
         Actuator actuator = checkedActuator(actuatorId, durationMin);
         task.update(name, actuator, runTime, days, durationMin);
         return task;
@@ -65,14 +70,15 @@ public class TaskService {
 
     public ScheduledTask setActive(Long userId, Long taskId, boolean active) {
         access.require(userId);
-        ScheduledTask task = tasks.findById(taskId).orElseThrow(() -> new NotFoundException("Task", taskId));
+        ScheduledTask task = tenancy.task(tasks.findById(taskId).orElseThrow(() -> new NotFoundException("Task", taskId)));
         task.setActive(active);
         return task;
     }
 
     public void delete(Long userId, Long taskId) {
         access.require(userId);
-        tasks.deleteById(taskId);
+        // look it up first: another farm's schedule is "not found", never deleted
+        tasks.delete(tenancy.task(tasks.findById(taskId).orElseThrow(() -> new NotFoundException("Task", taskId))));
     }
 
     /** Runs every task whose time has come today. */
