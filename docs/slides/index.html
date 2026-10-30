@@ -36,7 +36,7 @@
 <p style="font-size:28px;letter-spacing:4px;text-transform:uppercase;font-weight:700;color:#7DCB94">OOAD Final Project · Group 1</p>
 <h1 style="font-size:104px;font-weight:700;line-height:1.05;color:#F1F5EF">From OOAD design<br>to a working farm</h1>
 <p style="font-size:40px;line-height:1.35;color:#BFD3C4">Smart Farm Monitoring System</p>
-<p style="font-size:30px;line-height:1.45;color:#BFD3C4">Eleven deliverables, each shown as concept, diagram, real Java code and the running app,<br>plus this week’s new devices, sensor repair and thermostat rules.</p>
+<p style="font-size:30px;line-height:1.45;color:#BFD3C4">Eleven deliverables, each shown as concept, diagram, real Java code and the running app,<br>plus what came after: sensor repair, thermostat rules, a device catalog and many farms on one server.</p>
 <p style="position:absolute;left:128px;bottom:72px;width:1200px;font-size:24px;color:#7DCB94">github.com/RamekhCHHOENG/smart-farm-monitoring</p>
 <aside>In this presentation we walk through our eleven object oriented analysis and design deliverables. For each one we show the concept, the diagram, the real Java code that implements it, and the running application. The goal is to prove two things: that we understand the object oriented concepts, and that we used them to build a real, working farm system.</aside>
 </section>
@@ -65,8 +65,8 @@
 <p style="font-size:28px;line-height:1.45;color:#4A5A50">The screen where you can see it work.</p>
 </div>
 </div>
-<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">New this week:</b> 3 sensor kinds and 4 actuator kinds, a repair flow for sensors, thermostat rules with a fan-heater interlock, and a Devices page.</p>
-<aside>Every chapter follows the same pattern: the concept, the diagram from our design, the real Java code that implements it with file and line numbers, and the running application. At the end we added the features built this week: new device kinds, sensor repair, thermostat rules and the Devices page.</aside>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">Added since:</b> new device kinds, sensor repair, thermostat rules with a fan-heater interlock, a Devices page, a device catalog, and one server for many customer farms.</p>
+<aside>Every chapter follows the same pattern: the concept, the diagram from our design, the real Java code that implements it with file and line numbers, and the running application. At the end we show what was added since: new device kinds, sensor repair, thermostat rules, the Devices page, a device catalog, and one server for many customer farms.</aside>
 </section>
 <section id="d1-problem" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:40px">
 <p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 1 · Problem statement</p>
@@ -91,13 +91,13 @@
 <div style="width:420px;display:flex;flex-direction:column;gap:24px">
 <p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">The running system</p>
 <h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">The live dashboard</h2>
-<p style="font-size:30px;line-height:1.45;color:#4A5A50">A vegetable bed, a chicken house and a greenhouse, refreshing every 4 seconds.</p>
-<p style="font-size:30px;line-height:1.45;color:#4A5A50">Each tile shows the value, how close it is to its rule, and how fresh it is.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">A vegetable bed, a chicken house and a greenhouse, refreshing every 4 seconds, with a one-sentence summary of the farm.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Today’s tasks, readings in range, alerts and machine starts, a 24-hour chart, and a farm map with the most stressed zones first.</p>
 </div>
 <div style="flex:1;background:#FBFCF9;border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 40px rgba(20,35,27,0.12)">
 <img src="images/dashboard.png" alt="Dashboard of the demo farm with sensor tiles and actuator controls" style="width:1150px;height:650px;object-fit:contain">
 </div>
-<aside>Here is the result: the live dashboard of a crop bed, a chicken house and a greenhouse, refreshing every four seconds. Each tile shows the latest value, a bar with the rule's threshold marks, and how fresh the value is.</aside>
+<aside>Here is the result: the live dashboard of a crop bed, a chicken house and a greenhouse, refreshing every four seconds. At the top, a summary sentence made by rules from the readings, the average temperature and the main values; then today's scheduled tasks, how many readings stayed in range, the alerts and machine starts compared with yesterday, and a farm map that puts the most stressed zones first.</aside>
 </section>
 <section id="d2-actors" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:40px">
 <p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 2 · Actors and permissions</p>
@@ -841,14 +841,123 @@
 </div>
 <aside>In the Farm Lab, virtual sensors and actuators talk to the server exactly like real ESP32 boards. The new Thermostat scenario sets the chicken house to 35 degrees on a normal day. The fan starts, and as soon as the house is back to 30 degrees the rule stops it, about ten seconds later and far before its two minute safety limit. The heater never starts. The scenario passes.</aside>
 </section>
+<section id="catalog" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">New · Device catalog</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">A model describes; a device is one real unit</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px">
+<div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:40px;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:64px;font-weight:700;line-height:1;color:#2F7D47">1</p>
+<h3 style="font-size:36px;font-weight:700">DeviceModel</h3>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">The catalog entry: “DHT22, 3.3 V, measures temperature and humidity”. Written once, used by every farm.</p>
+</div>
+<div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:40px;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:64px;font-weight:700;line-height:1;color:#2F7D47">2</p>
+<h3 style="font-size:36px;font-weight:700">FarmDevice</h3>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">One physical unit made from a model and placed in a zone: “House sensor 1”, with its serial number and notes.</p>
+</div>
+<div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:40px;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:64px;font-weight:700;line-height:1;color:#2F7D47">3</p>
+<h3 style="font-size:36px;font-weight:700">Sensor / Actuator</h3>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Its channels. A DHT22 gives two sensor channels; rules, schedules and the dashboard keep working with these.</p>
+</div>
+</div>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">New hardware is now <b style="color:#14231B">data, not code</b>: about 40 models are seeded, and a farm can add models only it sees. Each ESP32 board has its own key; only its SHA-256 is stored.</p>
+<aside>The device catalog separates the description of a product from the real unit on the farm. A DeviceModel says what a DHT22 is and what it measures; a FarmDevice is one real DHT22 in the chicken house; its channels are the same Sensor and Actuator classes the rules already use. So new hardware is added as data, without new code. About forty models are seeded, a farm can add models only it sees, and every ESP32 board has its own key, stored only as a hash.</aside>
+</section>
+<section id="catalog-app" data-transition="fade" style="background:#E4ECE5;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:440px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Live · Catalog</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Choose hardware from the catalog</h2>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Each model shows its drawing, what it measures, its voltage and price.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Shared models are kept by company staff; a farm’s own models are marked as such.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 40px rgba(20,35,27,0.12)">
+<img src="images/catalog.png" alt="Device catalog with sensor and actuator models" style="width:1130px;height:650px;object-fit:contain">
+</div>
+<aside>In the app, the catalog lists every model with its drawing, what it measures, its voltage and price. Shared models are kept by company staff, and a farm's own models are marked, and other farms never see them.</aside>
+</section>
+<section id="company" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">New · One server, many farms</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Each customer farm only ever sees its own data</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px">
+<div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:40px;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:64px;font-weight:700;line-height:1;color:#2F7D47">1</p>
+<h3 style="font-size:36px;font-weight:700">Farm accounts</h3>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Owner, worker and technician always work on their own farm, with the same roles as before.</p>
+</div>
+<div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:40px;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:64px;font-weight:700;line-height:1;color:#2F7D47">2</p>
+<h3 style="font-size:36px;font-weight:700">Company admin</h3>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Creates farms and invites each owner by a one-time link. Opening a farm, the admin acts as its owner.</p>
+</div>
+<div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:40px;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:64px;font-weight:700;line-height:1;color:#2F7D47">3</p>
+<h3 style="font-size:36px;font-weight:700">Company support</h3>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Only the farms they are assigned to, and only while the owner allows support; there they act as a technician.</p>
+</div>
+</div>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Every request knows the farm it works on, and every lookup goes through one class, <b style="color:#14231B">Tenancy</b>.</p>
+<aside>The system can now host many customer farms on one server. Farm accounts keep working exactly as before on their own farm. A company admin creates farms and invites the owner with a one time link, and acts as the owner when opening a farm. Support staff only reach the farms they are assigned to, and only while the owner allows it. Every request knows which farm it works on, and every lookup goes through one class: Tenancy.</aside>
+</section>
+<section id="company-code" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">One server, many farms · In the code</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Another farm’s data is simply “not found”</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:460px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">The sign-in check puts the request’s farm in <b style="color:#14231B">Tenancy</b>.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Services wrap every lookup: <b style="color:#14231B">tenancy.zone(…)</b>, <b style="color:#14231B">tenancy.sensor(…)</b>…</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">An id from another farm answers 404, so guessing ids reveals nothing. A test found one leak, a delete by id; it is fixed.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">service/Tenancy.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">46 </span>/**&#160;Something&#160;from&#160;another&#160;farm&#160;is&#160;answered&#160;as&#160;"not&#160;found"&#160;*/</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">47 </span>public&#160;&lt;T&gt;&#160;T&#160;check(T&#160;found,&#160;Long&#160;ownerFarmId,&#160;String&#160;what,&#160;Long&#160;id)&#160;{</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">48 </span>&#160;&#160;if&#160;(limited()&#160;&amp;&amp;&#160;!Objects.equals(CURRENT.get().farmId(),&#160;ownerFarmId))&#160;{</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">49 </span>&#160;&#160;&#160;&#160;throw&#160;new&#160;NotFoundException(what,&#160;id);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">50 </span>&#160;&#160;}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">51 </span>&#160;&#160;return&#160;found;</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">52 </span>}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span></p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">54 </span>public&#160;Zone&#160;zone(Zone&#160;z)&#160;{</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>&#160;&#160;return&#160;check(z,&#160;z.getFarm().getId(),&#160;"Zone",&#160;z.getId());</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span>}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">55 </span>public&#160;Sensor&#160;sensor(Sensor&#160;s)&#160;{&#160;...&#160;}</p>
+</div>
+</div>
+<aside>Here is the one method behind it. If the request works on a farm and the thing found belongs to another farm, the answer is not found, exactly as if it did not exist. Every service lookup goes through a small wrapper like zone or sensor. Our company flow test found one leak, a delete by id that skipped this check, and it is fixed.</aside>
+</section>
+<section id="company-app" data-transition="fade" style="background:#E4ECE5;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:440px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Live · Company</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">The company sees every farm at a glance</h2>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Farms that need attention come first, 20 at a time.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Open a farm to work on it, or invite its owner by link.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 40px rgba(20,35,27,0.12)">
+<img src="images/company.png" alt="Company page listing customer farms" style="width:1130px;height:650px;object-fit:contain">
+</div>
+<aside>The company page lists every customer farm, the ones needing attention first, twenty at a time. From here the admin opens a farm to work on it, or invites its owner.</aside>
+</section>
+<section id="zone-app" data-transition="fade" style="background:#E4ECE5;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:440px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Live · Zone page</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Every zone has its own page</h2>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Conditions, time in range, machines and alerts at the top.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Then a 24-hour chart per sensor, run time per machine, rules, devices and activity.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 40px rgba(20,35,27,0.12)">
+<img src="images/zone.png" alt="Zone page with live conditions, charts and machines" style="width:1130px;height:650px;object-fit:contain">
+</div>
+<aside>Each zone now has its own page: the current conditions, how much of the day it stayed in range, its machines and alerts at the top, then a twenty four hour chart per sensor, run time per machine, its rules, devices and activity. With thousands of zones, a search box finds one by name.</aside>
+</section>
 <section id="proof" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:48px">
 <p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Proof</p>
 <h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Every rule of the design has a test</h2>
 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px">
 <div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:40px;display:flex;flex-direction:column;gap:16px">
-<p style="font-size:120px;font-weight:700;line-height:1;color:#2F7D47">58</p>
+<p style="font-size:120px;font-weight:700;line-height:1;color:#2F7D47">73</p>
 <h3 style="font-size:36px;font-weight:700">automated tests</h3>
-<p style="font-size:28px;line-height:1.45;color:#4A5A50">Both state machines, rules and thermostat, interlock, conflict check, API flows, permissions, database upgrade.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">State machines, thermostat rules, interlock, permissions, farms kept apart, catalog, sign-ins kept over a restart.</p>
 </div>
 <div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:40px;display:flex;flex-direction:column;gap:16px">
 <p style="font-size:120px;font-weight:700;line-height:1;color:#2F7D47">34</p>
@@ -858,18 +967,18 @@
 <div style="background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:40px;display:flex;flex-direction:column;gap:16px">
 <p style="font-size:120px;font-weight:700;line-height:1;color:#2F7D47">17</p>
 <h3 style="font-size:36px;font-weight:700">farm scenarios</h3>
-<p style="font-size:28px;line-height:1.45;color:#4A5A50">Drought, heat wave, cold snap, thermostat, sensor repair, power cut… One known gap is recorded: a clogged pipe.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Drought, heat wave, cold snap, thermostat, sensor repair, clogged pipe, power cut… all 17 pass.</p>
 </div>
 </div>
-<aside>Finally, every rule of the design has a test. Fifty eight automated tests, a thirty four step browser walkthrough, and seventeen farm scenarios check that the code really follows the diagrams. One scenario is a known gap on purpose: a clogged pipe cannot be detected without a flow sensor.</aside>
+<aside>Finally, every rule of the design has a test. Seventy three automated tests, including farms kept apart and sign-ins that survive a restart, a thirty four step browser walkthrough, and seventeen farm scenarios check that the code really follows the diagrams. All seventeen pass, including the clogged pipe that used to be a known gap: when a pump run ends and the soil did not get wetter, an alert says to check the pump and the pipe.</aside>
 </section>
 <section id="summary" data-transition="fade" style="background:#14231B;color:#F1F5EF;font-family:'DM Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:center;gap:40px">
 <p style="font-size:28px;letter-spacing:4px;text-transform:uppercase;font-weight:700;color:#7DCB94">Summary</p>
 <h2 style="font-size:88px;font-weight:700;line-height:1.08;color:#F1F5EF">Design first, then code that follows it</h2>
 <p style="font-size:36px;line-height:1.4;color:#BFD3C4">Concepts → diagrams → classes and methods → tests → a farm system that works</p>
-<p style="font-size:30px;line-height:1.45;color:#BFD3C4">The new features followed the same path: a state machine for sensors, hysteresis and an interlock for rules, new kinds as subclasses.</p>
+<p style="font-size:30px;line-height:1.45;color:#BFD3C4">The new features followed the same path: a state machine for sensors, hysteresis and an interlock for rules, new kinds as subclasses, models apart from devices, one class that keeps farms apart.</p>
 <p style="position:absolute;left:128px;bottom:72px;width:1200px;font-size:24px;color:#7DCB94">github.com/RamekhCHHOENG/smart-farm-monitoring · Thank you</p>
-<aside>We designed first, and then wrote code that follows the design: every diagram became classes and methods, and every rule became a test. The features added this week followed the same path. Thank you.</aside>
+<aside>We designed first, and then wrote code that follows the design: every diagram became classes and methods, and every rule became a test. The features added later followed the same path, from the sensor state machine to keeping customer farms apart. Thank you.</aside>
 </section>
 </div>
 <div id="hud"></div>

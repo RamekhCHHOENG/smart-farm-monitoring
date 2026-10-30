@@ -8,7 +8,7 @@ In this presentation we walk through our eleven object oriented analysis and des
 
 ## 2. Each deliverable is shown four ways
 
-Every chapter follows the same pattern: the concept, the diagram from our design, the real Java code that implements it with file and line numbers, and the running application. At the end we added the features built this week: new device kinds, sensor repair, thermostat rules and the Devices page.
+Every chapter follows the same pattern: the concept, the diagram from our design, the real Java code that implements it with file and line numbers, and the running application. At the end we show what was added since: new device kinds, sensor repair, thermostat rules, the Devices page, a device catalog, and one server for many customer farms.
 
 ## 3. Farms are checked by hand, so problems are found too late
 
@@ -16,7 +16,7 @@ Small farms are still checked by hand, so problems like dry soil, heat stress or
 
 ## 4. The live dashboard
 
-Here is the result: the live dashboard of a crop bed, a chicken house and a greenhouse, refreshing every four seconds. Each tile shows the latest value, a bar with the rule's threshold marks, and how fresh the value is.
+Here is the result: the live dashboard of a crop bed, a chicken house and a greenhouse, refreshing every four seconds. At the top, a summary sentence made by rules from the readings, the average temperature and the main values; then today's scheduled tasks, how many readings stayed in range, the alerts and machine starts compared with yesterday, and a farm map that puts the most stressed zones first.
 
 ## 5. Three people and two external systems
 
@@ -154,10 +154,34 @@ Registering a device is now a full page: pick the zone, sensor or actuator, then
 
 In the Farm Lab, virtual sensors and actuators talk to the server exactly like real ESP32 boards. The new Thermostat scenario sets the chicken house to 35 degrees on a normal day. The fan starts, and as soon as the house is back to 30 degrees the rule stops it, about ten seconds later and far before its two minute safety limit. The heater never starts. The scenario passes.
 
-## 39. Every rule of the design has a test
+## 39. A model describes; a device is one real unit
 
-Finally, every rule of the design has a test. Fifty eight automated tests, a thirty four step browser walkthrough, and seventeen farm scenarios check that the code really follows the diagrams. One scenario is a known gap on purpose: a clogged pipe cannot be detected without a flow sensor.
+The device catalog separates the description of a product from the real unit on the farm. A DeviceModel says what a DHT22 is and what it measures; a FarmDevice is one real DHT22 in the chicken house; its channels are the same Sensor and Actuator classes the rules already use. So new hardware is added as data, without new code. About forty models are seeded, a farm can add models only it sees, and every ESP32 board has its own key, stored only as a hash.
 
-## 40. Design first, then code that follows it
+## 40. Choose hardware from the catalog
 
-We designed first, and then wrote code that follows the design: every diagram became classes and methods, and every rule became a test. The features added this week followed the same path. Thank you.
+In the app, the catalog lists every model with its drawing, what it measures, its voltage and price. Shared models are kept by company staff, and a farm's own models are marked, and other farms never see them.
+
+## 41. Each customer farm only ever sees its own data
+
+The system can now host many customer farms on one server. Farm accounts keep working exactly as before on their own farm. A company admin creates farms and invites the owner with a one time link, and acts as the owner when opening a farm. Support staff only reach the farms they are assigned to, and only while the owner allows it. Every request knows which farm it works on, and every lookup goes through one class: Tenancy.
+
+## 42. Another farm’s data is simply “not found”
+
+Here is the one method behind it. If the request works on a farm and the thing found belongs to another farm, the answer is not found, exactly as if it did not exist. Every service lookup goes through a small wrapper like zone or sensor. Our company flow test found one leak, a delete by id that skipped this check, and it is fixed.
+
+## 43. The company sees every farm at a glance
+
+The company page lists every customer farm, the ones needing attention first, twenty at a time. From here the admin opens a farm to work on it, or invites its owner.
+
+## 44. Every zone has its own page
+
+Each zone now has its own page: the current conditions, how much of the day it stayed in range, its machines and alerts at the top, then a twenty four hour chart per sensor, run time per machine, its rules, devices and activity. With thousands of zones, a search box finds one by name.
+
+## 45. Every rule of the design has a test
+
+Finally, every rule of the design has a test. Seventy three automated tests, including farms kept apart and sign-ins that survive a restart, a thirty four step browser walkthrough, and seventeen farm scenarios check that the code really follows the diagrams. All seventeen pass, including the clogged pipe that used to be a known gap: when a pump run ends and the soil did not get wetter, an alert says to check the pump and the pipe.
+
+## 46. Design first, then code that follows it
+
+We designed first, and then wrote code that follows the design: every diagram became classes and methods, and every rule became a test. The features added later followed the same path, from the sensor state machine to keeping customer farms apart. Thank you.
