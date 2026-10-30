@@ -37,3 +37,6 @@ Thumbs.db
 
 # --- Firmware build output (arduino-cli / Wokwi for VS Code) ---
 firmware/esp32-node/build/
+
+# UAT owner passwords written by scripts/seed-uat.py
+uat-credentials.txt
