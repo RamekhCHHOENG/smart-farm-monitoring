@@ -1,10 +1,10 @@
-// Records "From OOAD design to a working app": one chapter per midterm deliverable (D1-D11).
+// Records "OOAD in practice": the analysis and design deliverables (D1-D11) and the working app built from them.
 // Each chapter shows the concept, the diagram, the real code that implements it (read from the
 // source files at recording time, with real line numbers) and, where possible, the running app.
 // Run against the demo farm on a FRESH database, while both servers run:
 //   PW=<demo password> KEY=<device key> OUT=<folder> DIAGRAMS=<folder with the PlantUML PNGs> \
 //   [KOKORO="<python> scripts/tts_server.py <model.onnx> <voices.npz> af_heart"] \
-//   node scripts/record-oop-video.mjs
+//   node scripts/record-ooad-video.mjs
 // Then: node scripts/make-demo-video.mjs <OUT> <video.mp4>
 // Render the diagrams first: java -jar plantuml.jar -tpng -Sdpi=130 -o <DIAGRAMS> docs/diagrams/0*.puml
 import { chromium } from "playwright";
@@ -16,7 +16,7 @@ import path from "node:path";
 const BASE = "http://localhost:3000";
 const PW = process.env.PW;
 const KEY = process.env.KEY;
-const OUT = process.env.OUT ?? "oop-video";
+const OUT = process.env.OUT ?? "ooad-video";
 const DIAGRAMS = process.env.DIAGRAMS ?? "diagrams";
 const SRC = "backend/src/main/java/com/smartfarm";
 const TEST = "backend/src/test/java/com/smartfarm";
@@ -168,17 +168,24 @@ async function code(page, kicker, title, points, snip) {
 
 // =====================================================================================
 let { ctx, page } = await newScene("title");
-await card(page, "OOAD Final Project · Group 1", "From OOAD design to a working app", [
+await card(page, "Object-Oriented Analysis and Design · Group 1", "OOAD in practice: from analysis to a working app", [
   "Smart Farm Monitoring System",
-  "Eleven deliverables, each shown as concept, diagram, real code and running app",
+  "Eleven OOAD deliverables, each shown as concept, model, real code and running app",
 ]);
-await say(page, "", "In this video we walk through our eleven object oriented analysis and design deliverables. For each one we show the concept, the diagram, the real Java code that implements it, and the running application.", 6000);
-await say(page, "", "The goal is to prove two things: that we understand the object oriented concepts, and that we used them to build a real, working farm system.", 4000);
+await say(page, "", "This video walks through our eleven object oriented analysis and design deliverables, and the working farm system we built from them.", 6000);
+await say(page, "", "The goal is to show that we can analyse a real problem, design it with objects, and then build software that follows the design.", 4500);
+await info(page, "The OOAD process we followed", "Analysis → Design → Implementation → Verification", table(["Phase", "Question it answers", "Deliverables"], [
+  ["<b>Analysis</b>", "What must the system do, and for whom?", "D1 Problem · D2 Actors · D3 Requirements · D4 Use cases · D5 Domain model"],
+  ["<b>Design</b>", "Which objects do the work, and how do they collaborate?", "D6 Class diagram · D7 Sequence · D8 Activity · D9 State machine · D10 GRASP · D11 SOLID"],
+  ["<b>Implementation</b>", "Does the code follow the design?", "Java Spring Boot backend, Nuxt frontend, ESP32 firmware"],
+  ["<b>Verification</b>", "Does it really work?", "31 tests · 34-step walkthrough · 11 farm scenarios"],
+], ["190px", "360px"]));
+await say(page, "The OOAD process", "We followed the OOAD process. Analysis answers what the system must do and for whom: deliverables one to five. Design answers which objects do the work and how they collaborate: deliverables six to eleven. Then we implemented the design and verified it with tests.", 6000);
 await ctx.close();
 
 // ---------- D1 ----------
 ({ ctx, page } = await newScene("d1-problem"));
-await info(page, "Deliverable 1", "Problem statement", table(["", ""], [
+await info(page, "Analysis · Deliverable 1", "Problem statement", table(["", ""], [
   ["<b>Problem</b>", "Small farms in Cambodia are checked by hand. Dry soil, heat stress in a chicken house or an empty feeder are found too late: crop loss, sick animals, wasted water and feed, long hours."],
   ["<b>Solution</b>", "Sensors in crop beds and chicken houses; rules that start pumps, fans and feeders automatically; alerts to farm staff; schedules; reports."],
   ["<b>Core value</b>", "Faster response (seconds, not hours) · fewer losses · lower workload · decisions based on data"],
@@ -191,7 +198,7 @@ await ctx.close();
 
 // ---------- D2 ----------
 ({ ctx, page } = await newScene("d2-actors"));
-await info(page, "Deliverable 2", "Actors and permissions", table(["Actor", "Type", "Can do"], [
+await info(page, "Analysis · Deliverable 2", "Actors and permissions", table(["Actor", "Type", "Can do"], [
   ["Farm Owner", "Primary", "Everything on the farm: zones, rules, schedules, staff accounts"],
   ["Farm Worker", "Primary", "Watch the dashboard, start and stop devices, acknowledge alerts"],
   ["Technician", "Supporting", "Register devices, report faults, repair or decommission them"],
@@ -199,7 +206,7 @@ await info(page, "Deliverable 2", "Actors and permissions", table(["Actor", "Typ
   ["Notification Service", "External system", "Deliver alerts (console or Telegram)"],
 ], ["190px", "160px"]));
 await say(page, "Deliverable 2 · Actors", "We identified five actors: three people, the farm owner, worker and technician, and two external systems, the sensor device and the notification service.", 6500);
-await code(page, "Deliverable 2 · In the code", "Permissions are checked on the server", [
+await code(page, "Analysis · Deliverable 2 · In the code", "Permissions are checked on the server", [
   "Every write operation calls <b>AccessPolicy.require</b> with the roles allowed to do it.",
   "The owner always passes; other roles only get what the permissions table gives them.",
   "Hiding a button in the UI is never the only protection.",
@@ -213,7 +220,7 @@ await ctx.close();
 
 // ---------- D3 ----------
 ({ ctx, page } = await newScene("d3-requirements"));
-await info(page, "Deliverable 3", "Functional requirements, each one a screen or a service", table(["ID", "Requirement", "Where in the app"], [
+await info(page, "Analysis · Deliverable 3", "Functional requirements, each one a screen or a service", table(["ID", "Requirement", "Where in the app"], [
   ["FR-01", "Farm and zones (crop, poultry)", "Zones & devices · FarmService"],
   ["FR-02", "Register, rename, remove devices", "Zones & devices · FarmService"],
   ["FR-03", "Receive and validate readings", "ReadingController · MonitoringService"],
@@ -241,10 +248,10 @@ await ctx.close();
 
 // ---------- D4 ----------
 ({ ctx, page } = await newScene("d4-use-cases"));
-await diagram(page, "Deliverable 4", "Use case diagram", "use-case.png",
+await diagram(page, "Analysis · Deliverable 4", "Use case diagram", "use-case.png",
   "Eleven use cases for five actors.<br><br><b>«include»</b>: every reading is evaluated against the rules; every manual action is logged.<br><br><b>«extend»</b>: an alert is sent only when a threshold is breached.");
 await say(page, "Deliverable 4 · Use cases", "The use case diagram shows eleven use cases. Submit sensor reading always includes evaluate rules, and send alert extends it only when a threshold is breached.", 7500);
-await code(page, "Deliverable 4 · In the code", "Use case 3: Submit Sensor Reading", [
+await code(page, "Analysis · Deliverable 4 · In the code", "Use case 3: Submit Sensor Reading", [
   "The device's request arrives at <b>ReadingController</b> (the use case's entry point).",
   "«include» Evaluate Rules: the loop over every active rule always runs.",
   "«extend» Send Alert: only inside <b>if (rule.isTriggered(...))</b>.",
@@ -254,10 +261,10 @@ await ctx.close();
 
 // ---------- D5 ----------
 ({ ctx, page } = await newScene("d5-domain"));
-await diagram(page, "Deliverable 5", "Conceptual domain model", "domain-model.png",
-  "Ten domain classes with associations and multiplicities.<br><br>A farm contains zones; a zone has sensors and actuators; a sensor produces readings.<br><br>Multiplicity 0..* lets a zone exist before its devices are installed.");
-await say(page, "Deliverable 5 · Domain model", "The domain model has ten classes. A farm contains zones, a zone has sensors and actuators, and a sensor produces readings.", 6500);
-await code(page, "Deliverable 5 · In the code", "Composition: a zone owns its devices", [
+await diagram(page, "Analysis · Deliverable 5", "Conceptual domain model", "domain-model.png",
+  "Analysis model: real-world concepts, not code yet. Ten classes with associations and multiplicities.<br><br>A farm contains zones; a zone has sensors and actuators; a sensor produces readings.<br><br>Multiplicity 0..* lets a zone exist before its devices are installed.");
+await say(page, "Deliverable 5 · Domain model", "The domain model ends the analysis. It shows the concepts of the farm, not software yet: a farm contains zones, a zone has sensors and actuators, and a sensor produces readings.", 6500);
+await code(page, "Analysis · Deliverable 5 · In the code", "Composition: a zone owns its devices", [
   "<b>Zone ◆── Sensor</b> and <b>Zone ◆── Actuator</b> are compositions.",
   "<b>cascade = ALL</b> and <b>orphanRemoval</b>: deleting a zone deletes its devices, readings, rules and schedules.",
   "Multiplicity 0..* is a List that may be empty.",
@@ -267,28 +274,28 @@ await ctx.close();
 
 // ---------- D6 ----------
 ({ ctx, page } = await newScene("d6-class-diagram"));
-await diagram(page, "Deliverable 6", "Design class diagram", "class-diagram.png",
-  "Attributes, methods and the relationships we use: association, composition, inheritance, interface realization and dependency.<br><br>Next: the four OOP pillars in the real code.");
-await say(page, "Deliverable 6 · Class diagram", "The design class diagram adds attributes, methods, and five kinds of relationship. Now let's see the four pillars of object oriented programming in the real code.", 7000);
-await code(page, "OOP pillar 1 · Encapsulation", "The actuator protects its own state", [
+await diagram(page, "Design · Deliverable 6", "Design class diagram", "class-diagram.png",
+  "Design moves from concepts to software classes: attributes, methods and five kinds of relationship.<br><br>It applies the four object-oriented design principles; next, each one in the real code.");
+await say(page, "Deliverable 6 · Class diagram", "Design starts here. The design class diagram turns the domain concepts into software classes, with attributes, methods and five kinds of relationship. It applies four object oriented design principles. Let's see each one in the code.", 7000);
+await code(page, "Design · Deliverable 6 · OO principle: Encapsulation", "The actuator protects its own state", [
   "<b>status</b> is private. Nobody can set it directly.",
   "The only way to change it is through methods like <b>activate</b>, which check the rules first.",
   "A pump can never be started twice, or longer than its safety limit.",
 ], snippet(`${SRC}/domain/Actuator.java`, "public boolean activate(int durationMin", 18, ["if (status != ActuatorStatus.IDLE", "status = ActuatorStatus.RUNNING", "status = ActuatorStatus.IDLE"]));
 await say(page, "Encapsulation", "Encapsulation: the actuator's status is private. It only changes through methods like activate, which first check that the actuator is idle and the duration is within its safety limit.", 7500);
-await code(page, "OOP pillar 2 · Abstraction", "Sensor says what every sensor must do, not how", [
+await code(page, "Design · Deliverable 6 · OO principle: Abstraction", "Sensor says what every sensor must do, not how", [
   "<b>Sensor</b> is an <b>abstract class</b>.",
   "Services only know these methods: unit, valid range, which actuator corrects it.",
   "Each concrete sensor fills in the details.",
 ], snippet(`${SRC}/domain/Sensor.java`, "public abstract SensorType getType()", 16, ["public abstract"]));
 await say(page, "Abstraction", "Abstraction: Sensor is an abstract class. It declares what every sensor must provide, like its unit and valid range, without saying how.", 6500);
-await code(page, "OOP pillar 3 · Inheritance", "A soil moisture sensor IS-A sensor", [
+await code(page, "Design · Deliverable 6 · OO principle: Inheritance", "A soil moisture sensor IS-A sensor", [
   "<b>SoilMoistureSensor extends Sensor</b> and inherits recording, validation and offline detection.",
   "It only adds what is specific: percent, 0 to 100, corrected by the water pump.",
   "Same for TemperatureSensor, FeedLevelSensor, and WaterPump, Fan, Feeder.",
 ], snippet(`${SRC}/domain/SoilMoistureSensor.java`, "public class SoilMoistureSensor extends Sensor", 24, ["extends Sensor", "@Override"]));
 await say(page, "Inheritance", "Inheritance: the soil moisture sensor extends Sensor. It inherits recording and validation, and only adds what is special about soil: percent, zero to one hundred, and the water pump that corrects it.", 8000);
-await code(page, "OOP pillar 4 · Polymorphism", "One call, different behaviour per zone", [
+await code(page, "Design · Deliverable 6 · OO principle: Polymorphism", "One call, different behaviour per zone", [
   "<b>zone.createDefaultRules()</b> is one call.",
   "A <b>CropZone</b> answers with a dry-soil rule for the pump; a <b>PoultryZone</b> with heat and feed rules.",
   "The service never asks which kind of zone it has.",
@@ -302,10 +309,10 @@ await ctx.close();
 
 // ---------- D7 ----------
 ({ ctx, page } = await newScene("d7-sequence"));
-await diagram(page, "Deliverable 7", "Sequence diagram: Submit Sensor Reading", "sequence.png",
+await diagram(page, "Design · Deliverable 7", "Sequence diagram: Submit Sensor Reading", "sequence.png",
   "Device → ReadingController → MonitoringService → Sensor → rules → Actuator → AlertService → NotificationService.<br><br>loop over the rules, alt when the actuator refuses.");
 await say(page, "Deliverable 7 · Sequence", "The sequence diagram follows one reading: from the device, through the controller and the monitoring service, to the sensor, the rules, the actuator and the alert.", 7000);
-await code(page, "Deliverable 7 · In the code", "Each message is a method call", [
+await code(page, "Design · Deliverable 7 · In the code", "Each message is a method call", [
   "<b>rule.getActuator()</b>, <b>actuator.activate(...)</b> and <b>alertService.raise(...)</b> are the arrows of the diagram.",
   "<b>alt</b>: if the actuator refuses, the alert becomes <b>CRITICAL</b>.",
 ], snippet(`${SRC}/service/MonitoringService.java`, "private String respond(AutomationRule rule", 25, ["rule.getActuator()", "actuator.activate(", "Severity.CRITICAL", "alertService.raise("]));
@@ -326,10 +333,10 @@ await ctx.close();
 
 // ---------- D8 ----------
 ({ ctx, page } = await newScene("d8-activity"));
-await diagram(page, "Deliverable 8", "Activity diagram: automated monitoring and response", "activity.png",
+await diagram(page, "Design · Deliverable 8", "Activity diagram: automated monitoring and response", "activity.png",
   "Decision <b>[valid?]</b>: an impossible value is rejected and the sensor marked suspect.<br><br><b>Fork</b>: the actuator acts and the alert is sent in parallel.");
 await say(page, "Deliverable 8 · Activity", "The activity diagram shows the whole workflow. First a decision: is the reading valid? Then a fork: the actuator acts while the alert is sent.", 7000);
-await code(page, "Deliverable 8 · In the code", "The [valid?] decision", [
+await code(page, "Design · Deliverable 8 · In the code", "The [valid?] decision", [
   "<b>sensor.isValid(value)</b> is the decision node.",
   "No: mark the sensor suspect and answer HTTP 422; nothing else happens.",
   "Yes: record the reading and evaluate the rules.",
@@ -350,10 +357,10 @@ await ctx.close();
 
 // ---------- D9 ----------
 ({ ctx, page } = await newScene("d9-state-machine"));
-await diagram(page, "Deliverable 9", "State machine: the actuator lifecycle", "state-machine.png",
+await diagram(page, "Design · Deliverable 9", "State machine: the actuator lifecycle", "state-machine.png",
   "Six states: IDLE, RUNNING, FAULT, OFFLINE, MAINTENANCE, DECOMMISSIONED.<br><br>Each transition is a method that first checks the current state. A wrong transition is refused with HTTP 409.");
 await say(page, "Deliverable 9 · State machine", "The state machine gives the actuator six states. Every transition in the diagram is a method in the code.", 6000);
-await code(page, "Deliverable 9 · In the code", "Guarded transitions", [
+await code(page, "Design · Deliverable 9 · In the code", "Guarded transitions", [
   "Each method lists the states it may start from, like the arrows of the diagram.",
   "<b>require(...)</b> throws when the transition is not allowed; the API answers 409 Conflict.",
   "A broken pump can never jump back to IDLE.",
@@ -377,18 +384,18 @@ await ctx.close();
 
 // ---------- D10 ----------
 ({ ctx, page } = await newScene("d10-grasp"));
-await code(page, "Deliverable 10 · GRASP", "Information Expert", [
+await code(page, "Design · Deliverable 10 · GRASP", "Information Expert", [
   "Give the job to the class that has the information.",
   "The <b>rule</b> owns condition, threshold and cooldown, so the rule decides whether a reading triggers it.",
   "The <b>sensor</b> knows its range, so <b>Sensor.isValid</b> decides validity.",
 ], snippet(`${SRC}/domain/AutomationRule.java`, "public boolean isTriggered(SensorReading reading", 16, ["public boolean isTriggered", "case ABOVE", "case BELOW", "isCoolingDown"]));
 await say(page, "GRASP · Information Expert", "Information expert: the class that has the information does the work. The rule owns its condition, threshold and cooldown, so the rule decides if a reading triggers it.", 7500);
-await code(page, "Deliverable 10 · GRASP", "Creator", [
+await code(page, "Design · Deliverable 10 · GRASP", "Creator", [
   "A class creates the objects it contains or records.",
   "<b>Farm</b> creates its zones, <b>Zone</b> creates its sensors, and <b>Sensor.record</b> creates the <b>SensorReading</b>.",
 ], snippet(`${SRC}/domain/Sensor.java`, "/** GRASP Creator", 11, ["public SensorReading record", "new SensorReading(this, value, at)"]));
 await say(page, "GRASP · Creator", "Creator: a sensor produces readings, so the sensor creates the sensor reading object, after validating the value.", 6000);
-await code(page, "Deliverable 10 · GRASP", "Controller, Low Coupling, High Cohesion", [
+await code(page, "Design · Deliverable 10 · GRASP", "Controller, Low Coupling, High Cohesion", [
   "<b>Controller</b>: ReadingController receives the device's system event and delegates; it holds no farm logic.",
   "<b>Low coupling</b>: the device only knows one endpoint.",
   "<b>High cohesion</b>: each service has one focused job.",
@@ -398,7 +405,7 @@ await ctx.close();
 
 // ---------- D11 ----------
 ({ ctx, page } = await newScene("d11-solid"));
-await info(page, "Deliverable 11 · SOLID", "Single Responsibility Principle", table(["Class", "Its one job"], [
+await info(page, "Design · Deliverable 11 · SOLID", "Single Responsibility Principle", table(["Class", "Its one job"], [
   ["AutomationRule", "Decide whether a reading breaks the rule"],
   ["Actuator", "Act, and guard its own state"],
   ["MonitoringService", "Run the workflow for one reading"],
@@ -407,13 +414,13 @@ await info(page, "Deliverable 11 · SOLID", "Single Responsibility Principle", t
   ["Repositories", "Store and load"],
 ], ["260px"]));
 await say(page, "SOLID · Single Responsibility", "Single responsibility: every class has one reason to change. The rule decides, the actuator acts, the alert service alerts, and repositories store.", 7000);
-await code(page, "Deliverable 11 · SOLID", "Open/Closed Principle", [
+await code(page, "Design · Deliverable 11 · SOLID", "Open/Closed Principle", [
   "Open for extension: a new zone kind (a fish pond) is a new subclass of <b>Zone</b>.",
   "Closed for modification: the services work with the abstract <b>Zone</b> and do not change.",
   "Honest limit: the small <b>create</b> factory still needs one new line.",
 ], snippet(`${SRC}/domain/CropZone.java`, "public class CropZone extends Zone", 14, ["extends Zone", "super(farm, name)"]));
 await say(page, "SOLID · Open Closed", "Open closed: to add a fish pond, we add a subclass of zone. The services that use zone do not change.", 5500);
-await code(page, "Deliverable 11 · SOLID", "Dependency Inversion Principle", [
+await code(page, "Design · Deliverable 11 · SOLID", "Dependency Inversion Principle", [
   "<b>AlertService</b> depends on the <b>NotificationService</b> interface, never on Telegram.",
   "<b>ConsoleNotifier</b> and <b>TelegramNotifier</b> implement it.",
   "Choosing one is configuration (AppConfig), not a code change.",
@@ -423,7 +430,7 @@ const logFile = process.env.BACKEND_LOG;
 if (logFile && fs.existsSync(logFile)) {
   const alerts = fs.readFileSync(logFile, "utf8").split("\n").filter((l) => l.includes("[ALERT")).slice(-6)
     .map((l) => l.replace(/^.*ConsoleNotifier\s*:\s*/, ""));
-  await page.setContent(shell(`${head("Deliverable 11 · Live", "ConsoleNotifier output from the running server")}
+  await page.setContent(shell(`${head("Design · Deliverable 11 · Live", "ConsoleNotifier output from the running server")}
     <div style="flex:1;background:#0B140F;border-radius:14px;padding:16px;font:14px/1.7 'Geist Mono',monospace;color:#B9F6CA;overflow:hidden">
     ${alerts.map((a) => `<div>${esc(a)}</div>`).join("")}</div>`));
   await say(page, "Live: the interface at work", "These lines were written by the console notifier while we recorded this video. Set a Telegram token, and the same alerts go to staff phones instead.", 6500);
@@ -438,11 +445,12 @@ await code(page, "Proof", "Every rule of the design has a test", [
   "<b>11</b> farm scenarios in the Farm Lab: 10 pass, 1 known gap recorded.",
 ], snippet(`${TEST}/domain/ActuatorStateMachineTest.java`, "@Test", 26, ["void "]));
 await say(page, "Proof", "Finally, every rule of the design has a test. Thirty one automated tests, a thirty four step browser walkthrough, and eleven farm scenarios check that the code really follows the diagrams.", 7500);
-await card(page, "Summary", "Design first, then code that follows it", [
-  "Concepts → diagrams → classes and methods → tests → a farm system that works",
+await card(page, "Summary", "Analysis → Design → Code → Tests", [
+  "Analysis told us what to build; design told us how the objects work together",
+  "Every model became classes and methods, and every rule became a test",
   "github.com/RamekhCHHOENG/smart-farm-monitoring",
 ]);
-await say(page, "", "We designed first, and then wrote code that follows the design: every diagram became classes and methods, and every rule became a test. Thank you for watching.", 6000);
+await say(page, "", "Analysis told us what to build, and design told us how the objects work together. Every model became classes and methods, and every rule became a test. That is object oriented analysis and design in practice. Thank you for watching.", 6000);
 await ctx.close();
 
 kokoro?.close();
