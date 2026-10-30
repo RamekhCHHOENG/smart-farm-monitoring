@@ -12,7 +12,8 @@ node "Web server" {
 
 node "Application server (Java 21)" {
   component "REST controllers\n+ AuthInterceptor" as Web
-  component "Services\n(Monitoring, Actuator, Rule,\nTask, Alert, Auth)" as Svc
+  component "FarmAccessResolver\n+ Tenancy (one farm per request)" as Ten
+  component "Services\n(Monitoring, Actuator, Rule, Task,\nAlert, Auth, Company, Invite)" as Svc
   component "Domain model\n(entities, state machine)" as Dom
   component "Spring Data JPA\nrepositories" as Repo
   component "AutomationScheduler\n(every 10 s)" as Sched
@@ -28,10 +29,12 @@ node "Farm zone" {
 
 cloud "Telegram Bot API" as TG
 
-SPA --> Proxy : HTTPS, Bearer token
+SPA --> Proxy : HTTPS, Bearer token\n+ X-Farm-Id (company staff)
 Proxy --> Web : HTTP /api/**
-ESP --> Web : HTTP X-Device-Key\nPOST readings, GET relay state
+ESP --> Web : HTTP X-Device-Key (own key per board)\nPOST readings, GET relay state
 Sim --> Svc : processReading()
+Web --> Ten : farm + role
+Ten --> Svc : limits every lookup
 Web --> Svc
 Sched --> Svc
 Svc --> Dom

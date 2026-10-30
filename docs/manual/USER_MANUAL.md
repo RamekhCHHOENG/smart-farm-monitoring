@@ -1,6 +1,6 @@
 # Smart Farm Monitoring System - User Manual
 
-For Farm Owners, Farm Workers and Technicians. Screens show the demo farm.
+For Farm Owners, Farm Workers, Technicians and Smart Farm company staff. Screens show the demo farm and the customer farms of the test setup.
 
 ## 1. About this manual
 
@@ -11,6 +11,8 @@ This manual explains how to use the Smart Farm Monitoring System day to day. It 
 | Farm Owner | Sets up the farm and zones, decides the automation rules and schedules, manages staff accounts, reads reports. Can also do everything the others can. | All |
 | Farm Worker | Watches the dashboard, starts and stops pumps, fans and feeders, and acknowledges alerts after checking the zone. | 2, 3, 7, 8, 9 |
 | Technician | Registers sensors and actuators, reports faults and repairs devices, tests devices and farm scenarios in the Farm Lab. | 2, 4, 7, 9 |
+| Company Admin (Smart Farm) | Creates customer farms, invites owners and company staff, opens any farm as its owner, keeps the shared device catalog. | 2, 11 |
+| Company Support (Smart Farm) | Opens only the farms assigned to them, as a technician, while the owner allows support. | 2, 11 |
 
 Words such as **zone**, **sensor**, **actuator** and **threshold** are explained in the Glossary at the end.
 
@@ -30,10 +32,23 @@ If the username or password is wrong, the page says so. For safety it does not t
 ![Wrong username or password](screens/02-sign-in-wrong-password.png)
 *Figure 2. Wrong username or password*
 
-If you were signed in and the server restarted, or you were away for more than 12 hours, you are asked to sign in again. Nothing you saved is lost.
+You stay signed in for 12 hours, even if the server restarts in the meantime. After that, or if an owner or admin resets your password, you are asked to sign in again. Nothing you saved is lost.
 
 ![Your session ended: sign in again](screens/03-session-ended.png)
 *Figure 3. Your session ended: sign in again*
+
+### 2.1b Your first sign-in: the invite link
+
+New farm owners and new company staff do not get a password from anyone. Smart Farm sends a **one-time link** (by Telegram or SMS) that is valid for **7 days**.
+
+1. Open the link. It greets you by name and shows your username and your farm.
+2. Type a new password of at least 8 characters, type it again, and click **Set password and sign in**.
+3. You are signed in. The link now stops working, so nobody else can use it.
+
+![Set your password from the invite link](screens/39-invite-page.png)
+*Figure 4. Set your password from the invite link*
+
+If the page says **This link no longer works**, it was already used or is older than 7 days. Ask Smart Farm for a new link; the old one then stays invalid.
 
 ### 2.2 Change your password
 
@@ -44,7 +59,7 @@ Do this the first time you sign in with the password the server generated.
 3. Click **Change password**. Use the new password from the next sign-in.
 
 ![Change password](screens/15-change-password-dialog.png)
-*Figure 4. Change password*
+*Figure 5. Change password*
 
 ### 2.3 Moving around
 
@@ -56,14 +71,14 @@ Do this the first time you sign in with the password the server generated.
 - **Log out** signs you out on this device.
 
 ![Dark mode](screens/16-dashboard-dark-mode.png)
-*Figure 5. Dark mode*
+*Figure 6. Dark mode*
 
 ### 2.4 Khmer or English
 
 Click the **language button** at the top right (it shows the word Khmer in Khmer script; it is also on the sign-in page) to show the menus, dashboard, alerts and history in Khmer. Click it again (it then shows **EN**) to go back to English. Each phone or computer remembers its own choice.
 
 ![The dashboard in Khmer](screens/27-dashboard-khmer.png)
-*Figure 6. The dashboard in Khmer*
+*Figure 7. The dashboard in Khmer*
 
 > **Note:** Names you type (farm, zones, devices) and alert messages from the server stay as they were written. The setup forms for owners and technicians are in English.
 
@@ -72,7 +87,7 @@ Click the **language button** at the top right (it shows the word Khmer in Khmer
 The dashboard is the home page. It refreshes by itself every 4 seconds, so you can leave it open on a screen in the farm office.
 
 ![Dashboard of the Farm Owner](screens/04-dashboard-owner.png)
-*Figure 7. Dashboard of the Farm Owner*
+*Figure 8. Dashboard of the Farm Owner*
 
 ### 3.1 Reading the dashboard
 
@@ -94,12 +109,12 @@ The four cards at the top are also links: click **Open alerts** to go to the ale
 4. To stop it early, click **Stop**. If you do nothing, it switches off by itself when the time is up.
 
 ![Dashboard of the Farm Worker](screens/17-dashboard-worker.png)
-*Figure 8. Dashboard of the Farm Worker*
+*Figure 9. Dashboard of the Farm Worker*
 
 If the minutes are empty or above the safety limit, a red message appears right under the button and nothing starts.
 
 ![The minutes must be within the safety limit](screens/18-worker-wrong-minutes-message.png)
-*Figure 9. The minutes must be within the safety limit*
+*Figure 10. The minutes must be within the safety limit*
 
 > **Note:** A device in FAULT, OFFLINE or MAINTENANCE cannot be started. Ask the technician.
 
@@ -108,7 +123,7 @@ If the minutes are empty or above the safety limit, a red message appears right 
 When something CRITICAL happens (for example a pump reports a fault, or a rule wanted to start a fan that could not start), a **red banner** appears at the top of every page, also right after you sign in. Click **Alerts** to go to the list, or **×** to hide the banner.
 
 ![A critical alert shows on every page](screens/28-critical-banner.png)
-*Figure 10. A critical alert shows on every page*
+*Figure 11. A critical alert shows on every page*
 
 To also hear a **beep** and get a **pop-up** from the browser, click the **bell icon** at the top (on a phone: More → Alert sound) and allow notifications when the browser asks. Leave the app open in a tab; it checks every 8 seconds.
 
@@ -117,14 +132,19 @@ To also hear a **beep** and get a **pop-up** from the browser, click the **bell 
 A **zone** is one area of the farm, such as a vegetable bed or a chicken house. Each zone has **sensors** (they measure) and **actuators** (they act).
 
 ![Zones & devices (Farm Owner)](screens/05-zones-and-devices.png)
-*Figure 11. Zones & devices (Farm Owner)*
+*Figure 12. Zones & devices (Farm Owner)*
 
 ### 4.1 Farm name and location (Owner)
 
 Click **Farm settings**, change the name or location, and click **Save**. The dashboard title changes at once.
 
 ![Farm settings](screens/06-farm-settings-dialog.png)
-*Figure 12. Farm settings*
+*Figure 13. Farm settings*
+
+The same window has **Allow Smart Farm support to open this farm**. When it is ticked, support staff assigned to your farm can check devices and fix problems from a distance; everything they do appears in the activity log under their name. Untick it and click **Save** to switch their access off at once.
+
+![Farm settings with the support option](screens/41-farm-settings-support.png)
+*Figure 14. Farm settings with the support option (Farm Owner)*
 
 ### 4.2 Add a zone (Owner)
 
@@ -134,7 +154,7 @@ Click **Farm settings**, change the name or location, and click **Save**. The da
 4. Click **Save**.
 
 ![New zone](screens/07-new-zone-dialog.png)
-*Figure 13. New zone*
+*Figure 15. New zone*
 
 **Default rules** creates the usual rules for the zone type in one click: a crop zone waters dry soil, a poultry zone cools a hot house and refills the feeder. When the zone also has a heater, mister, light or tank valve with its matching sensor, the rules for those are added too (cold house heats, dry air mists, dark switches the light on, low tank opens the valve). **Edit** renames a zone; the **bin icon** deletes it.
 
@@ -149,10 +169,10 @@ Click **Farm settings**, change the name or location, and click **Save**. The da
 5. Click **Register**. The device appears in the table with a **#number**. Write it down: the ESP32 needs it.
 
 ![Register a device](screens/08-register-device-dialog.png)
-*Figure 14. Register a device*
+*Figure 16. Register a device*
 
 ![Zones & devices (Technician)](screens/21-zones-technician.png)
-*Figure 15. Zones & devices (Technician)*
+*Figure 17. Zones & devices (Technician)*
 
 ### 4.3b The device catalog, Add device and controller boards (Technician, Owner)
 
@@ -180,10 +200,10 @@ The buttons next to a device change with its status, so only the actions that ma
 | MAINTENANCE | Repair done (test passed), Test failed, Decommission | IDLE again; stays in maintenance; or removed from service for good. |
 
 ![A feeder in FAULT: only Start repair is offered](screens/22-device-in-fault.png)
-*Figure 16. A feeder in FAULT: only Start repair is offered*
+*Figure 18. A feeder in FAULT: only Start repair is offered*
 
 ![In MAINTENANCE: finish the repair, record a failed test, or decommission](screens/23-device-in-maintenance.png)
-*Figure 17. In MAINTENANCE: finish the repair, record a failed test, or decommission*
+*Figure 19. In MAINTENANCE: finish the repair, record a failed test, or decommission*
 
 **Sensors** have their own repair flow. A sensor that stops sending comes back **by itself** as soon as a valid reading arrives, so a cable you fixed needs no button. Use the buttons when a sensor is broken, stuck or must be tested:
 
@@ -201,7 +221,7 @@ A note under the sensor says what to do next, for example "A valid reading arriv
 Click **Edit** next to the device. You can rename a sensor, and rename an actuator or change how long it may run in one go (1 to 240 minutes). The **#number** stays the same, so an ESP32 that sends readings for it keeps working.
 
 ![Edit an actuator](screens/29-edit-device-dialog.png)
-*Figure 18. Edit an actuator*
+*Figure 20. Edit an actuator*
 
 **Remove** deletes a device after you confirm. A decommissioned actuator can only be removed.
 
@@ -216,7 +236,7 @@ No ESP32 yet? **Farm Lab** in the menu creates as many virtual sensors and actua
 5. Or click **Run** next to a scenario, or **Run all scenarios** (about 20 minutes). Each one reports **PASS**, **FAIL** or **KNOWN GAP**.
 
 ![Farm Lab during the Dry spell scenario: the server has started the pump](screens/35-virtual-device.png)
-*Figure 19. Farm Lab during the Dry spell scenario: the server has started the pump*
+*Figure 21. Farm Lab during the Dry spell scenario: the server has started the pump*
 
 | Scenario | What happens | Expected |
 |---|---|---|
@@ -244,7 +264,7 @@ No ESP32 yet? **Farm Lab** in the menu creates as many virtual sensors and actua
 A rule says: **IF** a sensor reading goes above or below a value **THEN** start an actuator for some minutes and send an alert. Rules work day and night, also when nobody is looking.
 
 ![Automation rules](screens/09-automation-rules.png)
-*Figure 20. Automation rules*
+*Figure 22. Automation rules*
 
 ### 5.1 Create a rule
 
@@ -256,19 +276,19 @@ A rule says: **IF** a sensor reading goes above or below a value **THEN** start 
 6. Click **Save rule**.
 
 ![New rule](screens/10-new-rule-dialog.png)
-*Figure 21. New rule*
+*Figure 23. New rule*
 
 Use the switch in the **Active** column to pause a rule without deleting it. The pencil edits a rule; the bin deletes it. Workers and technicians see the rules but cannot change them.
 
 ![Rules as seen by a Farm Worker (read only)](screens/19-rules-worker-read-only.png)
-*Figure 22. Rules as seen by a Farm Worker (read only)*
+*Figure 24. Rules as seen by a Farm Worker (read only)*
 
 ## 6. Schedules (Owner)
 
 A schedule starts an actuator at a fixed time on chosen days, for example feeding at 07:00 every day. Times are **farm time** (the time zone is shown at the top of the page).
 
 ![Schedules with their next run](screens/11-schedules.png)
-*Figure 23. Schedules with their next run*
+*Figure 25. Schedules with their next run*
 
 1. Click **New schedule** and type a name.
 2. Choose the actuator, the time and how many minutes it runs.
@@ -276,12 +296,12 @@ A schedule starts an actuator at a fixed time on chosen days, for example feedin
 4. Click **Save schedule**. The **Next run** column tells you when it will start.
 
 ![New schedule](screens/12-new-schedule-dialog.png)
-*Figure 24. New schedule*
+*Figure 26. New schedule*
 
 To change a schedule, click the **pencil** in its row, change the time, days, actuator or minutes, and click **Save schedule**. A task that already ran today does not run twice if you move it later. The **bin** deletes a schedule after you confirm.
 
 ![Edit a schedule](screens/30-edit-schedule-dialog.png)
-*Figure 25. Edit a schedule*
+*Figure 27. Edit a schedule*
 
 > **Note:** If the server was off at the scheduled time, the task still runs if the server is back within 15 minutes. Otherwise it waits for the next selected day.
 
@@ -296,7 +316,7 @@ An alert is created when a rule fires, when a device reports a fault or goes off
 | CRITICAL | Act now: a device is broken, or a rule wanted to start a device that could not start. |
 
 ![Alerts as seen by a Farm Worker](screens/20-alerts-worker-acknowledge.png)
-*Figure 26. Alerts as seen by a Farm Worker*
+*Figure 28. Alerts as seen by a Farm Worker*
 
 1. Read the alert and **go and check the zone**.
 2. Click **Acknowledge**. Your name is saved with the alert.
@@ -305,7 +325,7 @@ An alert is created when a rule fires, when a device reports a fault or goes off
 The **Open** tab shows alerts still waiting; **All** also shows acknowledged ones and who acknowledged them. If the same problem happens again before anyone acknowledges it, it is counted on the same alert ("happened 2 times") instead of filling the list with copies.
 
 ![All alerts, including acknowledged ones](screens/14-alerts-owner.png)
-*Figure 27. All alerts, including acknowledged ones*
+*Figure 29. All alerts, including acknowledged ones*
 
 ## 8. History and reports
 
@@ -318,7 +338,7 @@ The quickest way in: click a sensor tile on the dashboard. History opens with th
 5. Click **Download CSV** to save every reading in the range as a file that opens in Excel or Google Sheets, for reports or a teacher.
 
 ![History & reports](screens/13-history-and-reports.png)
-*Figure 28. History & reports*
+*Figure 30. History & reports*
 
 > **Note:** Readings are kept for 90 days, then deleted to keep the server fast. Download a CSV if you need them longer. Alerts and device activity are kept.
 
@@ -327,25 +347,25 @@ The quickest way in: click a sensor tile on the dashboard. History opens with th
 The app works in the phone's browser. The menu sits at the **bottom of the screen**, within reach of your thumb: **Home**, **Alerts** (with the number still open), **History**, **Zones** and **More**. Lists turn into cards so that messages and statuses stay readable.
 
 ![Dashboard on a phone](screens/24-phone-dashboard.png)
-*Figure 29. Dashboard on a phone*
+*Figure 31. Dashboard on a phone*
 
 ![Alerts on a phone](screens/25-phone-alerts.png)
-*Figure 30. Alerts on a phone*
+*Figure 32. Alerts on a phone*
 
 **More** opens the other pages (Automation rules, Schedules, and Users for the owner) and the settings: language, alert sound, dark mode, change password and log out.
 
 ![The More menu on a phone, in Khmer](screens/31-phone-more-menu.png)
-*Figure 31. The More menu on a phone, in Khmer*
+*Figure 33. The More menu on a phone, in Khmer*
 
 ![Zones & devices on a phone](screens/26-phone-zones.png)
-*Figure 32. Zones & devices on a phone*
+*Figure 34. Zones & devices on a phone*
 
 ## 10. Staff accounts (Owner)
 
 Open **Users** in the menu. Every person should have their own account, so the history shows who did what.
 
 ![Staff accounts](screens/32-users.png)
-*Figure 33. Staff accounts*
+*Figure 35. Staff accounts*
 
 ### 10.1 Add a person
 
@@ -356,7 +376,7 @@ Open **Users** in the menu. Every person should have their own account, so the h
 5. Tell the person their username and password in person. They should change the password with the key icon.
 
 ![Add a user](screens/33-add-user-dialog.png)
-*Figure 34. Add a user*
+*Figure 36. Add a user*
 
 ### 10.2 Change a role, reset a password, remove a person
 
@@ -365,9 +385,61 @@ Open **Users** in the menu. Every person should have their own account, so the h
 - The **bin** removes a person who left the farm. Their name stays in old alerts and device activity. You cannot remove yourself.
 
 ![Reset a password](screens/34-reset-password-dialog.png)
-*Figure 35. Reset a password*
+*Figure 37. Reset a password*
 
-## 11. Troubleshooting
+## 11. Smart Farm company: customer farms and staff
+
+Smart Farm is run by a company that sets farms up for its customers. One server holds every customer's farm, and **each farm sees only its own data**: zones, devices, readings, rules, schedules, alerts and people. If someone asks for an item of another farm, the app simply answers "not found".
+
+| Account | Belongs to | Works as |
+|---|---|---|
+| Company Admin | The company | Creates farms, invites owners and staff, assigns support, suspends farms. Opens any farm as its **owner**. |
+| Company Support | The company | Opens only the farms assigned to them, as a **technician**, and only while the farm's owner allows support. |
+| Farm Owner, Technician, Worker | One farm | As in the chapters above, on their own farm only. |
+
+Company people sign in like everyone else, and see the **Smart Farm company** menu: **Customer farms** and **Company staff**.
+
+### 11.1 See all customer farms (Admin, Support)
+
+Open **Customer farms**. The top cards show how many farms there are, how many need attention (offline sensors, no data, or open alerts), sensors online and open alerts. Farms that need attention come first, 20 at a time; use the search box (farm, place or owner) or the **All / Need attention / Suspended** buttons. A support person sees only the farms assigned to them.
+
+![Customer farms](screens/36-company-farms.png)
+*Figure 38. Customer farms (Company Admin)*
+
+### 11.2 Create a farm for a new customer (Admin)
+
+1. Click **New farm**.
+2. Type the **farm name** and **location**, then the owner's **name**, **username** (3-30 small letters, numbers, dots or dashes) and phone or Telegram.
+3. Click **Create farm and invite link**. The farm starts empty.
+4. Click **Copy link** and send it to the owner. **The link is shown only once.** If it is lost, open the farm's **...** menu and choose **New owner invite link**.
+5. The owner opens the link and sets their own password (section 2.1b). Then they or you add zones and devices.
+
+![New farm for a customer](screens/37-new-farm-dialog.png)
+*Figure 39. New farm for a customer*
+
+The **...** menu of a farm (Admin) also has **Edit details**, **Assign support staff**, and **Suspend farm** or **Reactivate farm**. A suspended farm keeps its data and keeps running its automation rules, but its people cannot use the app until it is reactivated.
+
+### 11.3 Work on a farm (Admin, Support)
+
+Click **Open farm**. A bar at the top says **Working on** and the farm's name, with your role there ("as its owner" for an admin, as a technician for support). Everything you see and change is on that farm only. Click **Back to customer farms** to leave it.
+
+![Working on a customer farm](screens/38-open-farm-bar.png)
+*Figure 40. Working on a customer farm*
+
+Support can open a farm only if **both** are true: an admin assigned them to it, and the owner has not switched support off (section 4.1). Otherwise the app says so (see the Troubleshooting table).
+
+### 11.4 Company staff (Admin)
+
+Open **Company staff** and click **Add staff**. Type a name and username and choose **Admin** (makes farms, invites owners, manages staff, opens any farm as its owner) or **Support** (opens assigned farms as a technician). You get an invite link to send, exactly like for an owner.
+
+![Company staff](screens/40-company-staff.png)
+*Figure 41. Company staff*
+
+### 11.5 The device catalog
+
+Company staff keep the shared **Device catalog** (sensor and actuator models used by every farm). A farm's owner or technician can add models only that farm sees (section 4.3b).
+
+## 12. Troubleshooting
 
 | What you see | What to do |
 |---|---|
@@ -375,7 +447,11 @@ Open **Users** in the menu. Every person should have their own account, so the h
 | "Too many wrong passwords. Wait N min" | Wait, or ask the Farm Owner to reset your password (Users → key icon), which unlocks it at once. |
 | "A Farm Worker account cannot do this" | The page or action is for another role. Ask the Farm Owner. |
 | "Cannot reach the server... Retrying" | The backend computer is off or the network is down. The page reconnects by itself when it is back. |
-| "Your session ended" | Sign in again. This happens after a server restart or after 12 hours. |
+| "This link no longer works" | The invite link was already used or is older than 7 days. Ask Smart Farm for a new one. |
+| "This farm is suspended. Please contact Smart Farm." | The company paused this farm. Its data is kept and its automation still runs; contact Smart Farm to reactivate it. |
+| "You are not assigned to <farm>. Ask a company admin." (Support) | A company admin must assign the farm to you (farm menu, **Assign support staff**). |
+| "The owner of <farm> has turned off support access." (Support) | Ask the farm's owner to tick **Allow Smart Farm support to open this farm** in Farm settings. |
+| "Your session ended" | Sign in again. This happens after 12 hours, or when your password was reset. |
 | A sensor dot is red / "is offline" alert | The sensor sent nothing for 2 minutes. Check its power, cable and Wi-Fi (Technician). It comes back by itself with the next valid reading; to test it, use Start repair then Complete repair (section 4.4). |
 | A sensor is greyed out and says FAULT or MAINTENANCE | A technician took it out of service. Its readings are ignored or its rules are paused until the repair is completed (section 4.4). |
 | "Complete repair" says the test failed | No valid reading has arrived since the repair began. Check power, cable and Wi-Fi, wait for a reading, and try again. |
@@ -385,7 +461,7 @@ Open **Users** in the menu. Every person should have their own account, so the h
 | "Threshold must be between ..." | Choose a threshold the sensor can actually measure. |
 | A schedule did not run | Check that it is Active, the day is selected, and the Next run time. The server must be on at that time. |
 
-## 12. Glossary
+## 13. Glossary
 
 | Word | Meaning |
 |---|---|
@@ -400,3 +476,8 @@ Open **Users** in the menu. Every person should have their own account, so the h
 | Schedule | An actuator start at a fixed time on chosen days. |
 | Acknowledge | Confirm you have seen an alert and checked the zone. |
 | CSV | A simple table file that Excel and Google Sheets open. |
+| Customer farm | One farm that Smart Farm set up for a customer. Each customer farm sees only its own data. |
+| Invite link | A one-time link, valid for 7 days, with which a new owner or staff member sets their own password. |
+| Company Admin / Support | Smart Farm's own people: admins make farms and manage staff; support looks after assigned farms. |
+| Support access | The owner's permission for assigned support staff to open the farm as a technician. |
+| Suspended | A farm paused by the company: data kept, automation running, people locked out. |

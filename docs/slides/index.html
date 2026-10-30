@@ -101,16 +101,18 @@
 </section>
 <section id="d2-actors" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:40px">
 <p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 2 · Actors and permissions</p>
-<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Three people and two external systems</h2>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Five people and two external systems</h2>
 <table style="font-size:28px;color:#2B3A31;font-family:'DM Sans', Arial, sans-serif">
 <tr><th style="width:22%">Actor</th><th style="width:20%">Type</th><th style="width:58%">Can do</th></tr>
 <tr><td>Farm Owner</td><td>Primary</td><td>Everything: zones, rules, schedules, staff accounts</td></tr>
 <tr><td>Farm Worker</td><td>Primary</td><td>Watch the dashboard, start and stop devices, acknowledge alerts</td></tr>
 <tr><td>Technician</td><td>Supporting</td><td>Register devices, report faults, repair actuators and sensors</td></tr>
+<tr><td>Company Admin</td><td>Primary</td><td>Creates customer farms, invites owners and staff, opens any farm as its owner</td></tr>
+<tr><td>Company Support</td><td>Supporting</td><td>Opens only assigned farms, as a technician, while the owner allows support</td></tr>
 <tr><td>Sensor Device</td><td>External system</td><td>Send readings and read its relay state, with a device key</td></tr>
 <tr><td>Notification Service</td><td>External system</td><td>Deliver alerts (console or Telegram)</td></tr>
 </table>
-<aside>We identified five actors: three people, the farm owner, worker and technician, and two external systems, the sensor device and the notification service. The technician now also repairs sensors, not only actuators.</aside>
+<aside>We identified seven actors: five people and two external systems. The farm owner, worker and technician belong to one customer farm. Since the company model, Smart Farm staff are actors too: the company admin sets farms up and invites owners, and company support helps only the farms it is assigned to, and only while the owner allows it. The two external systems are the sensor device and the notification service.</aside>
 </section>
 <section id="d2-code" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
 <p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 2 · In the code</p>
@@ -157,13 +159,15 @@
 <tr><td>FR-09</td><td>Alerts: breach, fault, offline</td><td>Alerts · AlertService</td></tr>
 <tr><td>FR-10</td><td>History, device log, CSV</td><td>History · QueryService</td></tr>
 <tr><td>FR-11</td><td>Staff accounts</td><td>Users · UserService</td></tr>
+<tr><td>FR-12</td><td>Customer farms, invite links, support access</td><td>Company · CompanyService, InviteService</td></tr>
+<tr><td>FR-13</td><td>Device catalog and controller boards</td><td>Catalog · CatalogService</td></tr>
 </table>
-<aside>Each functional requirement maps to a screen and to the service that implements it. Zones and devices cover requirements one and two, the automation rules page five and six, schedules seven, history ten.</aside>
+<aside>Each functional requirement maps to a screen and to the service that implements it. Zones and devices cover requirements one and two, the automation rules page five and six, schedules seven, history ten. The company model added two: twelve, customer farms with invite links and support access, and thirteen, the device catalog with controller boards.</aside>
 </section>
 <section id="d4-usecase" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
 <div style="width:440px;display:flex;flex-direction:column;gap:24px">
 <p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 4</p>
-<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Use case diagram</h2>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Use cases: the farm</h2>
 <p style="font-size:28px;line-height:1.45;color:#4A5A50">Eleven use cases for five actors.</p>
 <p style="font-size:28px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">«include»</b>: every reading is evaluated against the rules; every manual action is logged.</p>
 <p style="font-size:28px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">«extend»</b>: an alert is sent only when a threshold is breached.</p>
@@ -172,6 +176,19 @@
 <img src="images/use-case.png" alt="Use case diagram: five actors and eleven use cases with include and extend" style="width:1120px;height:780px;object-fit:contain">
 </div>
 <aside>The use case diagram shows eleven use cases. Submit sensor reading always includes evaluate rules, and send alert extends it only when a threshold is breached.</aside>
+</section>
+<section id="d4-company" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:440px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 4</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Use cases: the company</h2>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">Five more use cases, UC-12 to UC-16, for Smart Farm staff and the owner.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">«include»</b>: creating a farm or a staff account always ends in an invite; working on a farm always checks access.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">«extend»</b>: the owner can turn support access off, which changes the access check.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:24px;display:flex;align-items:center;justify-content:center">
+<img src="images/use-case-company.png" alt="Use case diagram for the company: Company Admin, Company Support, Farm Owner and Technician with use cases 11 to 16" style="width:1120px;height:594px;object-fit:contain">
+</div>
+<aside>The company model adds five use cases. The admin manages customer farms and works on any of them. Support works on assigned farms. Both create accounts only through an invite link, which is the include. Every time someone works on a customer farm the system checks the access, and the owner can switch support off, which is the extend. Manage device catalog is shared: staff keep the shared models, and each farm adds its own.</aside>
 </section>
 <section id="d4-code" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
 <p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 4 · In the code</p>
@@ -208,7 +225,7 @@
 <h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">A farm contains zones; a zone owns its devices</h2>
 <div style="flex:1;display:flex;flex-direction:row;gap:40px;align-items:stretch">
 <div style="flex:1;background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center">
-<img src="images/domain-model.png" alt="Domain model: Farm, Zone, Sensor, Actuator, SensorReading, rules, alerts and users with multiplicities" style="width:660px;height:620px;object-fit:contain">
+<img src="images/domain-model.png" alt="Domain model: Farm, Zone, Sensor, Actuator, SensorReading, rules, alerts, users, invites, sessions, device models and controller boards with multiplicities" style="width:660px;height:620px;object-fit:contain">
 </div>
 <div style="width:920px;display:flex;flex-direction:column;gap:24px">
 <div style="background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
@@ -226,7 +243,7 @@
 <p style="font-size:28px;line-height:1.45;color:#4A5A50">Multiplicity 0..* is a List that may be empty: a zone can exist before its devices are installed.</p>
 </div>
 </div>
-<aside>The domain model has ten classes. A farm contains zones, a zone has sensors and actuators, and a sensor produces readings. The composition from the domain model is real in the code: a zone owns its sensors and actuators, so deleting a zone removes them too.</aside>
+<aside>The domain model has fourteen classes. Users now work on at most one farm, or none for company staff, and company staff support many farms. A user activates an account with an invite and signs in with a session. A farm contains zones, a zone has sensors and actuators, and a sensor produces readings. The composition from the domain model is real in the code: a zone owns its sensors and actuators, so deleting a zone removes them too.</aside>
 </section>
 <section id="d6-class" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:72px 96px 96px;display:flex;flex-direction:column;gap:24px">
 <div style="display:flex;flex-direction:row;align-items:end;gap:40px">
@@ -237,9 +254,22 @@
 <p style="flex:1;font-size:26px;line-height:1.4;color:#4A5A50">Association, composition, inheritance, interface realization and dependency. Now with 6 sensor and 7 actuator subclasses, SensorStatus, and the thermostat members.</p>
 </div>
 <div style="flex:1;background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:16px;display:flex;align-items:center;justify-content:center">
-<img src="images/class-diagram.png" alt="Design class diagram of the domain and service packages" style="width:1690px;height:780px;object-fit:contain">
+<img src="images/class-diagram.png" alt="Design class diagram of the domain and service packages" style="width:1690px;height:740px;object-fit:contain">
 </div>
 <aside>The design class diagram adds attributes, methods, and five kinds of relationship. It now shows the six sensor subclasses and seven actuator subclasses, the sensor status, and the new thermostat members: stopAt, holdUntil, isTargetReached and opposes. Next, the four pillars of object oriented programming in the real code.</aside>
+</section>
+<section id="d6-company" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:72px 96px 96px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:row;align-items:end;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Deliverable 6</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">Company classes</h2>
+</div>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50;width:1000px">Who may work on which farm: <b style="color:#14231B">FarmAccessResolver</b> decides, <b style="color:#14231B">Tenancy</b> enforces, <b style="color:#14231B">Invite</b> and <b style="color:#14231B">UserSession</b> replace shared passwords.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:16px;display:flex;align-items:center;justify-content:center">
+<img src="images/class-diagram-company.png" alt="Class diagram of the company model: AppUser, Farm, Invite, UserSession, FarmAccessResolver, Tenancy, CompanyService and InviteService" style="width:1690px;height:740px;object-fit:contain">
+</div>
+<aside>A second class diagram shows the company model. An AppUser works on at most one farm, or none for company staff, and a company support person can be assigned to many farms. Invite and UserSession keep only token hashes. FarmAccessResolver is used by the AuthInterceptor on every request and builds the context that Tenancy holds, and services such as FarmService ask Tenancy for every lookup. CompanyService creates farms and uses InviteService to make the owner's invite.</aside>
 </section>
 <section id="oop-encap" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
 <p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">OOP pillar 1 · Encapsulation</p>
@@ -925,6 +955,48 @@
 </div>
 </div>
 <aside>Here is the one method behind it. If the request works on a farm and the thing found belongs to another farm, the answer is not found, exactly as if it did not exist. Every service lookup goes through a small wrapper like zone or sensor. Our company flow test found one leak, a delete by id that skipped this check, and it is fixed.</aside>
+</section>
+<section id="company-invite" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Company · In the code</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">No shared passwords: a one-time invite link</h2>
+<div style="flex:1;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:460px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">The admin never types a password. <b style="color:#14231B">create</b> makes a random token and keeps only its hash.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">The owner opens the link and chooses a password. <b style="color:#14231B">accept</b> uses the link up and signs older sessions out.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5A50">Links last 7 days. A stolen database holds no usable link.</p>
+</div>
+<div style="flex:1;background:#0F1A14;border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#D7E4DA">
+<p style="font-size:24px;color:#7DCB94;line-height:1.5">service/InviteService.java</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">52 </span>public&#160;String&#160;create(AppUser&#160;user)&#160;{</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">54 </span>&#160;&#160;byte[]&#160;bytes&#160;=&#160;new&#160;byte[24];&#160;random.nextBytes(bytes);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">56 </span>&#160;&#160;String&#160;token&#160;=&#160;Base64.getUrlEncoder()...encodeToString(bytes);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">57 </span>&#160;&#160;invites.save(new&#160;Invite(user,&#160;hash(token),&#160;now,&#160;now.plus(ttl)));</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">58 </span>&#160;&#160;return&#160;token;&#160;&#160;&#160;//&#160;shown&#160;once,&#160;only&#160;its&#160;SHA-256&#160;is&#160;kept</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">59 </span>}</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">&#160;&#160; </span></p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">76 </span>public&#160;LoginResult&#160;accept(String&#160;token,&#160;String&#160;password)&#160;{</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">77 </span>&#160;&#160;Invite&#160;invite&#160;=&#160;usable(token);&#160;&#160;&#160;//&#160;not&#160;used,&#160;not&#160;expired</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">80 </span>&#160;&#160;user.changePasswordHash(encoder.encode(password));</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap;background:#1F3A2B;color:#E9F7EC;border-radius:6px"><span style="color:#7DCB94">81 </span>&#160;&#160;invite.use(clock.instant());&#160;&#160;&#160;&#160;&#160;//&#160;one&#160;time&#160;only</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">82 </span>&#160;&#160;auth.logoutEverywhere(user.getId());</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">83 </span>&#160;&#160;return&#160;auth.startSession(user);</p>
+<p style="font-size:24px;line-height:1.5;white-space:nowrap"><span style="color:#5E7466">84 </span>}</p>
+</div>
+</div>
+<aside>Customer accounts are created without a password. The company admin creates the farm, the system makes a random token and stores only its SHA-256 hash, and the admin sends the link by Telegram or SMS. When the owner opens it, accept checks that the link is not used and not expired, sets the password, marks the link used and starts a session. Older sessions of that person are ended, and a second use of the same link is refused. If someone steals the database, the hashes cannot be turned back into working links.</aside>
+</section>
+<section id="company-seq" data-transition="fade" style="background:#F1F5EF;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
+<div style="width:440px;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#2F7D47">Company · Sequence</p>
+<h2 style="font-size:56px;font-weight:700;line-height:1.1;color:#14231B">From invite to a safe request</h2>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">Top:</b> the admin creates a farm and the owner activates the account.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50"><b style="color:#14231B">Bottom:</b> every request gets a farm and a role from <b style="color:#14231B">FarmAccessResolver</b>.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5A50">An item of another farm answers 404, so ids reveal nothing.</p>
+</div>
+<div style="flex:1;background:#FBFCF9;border:1px solid #D8E3DA;border-radius:20px;padding:24px;display:flex;align-items:center;justify-content:center">
+<img src="images/company-access-sequence.png" alt="From invite to a safe request: five actors and eleven use cases with include and extend" style="width:1120px;height:681px;object-fit:contain">
+</div>
+<aside>This sequence diagram has two parts. First, the admin creates a customer farm: the company service asks the invite service for a token, and the owner activates the account with it. Second, a company person works on a farm: the interceptor asks FarmAccessResolver who they are on that farm. An admin works as the owner. Support must be assigned to the farm and the owner must allow support, and then works as a technician. The result is stored in Tenancy, and every lookup through it answers not found for another farm.</aside>
 </section>
 <section id="company-app" data-transition="fade" style="background:#E4ECE5;color:#14231B;font-family:'DM Sans', Arial, sans-serif;padding:96px 128px 128px;display:flex;flex-direction:row;gap:56px;align-items:stretch">
 <div style="width:440px;display:flex;flex-direction:column;gap:24px">

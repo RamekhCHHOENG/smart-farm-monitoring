@@ -10,11 +10,30 @@ class User {
   username
   name
   role
+  companyRole
+}
+class Invite {
+  expiresAt
+  usedAt
+}
+class Session {
+  expiresAt
+}
+class DeviceModel {
+  name
+  measures
+  voltage
+}
+class ControllerBoard {
+  name
+  keyHash
 }
 class Farm {
   farmId
   name
   location
+  status
+  supportAllowed
 }
 class Zone {
   zoneId
@@ -65,7 +84,12 @@ class DeviceLog {
   at
 }
 
-User "1..*" -- "1" Farm : works on >
+User "0..*" -- "0..1" Farm : works on >
+User "0..*" -- "0..*" Farm : supports >
+User "1" -- "0..*" Invite : activates with >
+User "1" -- "0..*" Session : signs in with >
+Farm "1" -- "0..*" ControllerBoard : has >
+Farm "0..1" -- "0..*" DeviceModel : adds own >
 Farm "1" -- "0..*" Zone : contains >
 Zone "1" -- "0..*" Sensor : has >
 Zone "1" -- "0..*" Actuator : has >

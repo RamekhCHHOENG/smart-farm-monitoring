@@ -1,0 +1,46 @@
+@startuml company-access-sequence
+!include style.iuml
+skinparam sequenceMessageAlign center
+
+actor "Company Admin" as Admin
+actor "Farm Owner" as Owner
+participant ":CompanyController" as CC
+participant ":CompanyService" as CS
+participant ":InviteService" as IS
+participant ":AuthInterceptor" as AI
+participant ":FarmAccessResolver" as FR
+participant ":Tenancy" as T
+participant ":FarmService" as ZS
+
+== UC-12 / UC-13: create a customer farm and invite its owner ==
+Admin -> CC : POST /company/farms (farm, owner)
+CC -> CS : createFarm(adminId, ...)
+CS -> CS : require company ADMIN
+CS -> IS : create(ownerAccount)
+IS --> CS : one-time token (only its hash is stored)
+CS --> CC : CreatedFarm(inviteToken)
+CC --> Admin : invite link (valid 7 days)
+Admin -> Owner : sends the link
+Owner -> IS : accept(token, newPassword)
+IS -> IS : usable? [not used, not expired]
+IS --> Owner : password set, signed in
+
+== UC-14: work on a customer farm ==
+Admin -> AI : GET /api/farm + X-Farm-Id: 7
+AI -> FR : resolve(userId, "7", false)
+alt company ADMIN
+  FR --> AI : Context(farm 7, role OWNER)
+else company SUPPORT
+  FR -> FR : assigned to farm 7?
+  FR -> FR : owner allows support?
+  FR --> AI : Context(farm 7, role TECHNICIAN) or 403
+end
+AI -> T : set(context)
+AI -> ZS : handle request
+ZS -> T : zone(found)
+alt zone belongs to farm 7
+  T --> ZS : zone
+else zone of another farm
+  T --> ZS : NotFoundException (404)
+end
+@enduml

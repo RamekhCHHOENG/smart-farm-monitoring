@@ -203,6 +203,11 @@ scripts/e2e-walkthrough.mjs
 | OCP | new zone/sensor/actuator kinds are new subclasses (the heater, mister, light, tank valve and humidity, light, tank sensors were added this way); services work with the abstract types |
 | DIP | `MonitoringService` → `AlertService` → `NotificationService` interface; wiring in `AppConfig` |
 | Permissions table (D2) | `AccessPolicy.require(...)` in every write service method |
+| UC-12 Manage Customer Farms, UC-13 Invite and Activate Account (docs/diagrams/01b, 09) | `CompanyService.createFarm` → `InviteService.create` (random token, only its SHA-256 stored); the owner's `InviteService.accept` uses the link once and starts a session |
+| UC-14 Work on a Customer Farm «include» Check Farm Access (docs/diagrams/09) | `AuthInterceptor` → `FarmAccessResolver.resolve` (admin = owner, support = technician if assigned and allowed) → `Tenancy` |
+| One farm never sees another's data (docs/diagrams/03b) | every service lookup goes through `Tenancy.zone / sensor / actuator ...`; another farm's id answers 404 |
+| UC-16 Allow Support Access | `Farm.allowSupport` (Farm settings in the app) |
+| Signed in across a restart | `UserSession` rows keep only a token hash (12 hours); see `SessionPersistenceTest` |
 
 ## Security notes
 
@@ -298,7 +303,9 @@ Two decks, same look and screenshots. Open the HTML in a browser and use the arr
 
 - **Technical (OOAD)**, goes with the OOP walkthrough video: each deliverable as concept, diagram, real code
   (file and line numbers) and running app, then sensor repair, thermostat rules, the device catalog and many farms
-  on one server. [index.html](docs/slides/index.html) · [Smart-Farm-OOAD.pdf](docs/slides/Smart-Farm-OOAD.pdf) (46 pages) ·
+  on one server. The analysis and design chapters include the company model (actors, use cases UC-12 to UC-16,
+  domain model, company class diagram, invite and access sequence). [index.html](docs/slides/index.html) ·
+  [Smart-Farm-OOAD.pdf](docs/slides/Smart-Farm-OOAD.pdf) (50 pages) ·
   [speaker notes](docs/slides/speaker-notes.md)
 - **For farm users**, no code or diagrams: what the system does for owners, workers and technicians, screen by screen.
   [farm-users.html](docs/slides/farm-users.html) · [Smart-Farm-Guide.pdf](docs/slides/Smart-Farm-Guide.pdf) (21 pages) ·
@@ -306,8 +313,13 @@ Two decks, same look and screenshots. Open the HTML in a browser and use the arr
 
 ## User manual
 
-Step-by-step guide for owners, workers and technicians, with screenshots of every screen:
-[docs/manual/USER_MANUAL.md](docs/manual/USER_MANUAL.md).
+Step-by-step guide for owners, workers, technicians and Smart Farm company staff (customer farms, invite links,
+support access), with screenshots of every screen: [docs/manual/USER_MANUAL.md](docs/manual/USER_MANUAL.md).
+
+## User acceptance testing
+
+[docs/UAT.md](docs/UAT.md) shows how to run the app, seed three customer farms with `scripts/seed-uat.py` (random
+owner passwords in a git-ignored file) and give testers a public link through a Cloudflare quick tunnel.
 
 ## Hardware
 

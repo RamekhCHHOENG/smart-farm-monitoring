@@ -1,0 +1,75 @@
+@startuml class-diagram-company
+!include style.iuml
+skinparam classAttributeIconSize 0
+skinparam nodesep 40
+skinparam ranksep 55
+
+class AppUser {
+  -username: String
+  -role: Role
+  -companyRole: String
+  +isCompany(): boolean
+}
+class Farm {
+  -status: String
+  -supportAllowed: boolean
+  +isSuspended(): boolean
+  +isSupportAllowed(): boolean
+  +allowSupport(allowed): void
+}
+class Invite {
+  -tokenHash: String
+  -expiresAt: Instant
+  -usedAt: Instant
+  +usableAt(now): boolean
+  +use(now): void
+}
+class UserSession {
+  -tokenHash: String
+  -expiresAt: Instant
+  +validAt(now): boolean
+}
+class Zone
+class FarmDevice
+class ControllerBoard {
+  -keyHash: String
+}
+class AuthInterceptor <<interceptor>>
+class FarmAccessResolver {
+  +resolve(userId, farmHeader, accountOnly): Context
+}
+class Tenancy {
+  +farmId(): Long
+  +limited(): boolean
+  +check(found, ownerFarmId, what, id): T
+  +zone(z): Zone
+  +sensor(s): Sensor
+}
+class CompanyService {
+  +createFarm(userId, name, location, owner...): CreatedFarm
+  +setStatus(userId, farmId, status): FarmSummary
+  +assignSupport(userId, farmId, staffIds): FarmSummary
+}
+class InviteService {
+  +create(user): String
+  +accept(token, password): LoginResult
+}
+class FarmService
+
+AppUser "0..*" --> "0..1" Farm : works on
+AppUser "0..*" --> "0..*" Farm : supports
+Farm "1" *-- "0..*" Zone
+Farm "1" o-- "0..*" ControllerBoard
+Zone "1" *-- "0..*" FarmDevice
+Invite "0..*" --> "1" AppUser
+UserSession "0..*" --> "1" AppUser
+AuthInterceptor ..> FarmAccessResolver : <<uses>>
+FarmAccessResolver ..> Tenancy : <<creates context>>
+FarmAccessResolver ..> AppUser
+FarmAccessResolver ..> Farm
+FarmService ..> Tenancy : <<uses>>
+CompanyService ..> InviteService : <<uses>>
+CompanyService ..> Farm : <<create>>
+InviteService ..> Invite : <<create>>
+InviteService ..> UserSession : <<starts>>
+@enduml
