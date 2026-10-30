@@ -1,31 +1,33 @@
 package com.smartfarm.service;
 
 import com.smartfarm.domain.AppUser;
+import com.smartfarm.domain.UserSession;
 import com.smartfarm.repository.AppUserRepository;
+import com.smartfarm.repository.UserSessionRepository;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.HexFormat;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Issues opaque bearer tokens after a password check. Tokens live in memory, so a
- * server restart logs everyone out; that is acceptable for a single-farm server.
+ * Issues opaque bearer tokens after a password check. Sessions are stored in the database (only the
+ * token's SHA-256), so people stay signed in when the server restarts.
  */
 @Service
 public class AuthService {
-
-    public record Session(Long userId, Instant expiresAt) {
-    }
 
     public record LoginResult(String token, Instant expiresAt, AppUser user) {
     }
@@ -37,12 +39,13 @@ public class AuthService {
     private final Clock clock;
     private final Duration ttl;
     private final SecureRandom random = new SecureRandom();
-    private final Map<String, Session> sessions = new ConcurrentHashMap<>();
+    private final UserSessionRepository sessions;
     private final LoginGuard guard;
 
-    public AuthService(AppUserRepository users, PasswordEncoder encoder, Clock clock, LoginGuard guard,
-                       @Value("${farm.session-ttl:PT12H}") Duration ttl) {
+    public AuthService(AppUserRepository users, UserSessionRepository sessions, PasswordEncoder encoder, Clock clock,
+                       LoginGuard guard, @Value("${farm.session-ttl:PT12H}") Duration ttl) {
         this.users = users;
+        this.sessions = sessions;
         this.guard = guard;
         this.encoder = encoder;
         this.clock = clock;
@@ -64,12 +67,14 @@ public class AuthService {
     }
 
     /** Signs the person in: a new random token that is valid until the session time runs out. */
+    @Transactional
     public LoginResult startSession(AppUser user) {
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        Instant expiresAt = clock.instant().plus(ttl);
-        sessions.put(token, new Session(user.getId(), expiresAt));
+        Instant now = clock.instant();
+        Instant expiresAt = now.plus(ttl);
+        sessions.save(new UserSession(user, hash(token), now, expiresAt));
         return new LoginResult(token, expiresAt, user);
     }
 
@@ -91,25 +96,40 @@ public class AuthService {
     }
 
     /** After a password reset or removal, every open session of that user ends. */
+    @Transactional
     public void logoutEverywhere(Long userId) {
-        sessions.values().removeIf(s -> s.userId().equals(userId));
+        sessions.deleteByUserId(userId);
     }
 
+    @Transactional(readOnly = true)
     public Optional<Long> resolve(String token) {
-        Session session = token == null ? null : sessions.get(token);
-        if (session == null) {
+        if (token == null || token.isBlank()) {
             return Optional.empty();
         }
-        if (clock.instant().isAfter(session.expiresAt())) {
-            sessions.remove(token);
-            return Optional.empty();
-        }
-        return Optional.of(session.userId());
+        return sessions.findByTokenHash(hash(token))
+                .filter(s -> s.validAt(clock.instant()))
+                .map(UserSession::getUserId);
     }
 
+    @Transactional
     public void logout(String token) {
         if (token != null) {
-            sessions.remove(token);
+            sessions.deleteByTokenHash(hash(token));
+        }
+    }
+
+    /** Expired sessions are only rows nobody can use; clear them out now and then. */
+    @Scheduled(initialDelayString = "PT2M", fixedDelayString = "PT1H")
+    @Transactional
+    public int deleteExpiredSessions() {
+        return sessions.deleteExpired(clock.instant());
+    }
+
+    private static String hash(String token) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
         }
     }
 }

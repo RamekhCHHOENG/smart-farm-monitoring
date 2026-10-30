@@ -177,9 +177,9 @@ and test it with `scripts/fake-device.mjs` (no hardware) or an ESP32 (about USD 
 ### Tests
 
 ```bash
-cd backend && mvn test          # 71 tests: domain rules, actuator and sensor state machines, new device kinds, API flows,
+cd backend && mvn test          # 73 tests: domain rules, actuator and sensor state machines, new device kinds, API flows,
                                 #           permissions, real-device setup, accounts, lockout, editing, CSV export,
-                                #           alert grouping, pool reconnect, upgrade of an older database
+                                #           alert grouping, pool reconnect, upgrade of an older database, sign-ins kept over a restart
 cd frontend && npm run typecheck
 # Browser walkthrough of every use case as owner, technician and worker (34 steps), see the header of:
 scripts/e2e-walkthrough.mjs
@@ -216,8 +216,10 @@ scripts/e2e-walkthrough.mjs
 - The owner manages staff accounts; a password reset or removal signs that person out everywhere.
 - Raw readings older than 90 days are deleted (`FARM_READING_RETENTION_DAYS`); alerts and device logs are kept.
 - Devices authenticate with the `X-Device-Key` header (constant-time comparison).
-- Limitations (fine for a class project, fix before real use): tokens and login lockouts are kept
-  in memory (restart = log in again), and the ESP32 talks plain HTTP on the local network.
+- Sign-ins are stored in the database as SHA-256 hashes of the token (never the token itself), so a server
+  restart does not log anyone out; expired sessions are cleared every hour.
+- Limitations (fine for a class project, fix before real use): login lockouts are kept in memory
+  (a restart clears them), and the ESP32 talks plain HTTP on the local network.
   Put the server behind HTTPS before exposing it to the internet.
 
 ## Farm Lab: test every farm scenario without hardware
@@ -282,13 +284,25 @@ the source files at recording time, with real line numbers) and the running app.
 OOP pillars, GRASP and SOLID. Render the diagrams first (see the script's header), then join the
 scenes with `scripts/make-demo-video.mjs`.
 
+### Video for farm users
+
+`scripts/record-user-video.mjs` records a plain-language video with no code (about 5 minutes), following the
+farm-users slides: the dashboard and a zone, dry soil that starts the pump by itself, the alert, rules like a
+thermostat, schedules, a broken sensor and its repair, history, a worker on a phone in Khmer, and the Farm Lab.
+On a Mac with no Kokoro model, `SAY=Samantha` uses the built-in macOS voice. `BASE` and `API` point it at other
+ports. Join the scenes with `scripts/make-demo-video.mjs`.
+
 ## Slides
 
-The presentation that goes with the OOP walkthrough video: each deliverable as concept, diagram, real
-code (file and line numbers) and running app, plus the new device kinds, sensor repair and thermostat rules.
-[docs/slides/Smart-Farm-OOAD.pdf](docs/slides/Smart-Farm-OOAD.pdf) (40 pages), or open
-[docs/slides/index.html](docs/slides/index.html) in a browser and use the arrow keys.
-Speaker notes: [docs/slides/speaker-notes.md](docs/slides/speaker-notes.md).
+Two decks, same look and screenshots. Open the HTML in a browser and use the arrow keys, or use the PDF.
+
+- **Technical (OOAD)**, goes with the OOP walkthrough video: each deliverable as concept, diagram, real code
+  (file and line numbers) and running app, then sensor repair, thermostat rules, the device catalog and many farms
+  on one server. [index.html](docs/slides/index.html) · [Smart-Farm-OOAD.pdf](docs/slides/Smart-Farm-OOAD.pdf) (46 pages) ·
+  [speaker notes](docs/slides/speaker-notes.md)
+- **For farm users**, no code or diagrams: what the system does for owners, workers and technicians, screen by screen.
+  [farm-users.html](docs/slides/farm-users.html) · [Smart-Farm-Guide.pdf](docs/slides/Smart-Farm-Guide.pdf) (21 pages) ·
+  [speaker notes](docs/slides/speaker-notes-farm-users.md)
 
 ## User manual
 

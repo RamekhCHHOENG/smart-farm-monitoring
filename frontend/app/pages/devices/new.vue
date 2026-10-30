@@ -119,7 +119,7 @@ const createdChannels = computed(() => {
 
 <template>
   <div class="mx-auto max-w-5xl">
-    <NuxtLink to="/devices" class="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+    <NuxtLink to="/devices" class="hit mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
       <ArrowLeft class="size-4" /> All devices
     </NuxtLink>
     <PageHeader title="Add device" description="Choose a real device from the catalog and place it in a zone. Missing one? Add it to the catalog first." />
@@ -189,7 +189,7 @@ const createdChannels = computed(() => {
               <Search class="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input v-model="form.q" type="search" class="pl-8" placeholder="DHT22, CO₂, pump, valve…" aria-label="Search the catalog" />
             </div>
-            <NuxtLink to="/catalog" class="text-sm text-muted-foreground underline">Open the catalog</NuxtLink>
+            <NuxtLink to="/catalog" class="hit text-sm text-muted-foreground underline">Open the catalog</NuxtLink>
           </div>
           <div class="grid-cols-1 grid max-h-[520px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Device model">
             <button v-for="m in choices" :key="m.id" type="button" role="radio" :aria-checked="form.modelId === m.id"
